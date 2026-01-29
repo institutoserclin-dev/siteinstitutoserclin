@@ -28,7 +28,7 @@ export function Covenants() {
                <span className="font-bold text-xl">SINODONTO</span>
              </div>
              <div className="flex items-center justify-center p-6 border border-white/20 rounded-xl hover:bg-white/10 transition-colors">
-               <span className="font-bold text-xl">CASSI</span>
+               <span className="font-bold text-xl">SINTEAC</span>
              </div>
              <div className="flex items-center justify-center p-6 border border-white/20 rounded-xl hover:bg-white/10 transition-colors">
                <span className="font-bold text-xl">IGREJAS</span>
