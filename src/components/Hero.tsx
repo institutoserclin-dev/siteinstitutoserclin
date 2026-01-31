@@ -48,7 +48,7 @@ export function Hero() {
                 className="bg-blue-900 text-white hover:bg-blue-800 font-medium text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all" 
                 asChild
             >
-              <a href="/servicos">Conhecer Serviços</a>
+              <a href="#servicos">Conhecer Serviços</a>
             </Button>
           </div>
         </motion.div>
