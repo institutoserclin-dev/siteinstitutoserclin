@@ -18,6 +18,7 @@ export function Footer() {
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-colors"
+                title="Instagram"
               >
                 <Instagram className="w-4 h-4" />
               </a>
@@ -26,6 +27,7 @@ export function Footer() {
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-colors"
+                title="WhatsApp"
               >
                 <MessageCircle className="w-4 h-4" />
               </a>
@@ -36,27 +38,27 @@ export function Footer() {
           <div>
             <h4 className="font-bold text-base mb-4 text-secondary">Links Rápidos</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="text-white/80 hover:text-secondary block py-1">Início</a></li>
-              <li><a href="#sobre" className="text-white/80 hover:text-secondary block py-1">Sobre Nós</a></li>
-              <li><a href="#servicos" className="text-white/80 hover:text-secondary block py-1">Serviços</a></li>
-              <li><a href="#planos" className="text-white/80 hover:text-secondary block py-1">Planos</a></li>
+              <li><a href="#" className="text-white/80 hover:text-secondary block py-1 transition-colors">Início</a></li>
+              <li><a href="#sobre" className="text-white/80 hover:text-secondary block py-1 transition-colors">Sobre Nós</a></li>
+              <li><a href="#servicos" className="text-white/80 hover:text-secondary block py-1 transition-colors">Serviços</a></li>
+              <li><a href="#planos" className="text-white/80 hover:text-secondary block py-1 transition-colors">Planos</a></li>
             </ul>
           </div>
 
-          {/* Coluna 3: Contato (LINKS CORRIGIDOS) */}
+          {/* Coluna 3: Contato (LINKS REFORÇADOS) */}
           <div>
             <h4 className="font-bold text-base mb-4 text-secondary">Contato</h4>
             <ul className="space-y-4 text-sm">
               
-              {/* Endereço - Clique na linha toda */}
+              {/* Endereço - Abre Google Maps */}
               <li>
                 <a 
-                  href="https://www.google.com/maps/search/?api=1&query=Rua+Sorocaba+140+Rio+Branco+AC" 
+                  href="https://www.google.com/maps/search/?api=1&query=Rua+Sorocaba+140+Doca+Furtado+Rio+Branco+AC" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="flex items-start gap-3 text-white/80 hover:text-secondary transition-colors group"
+                  className="flex items-start gap-3 text-white/80 hover:text-secondary transition-colors group cursor-pointer"
                 >
-                  <MapPin className="w-4 h-4 text-secondary shrink-0 mt-1 group-hover:text-white" />
+                  <MapPin className="w-4 h-4 text-secondary shrink-0 mt-1 group-hover:text-white transition-colors" />
                   <span>
                     Rua Sorocaba, 140<br />
                     Doca Furtado, Rio Branco - AC
@@ -64,24 +66,24 @@ export function Footer() {
                 </a>
               </li>
 
-              {/* Telefone - Clique na linha toda */}
+              {/* Telefone - Abre Discador */}
               <li>
                 <a 
                   href="tel:+5568992161717" 
-                  className="flex items-center gap-3 text-white/80 hover:text-secondary transition-colors group"
+                  className="flex items-center gap-3 text-white/80 hover:text-secondary transition-colors group cursor-pointer"
                 >
-                  <Phone className="w-4 h-4 text-secondary shrink-0 group-hover:text-white" />
+                  <Phone className="w-4 h-4 text-secondary shrink-0 group-hover:text-white transition-colors" />
                   <span>(68) 99216-1717</span>
                 </a>
               </li>
 
-              {/* E-mail - Clique na linha toda */}
+              {/* E-mail - Abre App de Email */}
               <li>
                 <a 
                   href="mailto:institutoserclin@gmail.com" 
-                  className="flex items-center gap-3 text-white/80 hover:text-secondary transition-colors group"
+                  className="flex items-center gap-3 text-white/80 hover:text-secondary transition-colors group cursor-pointer"
                 >
-                  <Mail className="w-4 h-4 text-secondary shrink-0 group-hover:text-white" />
+                  <Mail className="w-4 h-4 text-secondary shrink-0 group-hover:text-white transition-colors" />
                   <span className="break-all">institutoserclin@gmail.com</span>
                 </a>
               </li>
@@ -110,7 +112,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-white/10 pt-4 text-center text-white/50 text-xs">
-          <p>&copy; {new Date().getFullYear()} Instituto SerClin. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} Instituto SerClin. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>
