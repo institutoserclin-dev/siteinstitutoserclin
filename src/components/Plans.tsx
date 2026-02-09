@@ -1,133 +1,215 @@
-import { Instagram, MapPin, Mail, Phone, MessageCircle } from "lucide-react";
+import { motion } from "framer-motion";
+import { Check, Star, Users, Zap, Briefcase, Brain, Crown, Heart, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function Footer() {
+const plans = [
+  // --- NÍVEL 1: ENTRADA ---
+  {
+    name: "Plano Essencial",
+    price: "99,90",
+    description: "A porta de entrada para o seu autocuidado.",
+    features: [
+      "Atendimento Quinzenal",
+      "Sessões de até 40 minutos",
+      "Acolhimento pontual",
+      "Orientação básica"
+    ],
+    highlight: false,
+    icon: Heart
+  },
+  {
+    name: "Plano Acolher",
+    price: "149,90",
+    description: "Manutenção emocional com suporte regular.",
+    features: [
+      "Atendimento Quinzenal",
+      "Sessões de 50 minutos",
+      "Suporte via WhatsApp",
+      "Horários diferenciados"
+    ],
+    highlight: false,
+    icon: Star
+  },
+  {
+    name: "Cuidado Premium",
+    price: "189,90",
+    description: "Para quem busca ferramentas práticas de evolução.",
+    features: [
+      "Atendimento Quinzenal (50 min)",
+      "Exercícios de fixação entre sessões",
+      "Curadoria de materiais (livros/vídeos)",
+      "Devolutiva verbal trimestral"
+    ],
+    highlight: true,
+    popular: true,
+    icon: Zap
+  },
+
+  // --- NÍVEL 2: ESPECÍFICOS E INTENSIVOS ---
+  {
+    name: "Mente Brilhante",
+    price: "249,90",
+    description: "Foco total em desempenho cognitivo e estudos.",
+    features: [
+      "Ideal para estudantes/concurseiros",
+      "Treino de memória e foco",
+      "Organização de rotina de estudos",
+      "Material PDF exclusivo"
+    ],
+    highlight: false,
+    icon: Brain
+  },
+  {
+    name: "Jornada Contínua",
+    price: "319,90",
+    description: "Acelere resultados com acompanhamento semanal.",
+    features: [
+      "Atendimento Semanal (4 sessões/mês)",
+      "Relatório de Evolução Semestral",
+      "Monitoramento contínuo de metas",
+      "1 Sessão Bônus a cada 6 meses"
+    ],
+    highlight: true,
+    icon: Sparkles
+  },
+  {
+    name: "Família Prestige",
+    price: "Sob Consulta",
+    description: "Cuidado integral para o seu maior patrimônio.",
+    features: [
+      "Cobertura para até 4 pessoas",
+      "Terapias Semanais para todos",
+      "Reunião mensal de alinhamento familiar",
+      "Economia inteligente no pacote"
+    ],
+    highlight: true,
+    gold: true, // Visual Dourado
+    warning: "Sessões mensais não cumulativas.",
+    icon: Crown
+  },
+
+  // --- NÍVEL 3: CORPORATIVO ---
+  {
+    name: "Empresarial",
+    price: "Sob Consulta",
+    description: "Saúde mental para colaboradores e instituições.",
+    features: [
+      "Convênios (SINPROAC e outros)",
+      "Palestras e Workshops",
+      "Plantão Psicológico",
+      "Consultoria em RH"
+    ],
+    highlight: false,
+    icon: Briefcase
+  }
+];
+
+export function Plans() {
   return (
-    <footer id="contato" className="bg-primary text-white py-8 border-t border-white/10">
-      <div className="container mx-auto px-4">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-          
-          {/* Coluna 1: Sobre e Redes Sociais */}
-          <div>
-            <h3 className="font-serif text-xl font-bold mb-4">Instituto SerClin</h3>
-            <p className="text-white/80 mb-4 leading-relaxed text-sm">
-              Dedicados ao desenvolvimento humano através de uma abordagem multidisciplinar e acolhedora.
-            </p>
-            <div className="flex gap-3">
-              {/* Botão Instagram */}
-              <a 
-                href="https://www.instagram.com/institutoserclin/" 
-                target="_blank" 
-                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="w-4 h-4" />
-              </a>
+    <section id="planos" className="py-24 bg-primary text-white relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-10 pointer-events-none">
+        <div className="absolute top-10 left-10 w-64 h-64 bg-secondary rounded-full blur-3xl" />
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
+      </div>
 
-              {/* Botão WhatsApp */}
-              <a 
-                href="https://wa.me/5568992161717" 
-                target="_blank" 
-                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-colors"
-                aria-label="WhatsApp"
-              >
-                <MessageCircle className="w-4 h-4" />
-              </a>
-            </div>
-          </div>
-
-          {/* Coluna 2: Links Rápidos */}
-          <div>
-            <h4 className="font-bold text-base mb-4 text-secondary">Links Rápidos</h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a href="#" className="text-white/80 hover:text-secondary transition-colors flex items-center gap-2">
-                  Início
-                </a>
-              </li>
-              <li>
-                <a href="#sobre" className="text-white/80 hover:text-secondary transition-colors flex items-center gap-2">
-                  Sobre Nós
-                </a>
-              </li>
-              <li>
-                <a href="#servicos" className="text-white/80 hover:text-secondary transition-colors flex items-center gap-2">
-                  Serviços
-                </a>
-              </li>
-              <li>
-                <a href="#planos" className="text-white/80 hover:text-secondary transition-colors flex items-center gap-2">
-                  Planos
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Coluna 3: Contato (Tudo com link agora) */}
-          <div>
-            <h4 className="font-bold text-base mb-4 text-secondary">Contato</h4>
-            <ul className="space-y-3 text-sm">
-              {/* Endereço Clicável */}
-              <li className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-secondary shrink-0 mt-1" />
-                <a 
-                  href="https://www.google.com/maps/search/?api=1&query=Rua+Sorocaba+140+Doca+Furtado+Rio+Branco+AC" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-white/80 hover:text-secondary transition-colors text-left"
-                >
-                  Rua Sorocaba, 140<br />
-                  Doca Furtado, Rio Branco - AC
-                </a>
-              </li>
-              
-              {/* Telefone Clicável (tel:) */}
-              <li className="flex items-center gap-3">
-                <Phone className="w-4 h-4 text-secondary shrink-0" />
-                <a 
-                  href="tel:+5568992161717"
-                  className="text-white/80 hover:text-secondary transition-colors"
-                >
-                  (68) 99216-1717
-                </a>
-              </li>
-              
-              {/* E-mail Clicável (mailto:) */}
-              <li className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-secondary shrink-0" />
-                <a 
-                  href="mailto:institutoserclin@gmail.com"
-                  className="text-white/80 hover:text-secondary transition-colors break-all"
-                >
-                  institutoserclin@gmail.com
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Coluna 4: Horário */}
-          <div>
-            <h4 className="font-bold text-base mb-4 text-secondary">Horário de Atendimento</h4>
-            <ul className="space-y-2 text-white/80 text-sm">
-              <li className="flex justify-between gap-4">
-                <span>Segunda - Sexta</span>
-                <span className="font-bold text-white">08:00 - 18:00</span>
-              </li>
-              <li className="flex justify-between gap-4">
-                <span>Sábado</span>
-                <span className="font-bold text-white">08:00 - 12:00</span>
-              </li>
-              <li className="flex justify-between gap-4">
-                <span>Domingo</span>
-                <span className="text-white/50">Fechado</span>
-              </li>
-            </ul>
-          </div>
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <h2 className="text-secondary font-sans font-bold tracking-widest uppercase mb-2 text-sm">Investimento</h2>
+          <h3 className="font-serif text-3xl md:text-4xl font-bold mb-4">Planos de Acompanhamento</h3>
+          <p className="text-white/80 text-lg">
+            Escolha o nível de suporte ideal para o seu momento de vida.
+          </p>
         </div>
 
-        <div className="border-t border-white/10 pt-4 text-center text-white/50 text-xs">
-          <p>&copy; {new Date().getFullYear()} Instituto SerClin. Todos os direitos reservados.</p>
+        {/* Layout Flexbox Centralizado */}
+        <div className="flex flex-wrap justify-center gap-6">
+          {plans.map((plan, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1, duration: 0.5 }}
+              viewport={{ once: true }}
+              className="w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.33%-1rem)] max-w-sm flex"
+            >
+              <Card className={`flex flex-col w-full border-none shadow-xl relative overflow-hidden transition-all duration-300 hover:-translate-y-2 
+                ${plan.gold 
+                  ? "bg-gradient-to-b from-white to-amber-50 border-2 border-amber-400 ring-4 ring-amber-400/20" 
+                  : plan.popular 
+                    ? "bg-white scale-105 z-10 border-2 border-secondary/50 shadow-2xl" 
+                    : "bg-white/95"
+                }`}
+              >
+                {/* Etiquetas de Destaque */}
+                {plan.popular && !plan.gold && (
+                  <div className="absolute top-0 right-0 bg-secondary text-primary text-xs font-bold px-3 py-1 rounded-bl-lg">
+                    MAIS PROCURADO
+                  </div>
+                )}
+                {plan.gold && (
+                  <div className="absolute top-0 inset-x-0 bg-gradient-to-r from-amber-400 to-yellow-600 text-white text-xs font-bold px-3 py-1 text-center uppercase tracking-wider shadow-sm">
+                    Exclusivo Família
+                  </div>
+                )}
+
+                <CardHeader className="pb-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 
+                    ${plan.gold ? "bg-amber-100 text-amber-600" : "bg-primary/10 text-primary"}`}>
+                    <plan.icon className="w-6 h-6" />
+                  </div>
+                  <CardTitle className="text-xl font-bold text-gray-900">{plan.name}</CardTitle>
+                  <CardDescription className="text-gray-600 min-h-[40px] leading-snug">{plan.description}</CardDescription>
+                </CardHeader>
+                
+                <CardContent className="flex-grow">
+                  <div className="mb-6">
+                    <span className="text-sm text-gray-500 font-medium align-top">R$</span>
+                    <span className={`text-4xl font-bold ${plan.gold ? "text-amber-600" : "text-primary"}`}>
+                      {plan.price}
+                    </span>
+                    {plan.price !== "Sob Consulta" && <span className="text-gray-500 font-medium">/mês</span>}
+                  </div>
+                  
+                  <ul className="space-y-3">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                        <Check className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.gold ? "text-amber-500" : "text-secondary"}`} />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Aviso de Não Cumulativo */}
+                  {plan.warning && (
+                    <div className="mt-4 p-2 bg-red-50 border border-red-100 rounded text-xs text-red-600 font-bold text-center uppercase tracking-wide">
+                      ⚠️ {plan.warning}
+                    </div>
+                  )}
+                </CardContent>
+                
+                <CardFooter className="pt-4">
+                  <Button 
+                    className={`w-full font-bold text-lg h-12 rounded-full shadow-md transition-all 
+                      ${plan.gold 
+                        ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white" 
+                        : "bg-secondary hover:bg-secondary/90 text-primary"}`} 
+                    asChild
+                  >
+                    <a 
+                      href={`https://wa.me/5568992161717?text=Olá, tenho interesse no ${plan.name}`} 
+                      target="_blank"
+                    >
+                      {plan.price === "Sob Consulta" ? "Falar com Consultor" : "Quero este Plano"}
+                    </a>
+                  </Button>
+                </CardFooter>
+              </Card>
+            </motion.div>
+          ))}
         </div>
       </div>
-    </footer>
+    </section>
   );
 }
