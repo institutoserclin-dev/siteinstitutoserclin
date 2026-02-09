@@ -81,7 +81,7 @@ const plans = [
       "Cobertura para até 4 pessoas",
       "Terapias Semanais para todos",
       "Reunião mensal de alinhamento familiar",
-      "Economia inteligente no pacote"
+      "Cuidado completo"
     ],
     highlight: true,
     gold: true, // Visual Dourado
