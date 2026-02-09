@@ -45,12 +45,12 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Coluna 3: Contato (LINKS REFORÇADOS) */}
+          {/* Coluna 3: Contato (COM WHATSAPP ADICIONADO) */}
           <div>
             <h4 className="font-bold text-base mb-4 text-secondary">Contato</h4>
             <ul className="space-y-4 text-sm">
               
-              {/* Endereço - Abre Google Maps */}
+              {/* Endereço */}
               <li>
                 <a 
                   href="https://www.google.com/maps/search/?api=1&query=Rua+Sorocaba+140+Doca+Furtado+Rio+Branco+AC" 
@@ -66,18 +66,33 @@ export function Footer() {
                 </a>
               </li>
 
-              {/* Telefone - Abre Discador */}
+              {/* Telefone (Ligar) */}
               <li>
                 <a 
                   href="tel:+5568992161717" 
                   className="flex items-center gap-3 text-white/80 hover:text-secondary transition-colors group cursor-pointer"
+                  title="Ligar para clínica"
                 >
                   <Phone className="w-4 h-4 text-secondary shrink-0 group-hover:text-white transition-colors" />
                   <span>(68) 99216-1717</span>
                 </a>
               </li>
 
-              {/* E-mail - Abre App de Email */}
+              {/* WhatsApp (Nova Linha) */}
+              <li>
+                <a 
+                  href="https://wa.me/5568992161717" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 text-white/80 hover:text-secondary transition-colors group cursor-pointer"
+                  title="Chamar no WhatsApp"
+                >
+                  <MessageCircle className="w-4 h-4 text-secondary shrink-0 group-hover:text-white transition-colors" />
+                  <span>WhatsApp: (68) 99216-1717</span>
+                </a>
+              </li>
+
+              {/* E-mail */}
               <li>
                 <a 
                   href="mailto:institutoserclin@gmail.com" 
