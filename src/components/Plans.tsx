@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Check, Star, Users, Zap, Briefcase, Brain, Crown, Heart } from "lucide-react";
+import { Check, Star, Users, Zap, Briefcase, Brain, Crown, Heart, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -11,7 +11,7 @@ const plans = [
     description: "A porta de entrada para o seu autocuidado.",
     features: [
       "Atendimento Quinzenal",
-      "Sessões de 30 minutos",
+      "Sessões de até 40 minutos",
       "Acolhimento pontual",
       "Orientação básica"
     ],
@@ -26,7 +26,7 @@ const plans = [
       "Atendimento Quinzenal",
       "Sessões de 50 minutos",
       "Suporte via WhatsApp",
-      "Horários flexíveis"
+      "Horários diferenciados"
     ],
     highlight: false,
     icon: Star
@@ -34,12 +34,12 @@ const plans = [
   {
     name: "Cuidado Premium",
     price: "189,90",
-    description: "Equilíbrio ideal entre autonomia e profundidade.",
+    description: "Para quem busca ferramentas práticas de evolução.",
     features: [
-      "Atendimento Quinzenal",
-      "Sessões estendidas",
-      "Planejamento Terapêutico",
-      "Monitoramento de metas"
+      "Atendimento Quinzenal (50 min)",
+      "Exercícios de fixação entre sessões",
+      "Curadoria de materiais (livros/vídeos)",
+      "Devolutiva verbal trimestral"
     ],
     highlight: true,
     popular: true,
@@ -50,12 +50,12 @@ const plans = [
   {
     name: "Mente Brilhante",
     price: "249,90",
-    description: "Foco em estimulação cognitiva e aprendizagem.",
+    description: "Foco total em desempenho cognitivo e estudos.",
     features: [
       "Ideal para estudantes/concurseiros",
-      "Técnicas de memorização",
-      "Organização de rotina",
-      "Material de apoio cognitivo"
+      "Treino de memória e foco",
+      "Organização de rotina de estudos",
+      "Material PDF exclusivo"
     ],
     highlight: false,
     icon: Brain
@@ -63,15 +63,15 @@ const plans = [
   {
     name: "Jornada Contínua",
     price: "319,90",
-    description: "Acelere resultados com terapia semanal.",
+    description: "Acelere resultados com acompanhamento semanal.",
     features: [
-      "Atendimento Semanal (4 sessões)",
-      "Acompanhamento intensivo",
-      "Profundidade clínica",
-      "Relatórios de evolução"
+      "Atendimento Semanal (4 sessões/mês)",
+      "Relatório de Evolução Semestral",
+      "Monitoramento contínuo de metas",
+      "1 Sessão Bônus a cada 6 meses"
     ],
     highlight: true,
-    icon: Check
+    icon: Sparkles
   },
   {
     name: "Família Prestige",
@@ -80,8 +80,8 @@ const plans = [
     features: [
       "Cobertura para até 4 pessoas",
       "Terapias Semanais para todos",
-      "Economia inteligente",
-      "Relatório familiar integrado"
+      "Reunião mensal de alinhamento familiar",
+      "Economia inteligente no pacote"
     ],
     highlight: true,
     gold: true, // Visual Dourado
@@ -89,7 +89,7 @@ const plans = [
     icon: Crown
   },
 
-  // --- NÍVEL 3: CORPORATIVO (Centralizado no final) ---
+  // --- NÍVEL 3: CORPORATIVO ---
   {
     name: "Empresarial",
     price: "Sob Consulta",
@@ -119,11 +119,11 @@ export function Plans() {
           <h2 className="text-secondary font-sans font-bold tracking-widest uppercase mb-2 text-sm">Investimento</h2>
           <h3 className="font-serif text-3xl md:text-4xl font-bold mb-4">Planos de Acompanhamento</h3>
           <p className="text-white/80 text-lg">
-            Opções éticas e flexíveis para cada etapa da sua jornada.
+            Escolha o nível de suporte ideal para o seu momento de vida.
           </p>
         </div>
 
-        {/* Grid Flexível para centralizar automaticamente */}
+        {/* Layout Flexbox Centralizado */}
         <div className="flex flex-wrap justify-center gap-6">
           {plans.map((plan, index) => (
             <motion.div
@@ -142,10 +142,10 @@ export function Plans() {
                     : "bg-white/95"
                 }`}
               >
-                {/* Faixas de Destaque */}
+                {/* Etiquetas de Destaque */}
                 {plan.popular && !plan.gold && (
                   <div className="absolute top-0 right-0 bg-secondary text-primary text-xs font-bold px-3 py-1 rounded-bl-lg">
-                    DESTACADO
+                    MAIS PROCURADO
                   </div>
                 )}
                 {plan.gold && (
@@ -181,7 +181,7 @@ export function Plans() {
                     ))}
                   </ul>
 
-                  {/* Aviso Específico para o Plano Família */}
+                  {/* Aviso de Não Cumulativo */}
                   {plan.warning && (
                     <div className="mt-4 p-2 bg-red-50 border border-red-100 rounded text-xs text-red-600 font-bold text-center uppercase tracking-wide">
                       ⚠️ {plan.warning}
@@ -198,10 +198,10 @@ export function Plans() {
                     asChild
                   >
                     <a 
-                      href={`https://wa.me/5568992161717?text=Olá, gostaria de saber mais sobre o ${plan.name}`} 
+                      href={`https://wa.me/5568992161717?text=Olá, tenho interesse no ${plan.name}`} 
                       target="_blank"
                     >
-                      {plan.price === "Sob Consulta" ? "Falar com Consultor" : "Escolher Plano"}
+                      {plan.price === "Sob Consulta" ? "Falar com Consultor" : "Quero este Plano"}
                     </a>
                   </Button>
                 </CardFooter>
