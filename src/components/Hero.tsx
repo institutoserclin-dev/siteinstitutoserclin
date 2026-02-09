@@ -29,7 +29,7 @@ export function Hero() {
           
           {/* CORREÇÃO 1: Adicionado text-white aqui */}
           <h1 className="font-serif text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-white">
-            INSTITUTO SER CLIN
+            INSTITUTO SERCLIN
           </h1>
           
           <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-10 font-light">
