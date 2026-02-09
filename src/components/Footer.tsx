@@ -68,10 +68,19 @@ export function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-secondary shrink-0 mt-1" />
-                <span className="text-white/80">
-                  Rua Valério Magalhães, 169<br />
-                  Bosque, Rio Branco - AC
-                </span>
+                {/* AQUI ESTÁ A MUDANÇA: 
+                   Transformei o endereço em um link (<a>) que abre o Google Maps.
+                   O link usa o endereço completo para garantir a precisão.
+                */}
+                <a 
+                  href="https://www.google.com/maps/dir/?api=1&destination=Rua+Sorocaba,+140+-+Doca+Furtado,+Rio+Branco+-+AC" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-white/80 hover:text-secondary transition-colors text-left"
+                >
+                  Rua Sorocaba, 140<br />
+                  Doca Furtado, Rio Branco - AC
+                </a>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-secondary shrink-0" />
