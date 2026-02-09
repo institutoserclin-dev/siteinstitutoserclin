@@ -16,6 +16,7 @@ export function Footer() {
               <a 
                 href="https://www.instagram.com/institutoserclin/" 
                 target="_blank" 
+                rel="noopener noreferrer"
                 className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-colors"
               >
                 <Instagram className="w-4 h-4" />
@@ -23,6 +24,7 @@ export function Footer() {
               <a 
                 href="https://wa.me/5568992161717" 
                 target="_blank" 
+                rel="noopener noreferrer"
                 className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-colors"
               >
                 <MessageCircle className="w-4 h-4" />
@@ -34,50 +36,53 @@ export function Footer() {
           <div>
             <h4 className="font-bold text-base mb-4 text-secondary">Links Rápidos</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="text-white/80 hover:text-secondary">Início</a></li>
-              <li><a href="#sobre" className="text-white/80 hover:text-secondary">Sobre Nós</a></li>
-              <li><a href="#servicos" className="text-white/80 hover:text-secondary">Serviços</a></li>
-              <li><a href="#planos" className="text-white/80 hover:text-secondary">Planos</a></li>
+              <li><a href="#" className="text-white/80 hover:text-secondary block py-1">Início</a></li>
+              <li><a href="#sobre" className="text-white/80 hover:text-secondary block py-1">Sobre Nós</a></li>
+              <li><a href="#servicos" className="text-white/80 hover:text-secondary block py-1">Serviços</a></li>
+              <li><a href="#planos" className="text-white/80 hover:text-secondary block py-1">Planos</a></li>
             </ul>
           </div>
 
-          {/* Coluna 3: Contato (LINKS DIRETOS AQUI) */}
+          {/* Coluna 3: Contato (LINKS CORRIGIDOS) */}
           <div>
             <h4 className="font-bold text-base mb-4 text-secondary">Contato</h4>
-            <ul className="space-y-3 text-sm">
+            <ul className="space-y-4 text-sm">
               
-              {/* Endereço: Abre o Google Maps direto */}
-              <li className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-secondary shrink-0 mt-1" />
+              {/* Endereço - Clique na linha toda */}
+              <li>
                 <a 
-                  href="https://www.google.com/maps/search/?api=1&query=Rua+Sorocaba+140+Doca+Furtado+Rio+Branco+AC" 
+                  href="https://www.google.com/maps/search/?api=1&query=Rua+Sorocaba+140+Rio+Branco+AC" 
                   target="_blank" 
-                  className="text-white/80 hover:text-secondary"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-3 text-white/80 hover:text-secondary transition-colors group"
                 >
-                  Rua Sorocaba, 140<br />
-                  Doca Furtado, Rio Branco - AC
+                  <MapPin className="w-4 h-4 text-secondary shrink-0 mt-1 group-hover:text-white" />
+                  <span>
+                    Rua Sorocaba, 140<br />
+                    Doca Furtado, Rio Branco - AC
+                  </span>
                 </a>
               </li>
 
-              {/* Telefone: Abre o discador (tel:) */}
-              <li className="flex items-center gap-3">
-                <Phone className="w-4 h-4 text-secondary shrink-0" />
+              {/* Telefone - Clique na linha toda */}
+              <li>
                 <a 
                   href="tel:+5568992161717" 
-                  className="text-white/80 hover:text-secondary"
+                  className="flex items-center gap-3 text-white/80 hover:text-secondary transition-colors group"
                 >
-                  (68) 99216-1717
+                  <Phone className="w-4 h-4 text-secondary shrink-0 group-hover:text-white" />
+                  <span>(68) 99216-1717</span>
                 </a>
               </li>
 
-              {/* E-mail: Abre o Gmail/Outlook (mailto:) */}
-              <li className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-secondary shrink-0" />
+              {/* E-mail - Clique na linha toda */}
+              <li>
                 <a 
                   href="mailto:institutoserclin@gmail.com" 
-                  className="text-white/80 hover:text-secondary break-all"
+                  className="flex items-center gap-3 text-white/80 hover:text-secondary transition-colors group"
                 >
-                  institutoserclin@gmail.com
+                  <Mail className="w-4 h-4 text-secondary shrink-0 group-hover:text-white" />
+                  <span className="break-all">institutoserclin@gmail.com</span>
                 </a>
               </li>
 
@@ -86,7 +91,7 @@ export function Footer() {
 
           {/* Coluna 4: Horário */}
           <div>
-            <h4 className="font-bold text-base mb-4 text-secondary">Atendimento</h4>
+            <h4 className="font-bold text-base mb-4 text-secondary">Horário de Atendimento</h4>
             <ul className="space-y-2 text-white/80 text-sm">
               <li className="flex justify-between gap-4">
                 <span>Segunda - Sexta</span>
@@ -96,12 +101,16 @@ export function Footer() {
                 <span>Sábado</span>
                 <span className="font-bold text-white">08:00 - 12:00</span>
               </li>
+              <li className="flex justify-between gap-4">
+                <span>Domingo</span>
+                <span className="text-white/50">Fechado</span>
+              </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-white/10 pt-4 text-center text-white/50 text-xs">
-          <p>© {new Date().getFullYear()} Instituto SerClin. Todos os direitos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} Instituto SerClin. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>
