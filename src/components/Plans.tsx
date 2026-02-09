@@ -1,18 +1,31 @@
 import { motion } from "framer-motion";
-import { Check, Star, Users, Zap, Briefcase, Brain, Crown } from "lucide-react";
+import { Check, Star, Users, Zap, Briefcase, Brain, Crown, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 const plans = [
-  // --- LINHA DE CIMA (3 PLANOS DE ENTRADA/INTERMEDIÁRIOS) ---
+  // --- NÍVEL 1: ENTRADA ---
+  {
+    name: "Plano Essencial",
+    price: "99,90",
+    description: "A porta de entrada para o seu autocuidado.",
+    features: [
+      "Atendimento Quinzenal",
+      "Sessões de 30 minutos",
+      "Acolhimento pontual",
+      "Orientação básica"
+    ],
+    highlight: false,
+    icon: Heart
+  },
   {
     name: "Plano Acolher",
     price: "149,90",
-    description: "Manutenção emocional e suporte pontual.",
+    description: "Manutenção emocional com suporte regular.",
     features: [
       "Atendimento Quinzenal",
+      "Sessões de 50 minutos",
       "Suporte via WhatsApp",
-      "Acolhimento humanizado",
       "Horários flexíveis"
     ],
     highlight: false,
@@ -21,17 +34,19 @@ const plans = [
   {
     name: "Cuidado Premium",
     price: "189,90",
-    description: "Equilíbrio ideal entre autonomia e suporte.",
+    description: "Equilíbrio ideal entre autonomia e profundidade.",
     features: [
       "Atendimento Quinzenal",
       "Sessões estendidas",
-      "Prioridade na agenda",
+      "Planejamento Terapêutico",
       "Monitoramento de metas"
     ],
     highlight: true,
     popular: true,
     icon: Zap
   },
+
+  // --- NÍVEL 2: ESPECÍFICOS E INTENSIVOS ---
   {
     name: "Mente Brilhante",
     price: "249,90",
@@ -45,8 +60,6 @@ const plans = [
     highlight: false,
     icon: Brain
   },
-
-  // --- LINHA DE BAIXO (3 PLANOS DE ALTO VALOR/GRUPOS) ---
   {
     name: "Jornada Contínua",
     price: "319,90",
@@ -54,15 +67,15 @@ const plans = [
     features: [
       "Atendimento Semanal (4 sessões)",
       "Acompanhamento intensivo",
-      "Profundidade terapêutica",
-      "Plano de desenvolvimento pessoal"
+      "Profundidade clínica",
+      "Relatórios de evolução"
     ],
     highlight: true,
     icon: Check
   },
   {
-    name: "Família Prestige Gold",
-    price: "1.200,00",
+    name: "Família Prestige",
+    price: "Sob Consulta",
     description: "Cuidado integral para o seu maior patrimônio.",
     features: [
       "Cobertura para até 4 pessoas",
@@ -71,10 +84,12 @@ const plans = [
       "Relatório familiar integrado"
     ],
     highlight: true,
-    gold: true, // Ativa o visual dourado
+    gold: true, // Visual Dourado
     warning: "Sessões mensais não cumulativas.",
     icon: Crown
   },
+
+  // --- NÍVEL 3: CORPORATIVO (Centralizado no final) ---
   {
     name: "Empresarial",
     price: "Sob Consulta",
@@ -93,7 +108,7 @@ const plans = [
 export function Plans() {
   return (
     <section id="planos" className="py-24 bg-primary text-white relative overflow-hidden">
-      {/* Elementos de Fundo */}
+      {/* Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-10 pointer-events-none">
         <div className="absolute top-10 left-10 w-64 h-64 bg-secondary rounded-full blur-3xl" />
         <div className="absolute bottom-10 right-10 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
@@ -104,12 +119,12 @@ export function Plans() {
           <h2 className="text-secondary font-sans font-bold tracking-widest uppercase mb-2 text-sm">Investimento</h2>
           <h3 className="font-serif text-3xl md:text-4xl font-bold mb-4">Planos de Acompanhamento</h3>
           <p className="text-white/80 text-lg">
-            Opções flexíveis desenhadas para cada etapa da sua jornada de desenvolvimento.
+            Opções éticas e flexíveis para cada etapa da sua jornada.
           </p>
         </div>
 
-        {/* Grid Responsivo: 1 coluna (mobile), 2 (tablet), 3 (PC) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
+        {/* Grid Flexível para centralizar automaticamente */}
+        <div className="flex flex-wrap justify-center gap-6">
           {plans.map((plan, index) => (
             <motion.div
               key={index}
@@ -117,12 +132,12 @@ export function Plans() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1, duration: 0.5 }}
               viewport={{ once: true }}
-              className="w-full max-w-sm flex"
+              className="w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.33%-1rem)] max-w-sm flex"
             >
               <Card className={`flex flex-col w-full border-none shadow-xl relative overflow-hidden transition-all duration-300 hover:-translate-y-2 
                 ${plan.gold 
                   ? "bg-gradient-to-b from-white to-amber-50 border-2 border-amber-400 ring-4 ring-amber-400/20" 
-                  : plan.highlight 
+                  : plan.popular 
                     ? "bg-white scale-105 z-10 border-2 border-secondary/50 shadow-2xl" 
                     : "bg-white/95"
                 }`}
@@ -130,7 +145,7 @@ export function Plans() {
                 {/* Faixas de Destaque */}
                 {plan.popular && !plan.gold && (
                   <div className="absolute top-0 right-0 bg-secondary text-primary text-xs font-bold px-3 py-1 rounded-bl-lg">
-                    RECOMENDADO
+                    DESTACADO
                   </div>
                 )}
                 {plan.gold && (
@@ -183,10 +198,10 @@ export function Plans() {
                     asChild
                   >
                     <a 
-                      href={`https://wa.me/5568992161717?text=Olá, tenho interesse no ${plan.name}`} 
+                      href={`https://wa.me/5568992161717?text=Olá, gostaria de saber mais sobre o ${plan.name}`} 
                       target="_blank"
                     >
-                      {plan.price === "Sob Consulta" ? "Consultar Empresa" : "Escolher Plano"}
+                      {plan.price === "Sob Consulta" ? "Falar com Consultor" : "Escolher Plano"}
                     </a>
                   </Button>
                 </CardFooter>
