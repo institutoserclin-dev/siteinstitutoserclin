@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom"; // Importante para ler a URL
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
 import { Services } from "@/components/Services";
@@ -7,26 +8,26 @@ import { Plans } from "@/components/Plans";
 import { Covenants } from "@/components/Covenants";
 import { Footer } from "@/components/Footer";
 
-interface HomeProps {
-  targetSection?: string;
-}
+export default function Home() {
+  const location = useLocation();
 
-export default function Home({ targetSection }: HomeProps) {
+  // Efeito para rolar a página suavemente quando houver um #link
   useEffect(() => {
-    if (targetSection) {
-      const element = document.getElementById(targetSection);
+    if (location.hash) {
+      const elementId = location.hash.replace('#', '');
+      const element = document.getElementById(elementId);
+      
       if (element) {
-        // Add a small delay to ensure layout is stable
+        // Pequeno delay para garantir que a página carregou antes de rolar
         setTimeout(() => {
           element.scrollIntoView({ behavior: "smooth" });
         }, 100);
-      } else {
-        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } else {
+      // Se não tiver # (hash), rola para o topo
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }, [targetSection]);
+  }, [location]);
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased text-foreground selection:bg-secondary selection:text-primary">
