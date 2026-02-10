@@ -24,7 +24,7 @@ const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales
 const EQUIPE = [
   { nome: 'Dra. Helenara Chaves', area: 'Neuropsicologia', cor: '#7c3aed' },
   { nome: 'Dr. Antônio Pinto', area: 'Psicologia', cor: '#2563eb' },
-  { nome: 'Prof. Me. Ramiro Mendes', area: 'Psicopedagogia', cor: '#16a34a' },
+  { nome: 'Prof. Ramiro Mendes', area: 'Psicopedagogia', cor: '#16a34a' },
   { nome: 'Fonoaudiologia', area: 'Fono', cor: '#ea580c' },
   { nome: 'Terapeuta ABA', area: 'ABA', cor: '#db2777' }
 ];
