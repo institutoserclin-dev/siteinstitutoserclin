@@ -12,7 +12,8 @@ import { Dashboard } from "@/pages/Dashboard";
 import { CadastroUsuario } from "@/pages/CadastroUsuario"; // Admin
 import { Pacientes } from "@/pages/Pacientes"; 
 import { Prontuario } from "@/pages/Prontuario";
-import { Acessos } from "@/pages/Acessos"; // Nova Tela
+import { Acessos } from "@/pages/Acessos"; 
+import { Horarios } from "@/pages/Horarios"; // <--- ADICIONADO AQUI
 
 function App() {
   return (
@@ -29,6 +30,9 @@ function App() {
           {/* Admin e Gestão */}
           <Route path="/sistema/cadastro" element={<PrivateRoute><CadastroUsuario /></PrivateRoute>} />
           <Route path="/sistema/acessos" element={<PrivateRoute><Acessos /></PrivateRoute>} />
+          
+          {/* NOVA ROTA DE HORÁRIOS ADICIONADA AQUI */}
+          <Route path="/sistema/horarios" element={<PrivateRoute><Horarios /></PrivateRoute>} />
 
           {/* Pacientes e Prontuários */}
           <Route path="/sistema/pacientes" element={<PrivateRoute><Pacientes /></PrivateRoute>} />
