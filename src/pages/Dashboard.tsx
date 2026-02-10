@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale';
 import { createClient } from '@supabase/supabase-js';
 import { 
   LogOut, Calendar as CalendarIcon, Plus, X, User, Trash2, 
-  Save, UserPlus, Users, Shield 
+  Save, UserPlus, Users, Shield, Clock 
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,41 +15,36 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/lib/supabase';
-import { usePerfil } from "@/hooks/usePerfil"; // Importando Hook de Permissão
+import { usePerfil } from "@/hooks/usePerfil";
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 const locales = { 'pt-BR': ptBR };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
-const EQUIPE = [
-  { nome: 'Dra. Helenara Chaves', area: 'Neuropsicologia', cor: '#7c3aed' },
-  { nome: 'Dr. Antônio Pinto', area: 'Psicologia', cor: '#2563eb' },
-  { nome: 'Prof. Ramiro Mendes', area: 'Psicopedagogia', cor: '#16a34a' },
-  { nome: 'Fonoaudiologia', area: 'Fono', cor: '#ea580c' },
-  { nome: 'Terapeuta ABA', area: 'ABA', cor: '#db2777' }
-];
-
 export function Dashboard() {
   const navigate = useNavigate();
-  const { isAdmin } = usePerfil(); // Verifica se é Admin
+  const { isAdmin, isSecretaria } = usePerfil();
 
   const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
+  const [equipe, setEquipe] = useState<any[]>([]); // Dinâmico agora
   const [loading, setLoading] = useState(false);
   const [isAgendamentoOpen, setIsAgendamentoOpen] = useState(false);
   const [eventoSelecionadoId, setEventoSelecionadoId] = useState<number | null>(null);
-  const [isCadastroProfOpen, setIsCadastroProfOpen] = useState(false);
-  const [loadingCadastro, setLoadingCadastro] = useState(false);
-  const [novoProfissional, setNovoProfissional] = useState({ nome: '', email: '', senha: '' });
   const [form, setForm] = useState({ profissional: '', paciente: '', telefone: '', sala: '1', inicio: '', fim: '', observacoes: '' });
 
-  const fetchAgendamentos = async () => {
-    try {
-      const { data, error } = await supabase.from('agendamentos').select('*');
-      if (error) throw error;
-      const eventosFormatados = data.map(evt => {
-        const prof = EQUIPE.find(p => p.nome === evt.profissional_nome);
+  // 1. Carregar Dados
+  const fetchData = async () => {
+    // Busca Profissionais
+    const { data: profs } = await supabase.from('profissionais').select('*');
+    setEquipe(profs || []);
+
+    // Busca Agenda
+    const { data: agendamentos, error } = await supabase.from('agendamentos').select('*');
+    if (!error && agendamentos) {
+      const eventosFormatados = agendamentos.map(evt => {
+        const prof = profs?.find(p => p.nome === evt.profissional_nome);
         return {
           id: evt.id,
           title: `${evt.paciente_nome} (${evt.profissional_nome?.split(' ')[0]})`,
@@ -61,91 +56,69 @@ export function Dashboard() {
         };
       });
       setEvents(eventosFormatados);
-    } catch (error: any) {
-      console.error("Erro ao buscar agenda:", error);
     }
   };
 
-  useEffect(() => { fetchAgendamentos(); }, []);
-
-  const handleCadastrarProfissional = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoadingCadastro(true);
-    try {
-      const supabaseTemp = createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_ANON_KEY,
-        { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
-      );
-      const { error } = await supabaseTemp.auth.signUp({
-        email: novoProfissional.email,
-        password: novoProfissional.senha,
-        options: { data: { full_name: novoProfissional.nome } },
-      });
-      if (error) throw error;
-      toast.success(`Usuário ${novoProfissional.nome} criado!`);
-      setNovoProfissional({ nome: '', email: '', senha: '' });
-      setIsCadastroProfOpen(false);
-    } catch (error: any) {
-      toast.error("Erro: " + error.message);
-    } finally {
-      setLoadingCadastro(false);
-    }
-  };
-
-  const handleViewChange = (newView: View) => setView(newView);
-  const handleNavigate = (newDate: Date) => setDate(newDate);
-
-  const abrirModalCriacao = () => {
-    setEventoSelecionadoId(null);
-    const dataSugestao = new Date(date); 
-    dataSugestao.setHours(new Date().getHours() + 1, 0, 0, 0);
-    const formatForInput = (d: Date) => {
-      const offset = d.getTimezoneOffset() * 60000;
-      return (new Date(d.getTime() - offset)).toISOString().slice(0, 16);
-    };
-    setForm({ profissional: '', paciente: '', telefone: '', sala: '1', inicio: formatForInput(dataSugestao), fim: '', observacoes: '' });
-    setIsAgendamentoOpen(true);
-  };
-
-  const handleSelectEvent = (event: any) => {
-    const evt = event.original;
-    const formatDateForInput = (dateString: string) => {
-      const date = new Date(dateString);
-      const offset = date.getTimezoneOffset() * 60000;
-      return (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
-    };
-    setEventoSelecionadoId(evt.id);
-    setForm({
-      profissional: evt.profissional_nome,
-      paciente: evt.paciente_nome,
-      telefone: evt.paciente_telefone || '',
-      sala: String(evt.sala_id),
-      inicio: formatDateForInput(evt.data_inicio),
-      fim: formatDateForInput(evt.data_fim),
-      observacoes: evt.observacoes || ''
-    });
-    setIsAgendamentoOpen(true);
-  };
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, "");
-    if (value.length > 11) value = value.slice(0, 11);
-    if (value.length > 10) value = value.replace(/^(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-    else if (value.length > 6) value = value.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
-    else if (value.length > 2) value = value.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
-    else if (value.length > 0) value = value.replace(/^(\d*)/, "($1");
-    setForm({ ...form, telefone: value });
-  };
+  useEffect(() => { fetchData(); }, []);
 
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
       const inicio = new Date(form.inicio);
       const fim = new Date(form.fim);
-      if (fim <= inicio) { toast.warning("Data final deve ser maior que a inicial."); setLoading(false); return; }
+      
+      if (fim <= inicio) { toast.warning("Hora final deve ser maior que inicial."); setLoading(false); return; }
 
+      // --- VALIDAÇÃO 1: O PROFISSIONAL ATENDE NESSE DIA/HORA? ---
+      const profissionalObj = equipe.find(p => p.nome === form.profissional);
+      if (profissionalObj && profissionalObj.horarios) {
+        const diaSemana = inicio.getDay(); // 0=Dom, 1=Seg...
+        const configDia = profissionalObj.horarios[diaSemana];
+
+        if (!configDia || !configDia.ativo) {
+          toast.error(`${form.profissional} não atende neste dia da semana.`);
+          setLoading(false); return;
+        }
+
+        // Verifica hora (comparação simples de string HH:MM)
+        const horaInicio = inicio.toTimeString().slice(0, 5);
+        const horaFim = fim.toTimeString().slice(0, 5);
+
+        if (horaInicio < configDia.inicio || horaFim > configDia.fim) {
+          toast.error(`${form.profissional} só atende das ${configDia.inicio} às ${configDia.fim} neste dia.`);
+          setLoading(false); return;
+        }
+      }
+
+      // --- VALIDAÇÃO 2: CHOQUE DE HORÁRIO (OVERLAP) ---
+      // Verifica se já existe agendamento para este profissional no intervalo (exceto ele mesmo se for edição)
+      const { data: conflitos } = await supabase
+        .from('agendamentos')
+        .select('id')
+        .eq('profissional_nome', form.profissional)
+        .neq('id', eventoSelecionadoId || -1) // Ignora o próprio ID se estiver editando
+        .or(`and(data_inicio.lte.${fim.toISOString()},data_fim.gte.${inicio.toISOString()})`); // Lógica de Overlap
+
+      // Nota: A lógica acima verifica se um evento começa antes do outro terminar E termina depois do outro começar.
+      // Ajuste fino para evitar "colar" eventos (ex: um acaba 10:00 e outro começa 10:00 não é conflito)
+      
+      // Filtragem manual para garantir precisão
+      const temConflitoReal = conflitos?.some(c => {
+        // Busca o evento original na lista local para ter as datas exatas
+        const evt = events.find(e => e.id === c.id);
+        if (!evt) return false;
+        // Se (NovoInicio < EventoFim) E (NovoFim > EventoInicio) -> Conflito
+        return inicio < evt.end && fim > evt.start;
+      });
+
+      if (temConflitoReal) {
+        toast.error(`Choque de horário! ${form.profissional} já tem paciente neste horário.`);
+        setLoading(false); return;
+      }
+
+      // --- SALVAR ---
       const payload = {
         sala_id: parseInt(form.sala),
         profissional_nome: form.profissional,
@@ -166,7 +139,7 @@ export function Dashboard() {
         toast.success("Agendado!");
       }
       setIsAgendamentoOpen(false);
-      fetchAgendamentos();
+      fetchData();
     } catch (error: any) {
       toast.error("Erro: " + error.message);
     } finally {
@@ -175,50 +148,64 @@ export function Dashboard() {
   };
 
   const handleExcluir = async () => {
-    if (!eventoSelecionadoId || !confirm("Tem certeza que deseja apagar?")) return;
-    setLoading(true);
-    try {
-      const { error } = await supabase.from('agendamentos').delete().eq('id', eventoSelecionadoId);
-      if (error) throw error;
-      toast.success("Excluído.");
-      setIsAgendamentoOpen(false);
-      fetchAgendamentos();
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
+    if (!eventoSelecionadoId || !confirm("Apagar agendamento?")) return;
+    await supabase.from('agendamentos').delete().eq('id', eventoSelecionadoId);
+    setIsAgendamentoOpen(false);
+    fetchData();
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login');
+  const handleLogout = async () => { await supabase.auth.signOut(); navigate('/login'); };
+  
+  // Helpers de Calendário
+  const handleViewChange = (newView: View) => setView(newView);
+  const handleNavigate = (newDate: Date) => setDate(newDate);
+  const handleSelectEvent = (event: any) => {
+    const evt = event.original;
+    const formatForInput = (d: Date) => { const offset = d.getTimezoneOffset() * 60000; return (new Date(d.getTime() - offset)).toISOString().slice(0, 16); };
+    setEventoSelecionadoId(evt.id);
+    setForm({
+      profissional: evt.profissional_nome, paciente: evt.paciente_nome, telefone: evt.paciente_telefone || '',
+      sala: String(evt.sala_id), inicio: formatForInput(evt.data_inicio), fim: formatForInput(evt.data_fim), observacoes: evt.observacoes || ''
+    });
+    setIsAgendamentoOpen(true);
+  };
+  const abrirModalCriacao = () => {
+    setEventoSelecionadoId(null);
+    const dataSugestao = new Date(date); dataSugestao.setHours(new Date().getHours() + 1, 0, 0, 0);
+    const formatForInput = (d: Date) => { const offset = d.getTimezoneOffset() * 60000; return (new Date(d.getTime() - offset)).toISOString().slice(0, 16); };
+    setForm({ profissional: '', paciente: '', telefone: '', sala: '1', inicio: formatForInput(dataSugestao), fim: '', observacoes: '' });
+    setIsAgendamentoOpen(true);
+  };
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, "");
+    if (value.length > 11) value = value.slice(0, 11);
+    if (value.length > 10) value = value.replace(/^(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+    else if (value.length > 6) value = value.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+    else if (value.length > 2) value = value.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+    else if (value.length > 0) value = value.replace(/^(\d*)/, "($1");
+    setForm({ ...form, telefone: value });
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       <header className="bg-white border-b px-6 py-3 flex justify-between items-center shadow-sm sticky top-0 z-20 h-20">
         <div className="flex items-center gap-3">
-          <div className="bg-blue-600 p-2.5 rounded-xl shadow-sm">
-            <CalendarIcon className="text-white w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-800 tracking-tight leading-none">Instituto SerClin</h1>
-            <p className="text-xs text-gray-500 font-medium mt-1">Sistema de Gestão Integrada</p>
-          </div>
+          <div className="bg-blue-600 p-2.5 rounded-xl shadow-sm"><CalendarIcon className="text-white w-6 h-6" /></div>
+          <div><h1 className="text-xl font-bold text-gray-800">Instituto SerClin</h1><p className="text-xs text-gray-500 font-medium">Gestão Integrada</p></div>
         </div>
         
         <div className="flex gap-2">
-          {/* BOTÕES EXCLUSIVOS DO ADMIN */}
+          {/* BOTÕES DE GESTÃO (Admin e Secretária podem ver Horários) */}
+          {(isAdmin || isSecretaria) && (
+            <Button variant="outline" onClick={() => navigate('/sistema/horarios')} className="border-green-200 text-green-700 hover:bg-green-50 gap-2 h-10">
+              <Clock size={18} /> <span className="hidden sm:inline">Horários</span>
+            </Button>
+          )}
+
           {isAdmin && (
-            <>
-              <Button variant="outline" onClick={() => navigate('/sistema/acessos')} className="border-purple-200 text-purple-700 hover:bg-purple-50 gap-2 h-10">
-                <Shield size={18} /> <span className="hidden sm:inline">Acessos</span>
-              </Button>
-              <Button variant="outline" onClick={() => setIsCadastroProfOpen(true)} className="border-gray-200 text-gray-700 hover:bg-gray-50 gap-2 h-10">
-                <UserPlus size={18} /> <span className="hidden sm:inline">Equipe</span>
-              </Button>
-            </>
+            <Button variant="outline" onClick={() => navigate('/sistema/acessos')} className="border-purple-200 text-purple-700 hover:bg-purple-50 gap-2 h-10">
+              <Shield size={18} /> <span className="hidden sm:inline">Acessos</span>
+            </Button>
           )}
 
           <Button variant="outline" onClick={() => navigate('/sistema/pacientes')} className="border-blue-200 text-blue-700 hover:bg-blue-50 gap-2 h-10">
@@ -228,18 +215,16 @@ export function Dashboard() {
           <Button onClick={abrirModalCriacao} className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-sm h-10">
             <Plus size={18} /> <span className="hidden sm:inline">Agendar</span>
           </Button>
-          
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="hover:bg-red-50 hover:text-red-600 text-gray-400 h-10 w-10">
-            <LogOut size={18} />
-          </Button>
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="hover:bg-red-50 hover:text-red-600 text-gray-400 h-10 w-10"><LogOut size={18} /></Button>
         </div>
       </header>
 
+      {/* LEGENDA DINÂMICA (Vem do Banco) */}
       <div className="bg-white border-b px-6 py-3 flex gap-4 overflow-x-auto scrollbar-hide">
-        {EQUIPE.map((prof) => (
-          <div key={prof.nome} className="flex items-center gap-2 min-w-fit px-2 py-1 rounded-full border border-transparent hover:border-gray-200">
+        {equipe.map((prof) => (
+          <div key={prof.id} className="flex items-center gap-2 min-w-fit px-2 py-1 rounded-full border border-transparent hover:border-gray-200">
             <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: prof.cor }} />
-            <span className="text-xs font-medium text-gray-700">{prof.nome.split(' ')[0]} {prof.nome.split(' ')[1]}</span>
+            <span className="text-xs font-medium text-gray-700">{prof.nome.split(' ')[0]} {prof.nome.split(' ')[1] || ''}</span>
           </div>
         ))}
       </div>
@@ -269,38 +254,9 @@ export function Dashboard() {
         </Card>
       </main>
 
-      {/* MODAL 1: CADASTRO DE PROFISSIONAL (Só Admin vê o botão, mas mantemos o modal aqui) */}
-      {isCadastroProfOpen && isAdmin && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-blue-50 px-6 py-4 flex justify-between items-center border-b border-blue-100">
-              <h3 className="font-bold text-lg text-blue-800 flex items-center gap-2"><UserPlus size={20}/> Nova Conta</h3>
-              <button onClick={() => setIsCadastroProfOpen(false)}><X size={20} className="text-blue-400 hover:text-blue-700"/></button>
-            </div>
-            <form onSubmit={handleCadastrarProfissional} className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Nome do Profissional</label>
-                <Input required placeholder="Ex: Dra. Ana Silva" value={novoProfissional.nome} onChange={e => setNovoProfissional({...novoProfissional, nome: e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">E-mail de Login</label>
-                <Input required type="email" placeholder="email@serclin.com" value={novoProfissional.email} onChange={e => setNovoProfissional({...novoProfissional, email: e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Senha Provisória</label>
-                <Input required type="password" minLength={6} placeholder="Mínimo 6 dígitos" value={novoProfissional.senha} onChange={e => setNovoProfissional({...novoProfissional, senha: e.target.value})} />
-              </div>
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 mt-2" disabled={loadingCadastro}>
-                {loadingCadastro ? 'Criando...' : 'Cadastrar Usuário'}
-              </Button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: AGENDAMENTO */}
+      {/* MODAL DE AGENDAMENTO */}
       {isAgendamentoOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
             <div className="bg-gray-50 px-6 py-4 flex justify-between items-center border-b">
               <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
@@ -315,8 +271,10 @@ export function Dashboard() {
                   <Select value={form.profissional} onValueChange={(val) => setForm({...form, profissional: val})} required>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {EQUIPE.map(prof => (
-                        <SelectItem key={prof.nome} value={prof.nome}><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: prof.cor }} />{prof.nome}</div></SelectItem>
+                      {equipe.map(prof => (
+                        <SelectItem key={prof.id} value={prof.nome}>
+                          <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: prof.cor }} />{prof.nome}</div>
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -338,9 +296,7 @@ export function Dashboard() {
                 </div>
                 <div className="space-y-1.5"><label className="text-sm font-semibold">Obs</label><Input value={form.observacoes} onChange={e => setForm({...form, observacoes: e.target.value})} /></div>
                 <div className="pt-4 flex gap-3 border-t mt-4">
-                  {eventoSelecionadoId && (
-                    <Button type="button" variant="destructive" onClick={handleExcluir} disabled={loading}><Trash2 size={18} className="mr-2"/> Excluir</Button>
-                  )}
+                  {eventoSelecionadoId && <Button type="button" variant="destructive" onClick={handleExcluir} disabled={loading}><Trash2 size={18} className="mr-2"/> Excluir</Button>}
                   <Button type="submit" className={`flex-[2] text-white font-bold ${eventoSelecionadoId ? 'bg-blue-600' : 'bg-green-600'}`} disabled={loading}><Save size={18} className="mr-2"/> {loading ? '...' : 'Salvar'}</Button>
                 </div>
               </form>
