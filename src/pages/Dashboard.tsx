@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
-// --- CORREÇÃO AQUI: Importação moderna ---
+// --- CORREÇÃO IMPORTANTE: Imports atualizados para date-fns v3 ---
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-// -----------------------------------------
+// ----------------------------------------------------------------
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Calendar as CalendarIcon, Plus, X, User } from "lucide-react"; // Removi AlertTriangle se não usar
+import { LogOut, Calendar as CalendarIcon, Plus, X, User } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Input } from "@/components/ui/input";
