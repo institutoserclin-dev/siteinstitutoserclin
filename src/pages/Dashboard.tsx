@@ -6,41 +6,21 @@ import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { createClient } from '@supabase/supabase-js';
 import { 
-  LogOut, 
-  Calendar as CalendarIcon, 
-  Plus, 
-  X, 
-  User, 
-  Trash2, 
-  Save,
-  UserPlus,
-  Users // <--- Ícone novo para o botão de Pacientes
+  LogOut, Calendar as CalendarIcon, Plus, X, User, Trash2, 
+  Save, UserPlus, Users, Shield 
 } from "lucide-react";
 import { toast } from "sonner";
-
-// Componentes UI
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-// Backend
 import { supabase } from '@/lib/supabase';
-
-// Estilos
+import { usePerfil } from "@/hooks/usePerfil"; // Importando Hook de Permissão
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// --- CONFIGURAÇÃO REGIONAL ---
 const locales = { 'pt-BR': ptBR };
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek,
-  getDay,
-  locales,
-});
+const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
-// --- DADOS DA EQUIPE ---
 const EQUIPE = [
   { nome: 'Dra. Helenara Chaves', area: 'Neuropsicologia', cor: '#7c3aed' },
   { nome: 'Dr. Antônio Pinto', area: 'Psicologia', cor: '#2563eb' },
@@ -51,38 +31,23 @@ const EQUIPE = [
 
 export function Dashboard() {
   const navigate = useNavigate();
-  
-  // --- ESTADOS DA AGENDA ---
+  const { isAdmin } = usePerfil(); // Verifica se é Admin
+
   const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(new Date());
-
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAgendamentoOpen, setIsAgendamentoOpen] = useState(false);
   const [eventoSelecionadoId, setEventoSelecionadoId] = useState<number | null>(null);
-
-  // --- ESTADOS DO CADASTRO DE PROFISSIONAL ---
   const [isCadastroProfOpen, setIsCadastroProfOpen] = useState(false);
   const [loadingCadastro, setLoadingCadastro] = useState(false);
   const [novoProfissional, setNovoProfissional] = useState({ nome: '', email: '', senha: '' });
+  const [form, setForm] = useState({ profissional: '', paciente: '', telefone: '', sala: '1', inicio: '', fim: '', observacoes: '' });
 
-  // Formulário de Agendamento
-  const [form, setForm] = useState({
-    profissional: '',
-    paciente: '',
-    telefone: '',
-    sala: '1',
-    inicio: '',
-    fim: '',
-    observacoes: ''
-  });
-
-  // --- 1. BUSCAR DADOS DA AGENDA ---
   const fetchAgendamentos = async () => {
     try {
       const { data, error } = await supabase.from('agendamentos').select('*');
       if (error) throw error;
-
       const eventosFormatados = data.map(evt => {
         const prof = EQUIPE.find(p => p.nome === evt.profissional_nome);
         return {
@@ -103,7 +68,6 @@ export function Dashboard() {
 
   useEffect(() => { fetchAgendamentos(); }, []);
 
-  // --- 2. CADASTRO DE PROFISSIONAL ---
   const handleCadastrarProfissional = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingCadastro(true);
@@ -129,34 +93,18 @@ export function Dashboard() {
     }
   };
 
-  // --- 3. FUNÇÕES DA AGENDA ---
-  const handleViewChange = (newView: View) => {
-    setView(newView);
-  };
-
-  const handleNavigate = (newDate: Date) => {
-    setDate(newDate);
-  };
+  const handleViewChange = (newView: View) => setView(newView);
+  const handleNavigate = (newDate: Date) => setDate(newDate);
 
   const abrirModalCriacao = () => {
     setEventoSelecionadoId(null);
     const dataSugestao = new Date(date); 
     dataSugestao.setHours(new Date().getHours() + 1, 0, 0, 0);
-    
     const formatForInput = (d: Date) => {
       const offset = d.getTimezoneOffset() * 60000;
       return (new Date(d.getTime() - offset)).toISOString().slice(0, 16);
     };
-
-    setForm({ 
-      profissional: '', 
-      paciente: '', 
-      telefone: '', 
-      sala: '1', 
-      inicio: formatForInput(dataSugestao), 
-      fim: '', 
-      observacoes: '' 
-    });
+    setForm({ profissional: '', paciente: '', telefone: '', sala: '1', inicio: formatForInput(dataSugestao), fim: '', observacoes: '' });
     setIsAgendamentoOpen(true);
   };
 
@@ -167,7 +115,6 @@ export function Dashboard() {
       const offset = date.getTimezoneOffset() * 60000;
       return (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
     };
-
     setEventoSelecionadoId(evt.id);
     setForm({
       profissional: evt.profissional_nome,
@@ -194,15 +141,10 @@ export function Dashboard() {
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       const inicio = new Date(form.inicio);
       const fim = new Date(form.fim);
-      
-      if (fim <= inicio) {
-        toast.warning("Data final deve ser maior que a inicial.");
-        setLoading(false); return;
-      }
+      if (fim <= inicio) { toast.warning("Data final deve ser maior que a inicial."); setLoading(false); return; }
 
       const payload = {
         sala_id: parseInt(form.sala),
@@ -255,8 +197,6 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      
-      {/* CABEÇALHO */}
       <header className="bg-white border-b px-6 py-3 flex justify-between items-center shadow-sm sticky top-0 z-20 h-20">
         <div className="flex items-center gap-3">
           <div className="bg-blue-600 p-2.5 rounded-xl shadow-sm">
@@ -269,46 +209,32 @@ export function Dashboard() {
         </div>
         
         <div className="flex gap-2">
-          
-          {/* BOTÃO DE PACIENTES (NOVO) */}
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/sistema/pacientes')} 
-            className="border-blue-200 text-blue-700 hover:bg-blue-50 gap-2 h-10"
-          >
+          {/* BOTÕES EXCLUSIVOS DO ADMIN */}
+          {isAdmin && (
+            <>
+              <Button variant="outline" onClick={() => navigate('/sistema/acessos')} className="border-purple-200 text-purple-700 hover:bg-purple-50 gap-2 h-10">
+                <Shield size={18} /> <span className="hidden sm:inline">Acessos</span>
+              </Button>
+              <Button variant="outline" onClick={() => setIsCadastroProfOpen(true)} className="border-gray-200 text-gray-700 hover:bg-gray-50 gap-2 h-10">
+                <UserPlus size={18} /> <span className="hidden sm:inline">Equipe</span>
+              </Button>
+            </>
+          )}
+
+          <Button variant="outline" onClick={() => navigate('/sistema/pacientes')} className="border-blue-200 text-blue-700 hover:bg-blue-50 gap-2 h-10">
             <Users size={18} /> <span className="hidden sm:inline">Pacientes</span>
           </Button>
 
-          {/* BOTÃO DE EQUIPE */}
-          <Button 
-            variant="outline" 
-            onClick={() => setIsCadastroProfOpen(true)} 
-            className="border-gray-200 text-gray-700 hover:bg-gray-50 gap-2 h-10"
-          >
-            <UserPlus size={18} /> <span className="hidden sm:inline">Equipe</span>
-          </Button>
-
-          {/* BOTÃO DE AGENDAR */}
-          <Button 
-            onClick={abrirModalCriacao} 
-            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-sm h-10"
-          >
+          <Button onClick={abrirModalCriacao} className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-sm h-10">
             <Plus size={18} /> <span className="hidden sm:inline">Agendar</span>
           </Button>
           
-          {/* BOTÃO SAIR */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleLogout} 
-            className="hover:bg-red-50 hover:text-red-600 text-gray-400 h-10 w-10"
-          >
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="hover:bg-red-50 hover:text-red-600 text-gray-400 h-10 w-10">
             <LogOut size={18} />
           </Button>
         </div>
       </header>
 
-      {/* LEGENDA */}
       <div className="bg-white border-b px-6 py-3 flex gap-4 overflow-x-auto scrollbar-hide">
         {EQUIPE.map((prof) => (
           <div key={prof.nome} className="flex items-center gap-2 min-w-fit px-2 py-1 rounded-full border border-transparent hover:border-gray-200">
@@ -318,7 +244,6 @@ export function Dashboard() {
         ))}
       </div>
 
-      {/* CALENDÁRIO */}
       <main className="flex-1 p-4 md:p-6 overflow-hidden">
         <Card className="h-full shadow-md border-none flex flex-col bg-white">
           <CardContent className="p-0 flex-1 relative">
@@ -333,10 +258,7 @@ export function Dashboard() {
               startAccessor="start"
               endAccessor="end"
               style={{ height: '100%', minHeight: '600px' }}
-              messages={{ 
-                next: "Próx", previous: "Ant", today: "Hoje", 
-                month: "Mês", week: "Semana", day: "Dia", agenda: "Lista" 
-              }}
+              messages={{ next: "Próx", previous: "Ant", today: "Hoje", month: "Mês", week: "Semana", day: "Dia", agenda: "Lista" }}
               culture='pt-BR'
               eventPropGetter={(event) => ({
                 style: { backgroundColor: event.color, borderLeft: '4px solid rgba(0,0,0,0.2)', fontSize: '0.8rem', borderRadius: '4px' }
@@ -347,8 +269,8 @@ export function Dashboard() {
         </Card>
       </main>
 
-      {/* --- MODAL 1: CADASTRO DE PROFISSIONAL --- */}
-      {isCadastroProfOpen && (
+      {/* MODAL 1: CADASTRO DE PROFISSIONAL (Só Admin vê o botão, mas mantemos o modal aqui) */}
+      {isCadastroProfOpen && isAdmin && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="bg-blue-50 px-6 py-4 flex justify-between items-center border-b border-blue-100">
@@ -376,7 +298,7 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* --- MODAL 2: AGENDAMENTO --- */}
+      {/* MODAL 2: AGENDAMENTO */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
