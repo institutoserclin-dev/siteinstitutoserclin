@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Adicionado useNavigate
 import { toast } from "sonner";
 import { 
   User, Plus, Search, FileText, MapPin, 
-  Trash2, Edit, X, Save 
+  Trash2, Edit, X, Save, ArrowLeft, Camera, ImageIcon 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,14 +16,18 @@ const CONVENIOS = [
 ];
 
 export function Pacientes() {
-  const { isAdmin } = usePerfil(); // Verifica se é Admin
+  const navigate = useNavigate(); // Hook para navegação
+  const { isAdmin } = usePerfil();
+  const fileInputRef = useRef<HTMLInputElement>(null); // Referência para input de foto
+
   const [pacientes, setPacientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [fotoSelecionada, setFotoSelecionada] = useState<File | null>(null); // Estado da foto
   
   const [form, setForm] = useState({
-    id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", endereco: "", telefone: "", convenio: "Particular"
+    id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", endereco: "", telefone: "", convenio: "Particular", foto_url: ""
   });
 
   const calcularIdade = (dataNasc: string) => {
@@ -59,27 +63,61 @@ export function Pacientes() {
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const payload = { ...form, convenio: form.convenio || "Particular" };
-      if (form.id) await supabase.from("pacientes").update(payload).eq("id", form.id);
-      else {
-        const { id, ...newPayload } = payload; // Remove ID nulo
-        await supabase.from("pacientes").insert([newPayload]);
+      let urlDaFoto = form.foto_url;
+
+      // 1. Se selecionou uma foto nova, faz o upload
+      if (fotoSelecionada) {
+        const fileExt = fotoSelecionada.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('fotos-perfil')
+          .upload(filePath, fotoSelecionada);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('fotos-perfil')
+          .getPublicUrl(filePath);
+        
+        urlDaFoto = publicUrl;
       }
-      toast.success("Salvo com sucesso!");
+
+      // 2. Salva os dados no banco
+      const payload = { 
+        ...form, 
+        convenio: form.convenio || "Particular",
+        foto_url: urlDaFoto 
+      };
+
+      if (form.id) {
+        await supabase.from("pacientes").update(payload).eq("id", form.id);
+        toast.success("Paciente atualizado!");
+      } else {
+        const { id, ...newPayload } = payload;
+        await supabase.from("pacientes").insert([newPayload]);
+        toast.success("Paciente cadastrado!");
+      }
+
       setIsModalOpen(false);
+      setFotoSelecionada(null); // Limpa seleção
       fetchPacientes();
-    } catch (error) {
-      toast.error("Erro ao salvar.");
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Erro ao salvar: " + error.message);
     }
   };
 
   const handleEditar = (p: any) => {
-    setForm({ ...p, cpf: p.cpf || "", convenio: p.convenio || "Particular" });
+    setForm({ ...p, cpf: p.cpf || "", convenio: p.convenio || "Particular", foto_url: p.foto_url || "" });
+    setFotoSelecionada(null);
     setIsModalOpen(true);
   };
 
   const handleNovo = () => {
-    setForm({ id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", endereco: "", telefone: "", convenio: "Particular" });
+    setForm({ id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", endereco: "", telefone: "", convenio: "Particular", foto_url: "" });
+    setFotoSelecionada(null);
     setIsModalOpen(true);
   };
 
@@ -95,19 +133,30 @@ export function Pacientes() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto min-h-screen bg-gray-50 font-sans">
+      
+      {/* BOTÃO VOLTAR (NOVO) */}
+      <div className="mb-6">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate("/sistema")} 
+          className="gap-2 pl-0 hover:bg-transparent hover:text-blue-600 text-gray-600"
+        >
+          <ArrowLeft size={18} /> Voltar para Dashboard
+        </Button>
+      </div>
+
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <User className="text-blue-600" /> Pacientes
           </h1>
-          <p className="text-gray-500 text-sm">Gerencie cadastros e prontuários.</p>
+          <p className="text-gray-500 text-sm">Gerencie cadastros, fotos e prontuários.</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             <Input placeholder="Buscar..." className="pl-9 bg-white" value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
-          {/* SÓ ADMIN VÊ O BOTÃO NOVO */}
           {isAdmin && (
             <Button onClick={handleNovo} className="bg-blue-600 hover:bg-blue-700 text-white">
               <Plus size={18} className="mr-2" /> Novo
@@ -121,25 +170,45 @@ export function Pacientes() {
           <Card key={paciente.id} className="hover:shadow-md transition-all bg-white border-gray-200">
             <CardContent className="p-5">
               <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="font-bold text-lg text-gray-800">{paciente.nome}</h3>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">
-                      {paciente.genero} • {calcularIdade(paciente.data_nascimento)}
-                    </span>
-                    <span className="text-xs border px-2 py-1 rounded text-blue-700 border-blue-100 bg-blue-50 font-semibold">
-                      {paciente.convenio}
-                    </span>
+                <div className="flex gap-3 items-center">
+                  
+                  {/* FOTO DO PACIENTE (REDONDA) */}
+                  {paciente.foto_url ? (
+                    <img 
+                      src={paciente.foto_url} 
+                      alt={paciente.nome} 
+                      className="w-12 h-12 rounded-full object-cover border border-gray-200 shadow-sm"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                      <User size={24} />
+                    </div>
+                  )}
+
+                  <div>
+                    <h3 className="font-bold text-lg text-gray-800">{paciente.nome}</h3>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">
+                        {paciente.genero} • {calcularIdade(paciente.data_nascimento)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                {/* SÓ ADMIN VÊ BOTÕES DE EDIÇÃO/EXCLUSÃO */}
+
                 {isAdmin && (
-                  <div className="flex gap-1">
-                    <button onClick={() => handleEditar(paciente)} className="p-2 hover:bg-gray-100 rounded text-gray-500"><Edit size={16}/></button>
-                    <button onClick={() => handleExcluir(paciente.id)} className="p-2 hover:bg-red-50 rounded text-gray-400 hover:text-red-500"><Trash2 size={16}/></button>
+                  <div className="flex flex-col gap-1">
+                    <button onClick={() => handleEditar(paciente)} className="p-1.5 hover:bg-gray-100 rounded text-gray-500"><Edit size={16}/></button>
+                    <button onClick={() => handleExcluir(paciente.id)} className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500"><Trash2 size={16}/></button>
                   </div>
                 )}
               </div>
+              
+              <div className="pl-[60px]">
+                <span className="text-xs border px-2 py-1 rounded text-blue-700 border-blue-100 bg-blue-50 font-semibold">
+                  {paciente.convenio}
+                </span>
+              </div>
+
               <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
                 <Link to={`/sistema/pacientes/${paciente.id}`} className="w-full">
                   <Button variant="outline" className="w-full text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50">
@@ -163,6 +232,32 @@ export function Pacientes() {
             </div>
             <div className="overflow-y-auto p-6">
               <form onSubmit={handleSalvar} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                
+                {/* ÁREA DE UPLOAD DE FOTO */}
+                <div className="md:col-span-2 flex justify-center mb-4">
+                  <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                    {fotoSelecionada ? (
+                      <img src={URL.createObjectURL(fotoSelecionada)} className="w-24 h-24 rounded-full object-cover border-4 border-blue-100" />
+                    ) : form.foto_url ? (
+                      <img src={form.foto_url} className="w-24 h-24 rounded-full object-cover border-4 border-blue-100" />
+                    ) : (
+                      <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300 group-hover:border-blue-400">
+                        <Camera size={32} className="text-gray-400 group-hover:text-blue-500" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 right-0 bg-blue-600 text-white p-1.5 rounded-full shadow-sm">
+                      <ImageIcon size={14} />
+                    </div>
+                  </div>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={(e) => setFotoSelecionada(e.target.files ? e.target.files[0] : null)} 
+                  />
+                </div>
+
                 <div className="md:col-span-2 space-y-1">
                   <label className="text-sm font-semibold text-gray-700">Nome Completo</label>
                   <input required value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} className={inputClass} placeholder="Ex: Maria da Silva" />
