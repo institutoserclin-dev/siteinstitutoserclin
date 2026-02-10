@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { format, differenceInYears } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePerfil } from "@/hooks/usePerfil";
 
@@ -47,8 +47,10 @@ export function Prontuario() {
       const nomeProfissional = user?.user_metadata?.full_name || user?.email || "Profissional";
       const emailProfissional = user?.email || "";
 
-      let arquivoUrl = null;
-      let arquivoNome = null;
+      // --- CORREÇÃO DO ERRO AQUI ---
+      // Definimos explicitamente que pode ser string (texto) ou null
+      let arquivoUrl: string | null = null;
+      let arquivoNome: string | null = null;
 
       if (arquivoSelecionado) {
         const fileExt = arquivoSelecionado.name.split('.').pop();
