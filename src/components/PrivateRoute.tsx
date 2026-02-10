@@ -1,39 +1,40 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase"; // ⚠️ CONFIRA SE O CAMINHO DO SEU SUPABASE ESTÁ CORRETO AQUI
+import { supabase } from "@/lib/supabase";
 
 export function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // 1. Verifica se tem sessão ativa ao carregar a página
+    // Verifica a sessão atual ao carregar
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
+      setSession(!!session);
     });
 
-    // 2. Fica ouvindo mudanças (ex: se o token expirar ou usuário clicar em sair)
+    // Escuta mudanças na autenticação (login/logout)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
+      setSession(!!session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) {
-    // Enquanto verifica, mostra uma tela branca ou um "Carregando..."
-    return <div className="flex h-screen w-full items-center justify-center">Carregando sistema...</div>;
+  // Enquanto verifica, mostra carregando (para evitar piscar a tela de login)
+  if (session === null) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+      </div>
+    );
   }
 
-  // Se NÃO tem sessão, chuta para o login
+  // Se não tem sessão, manda pro login
   if (!session) {
     return <Navigate to="/login" replace />;
   }
 
-  // Se tem sessão, deixa entrar
+  // Se tem sessão, mostra o conteúdo protegido
   return <>{children}</>;
 }

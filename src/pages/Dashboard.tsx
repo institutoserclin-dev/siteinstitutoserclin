@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-// 👇 AQUI ESTAVA O ERRO. Removemos 'View' daqui...
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
-// ... e importamos como TIPO aqui embaixo:
 import type { View } from 'react-big-calendar';
-
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { createClient } from '@supabase/supabase-js';
@@ -16,9 +13,8 @@ import {
   User, 
   Trash2, 
   Save,
-  Clock,
-  Phone,
-  UserPlus
+  UserPlus,
+  Users // <--- Ícone novo para o botão de Pacientes
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -48,7 +44,7 @@ const localizer = dateFnsLocalizer({
 const EQUIPE = [
   { nome: 'Dra. Helenara Chaves', area: 'Neuropsicologia', cor: '#7c3aed' },
   { nome: 'Dr. Antônio Pinto', area: 'Psicologia', cor: '#2563eb' },
-  { nome: 'Prof. Ramiro Mendes', area: 'Psicopedagogia', cor: '#16a34a' },
+  { nome: 'Prof. Me. Ramiro Mendes', area: 'Psicopedagogia', cor: '#16a34a' },
   { nome: 'Fonoaudiologia', area: 'Fono', cor: '#ea580c' },
   { nome: 'Terapeuta ABA', area: 'ABA', cor: '#db2777' }
 ];
@@ -57,7 +53,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   
   // --- ESTADOS DA AGENDA ---
-  const [view, setView] = useState<View>(Views.WEEK); // Agora o TS entende que 'View' é um tipo
+  const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(new Date());
 
   const [events, setEvents] = useState<any[]>([]);
@@ -261,25 +257,52 @@ export function Dashboard() {
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       
       {/* CABEÇALHO */}
-      <header className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-20">
+      <header className="bg-white border-b px-6 py-3 flex justify-between items-center shadow-sm sticky top-0 z-20 h-20">
         <div className="flex items-center gap-3">
-          <div className="bg-blue-600 p-2 rounded-lg shadow-sm">
-            <CalendarIcon className="text-white w-5 h-5" />
+          <div className="bg-blue-600 p-2.5 rounded-xl shadow-sm">
+            <CalendarIcon className="text-white w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-800 tracking-tight">Instituto SerClin</h1>
-            <p className="text-xs text-gray-500 font-medium">Sistema de Gestão</p>
+            <h1 className="text-xl font-bold text-gray-800 tracking-tight leading-none">Instituto SerClin</h1>
+            <p className="text-xs text-gray-500 font-medium mt-1">Sistema de Gestão Integrada</p>
           </div>
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsCadastroProfOpen(true)} className="border-blue-200 text-blue-700 hover:bg-blue-50 gap-2">
-            <UserPlus size={18} /> <span className="hidden sm:inline">Add Equipe</span>
+          
+          {/* BOTÃO DE PACIENTES (NOVO) */}
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/sistema/pacientes')} 
+            className="border-blue-200 text-blue-700 hover:bg-blue-50 gap-2 h-10"
+          >
+            <Users size={18} /> <span className="hidden sm:inline">Pacientes</span>
           </Button>
-          <Button onClick={abrirModalCriacao} className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-sm">
+
+          {/* BOTÃO DE EQUIPE */}
+          <Button 
+            variant="outline" 
+            onClick={() => setIsCadastroProfOpen(true)} 
+            className="border-gray-200 text-gray-700 hover:bg-gray-50 gap-2 h-10"
+          >
+            <UserPlus size={18} /> <span className="hidden sm:inline">Equipe</span>
+          </Button>
+
+          {/* BOTÃO DE AGENDAR */}
+          <Button 
+            onClick={abrirModalCriacao} 
+            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-sm h-10"
+          >
             <Plus size={18} /> <span className="hidden sm:inline">Agendar</span>
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="hover:bg-red-50 hover:text-red-600 text-gray-400">
+          
+          {/* BOTÃO SAIR */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleLogout} 
+            className="hover:bg-red-50 hover:text-red-600 text-gray-400 h-10 w-10"
+          >
             <LogOut size={18} />
           </Button>
         </div>
@@ -311,7 +334,7 @@ export function Dashboard() {
               endAccessor="end"
               style={{ height: '100%', minHeight: '600px' }}
               messages={{ 
-                next: "Próximo", previous: "Anterior", today: "Hoje", 
+                next: "Próx", previous: "Ant", today: "Hoje", 
                 month: "Mês", week: "Semana", day: "Dia", agenda: "Lista" 
               }}
               culture='pt-BR'
