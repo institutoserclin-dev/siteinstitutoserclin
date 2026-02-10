@@ -4,10 +4,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
+// Importando componentes de proteção
+import { PrivateRoute } from "@/components/PrivateRoute";
+
 // Importando as páginas
 import Home from "@/pages/Home";
 import { Login } from "@/pages/Login";
-import { Dashboard } from "@/pages/Dashboard"; // <--- Importamos a Agenda aqui
+import { Dashboard } from "@/pages/Dashboard";
+import { CadastroUsuario } from "@/pages/CadastroUsuario"; // <--- Importamos a nova página aqui
 
 function App() {
   return (
@@ -17,14 +21,37 @@ function App() {
           {/* Roteador Profissional */}
           <BrowserRouter>
             <Routes>
-              {/* Rota 1: O Site Principal (Landing Page) */}
+              {/* --- ROTAS PÚBLICAS --- */}
+              
+              {/* Site Principal (Landing Page) */}
               <Route path="/" element={<Home />} />
 
-              {/* Rota 2: A Tela de Login */}
+              {/* Tela de Login */}
               <Route path="/login" element={<Login />} />
 
-              {/* Rota 3: O Painel do Sistema (Agora com a Agenda Real) */}
-              <Route path="/sistema" element={<Dashboard />} />
+
+              {/* --- ROTAS PROTEGIDAS (SISTEMA) --- */}
+              
+              {/* Painel Principal */}
+              <Route 
+                path="/sistema" 
+                element={
+                  <PrivateRoute>
+                    <Dashboard />
+                  </PrivateRoute>
+                } 
+              />
+
+              {/* Cadastro de Novos Profissionais (Só acessa quem estiver logado) */}
+              <Route 
+                path="/sistema/cadastro" 
+                element={
+                  <PrivateRoute>
+                    <CadastroUsuario />
+                  </PrivateRoute>
+                } 
+              />
+
             </Routes>
             <Toaster />
           </BrowserRouter>
