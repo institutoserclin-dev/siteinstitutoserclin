@@ -1,3 +1,16 @@
+// Adicione o ícone MessageCircle nos imports do Dashboard.tsx
+// No Header, ao lado dos outros botões de navegação:
+
+<Button 
+  variant="ghost" 
+  size="icon" 
+  onClick={() => navigate('/sistema/lembretes')} 
+  className="text-green-600 hover:bg-green-50"
+  title="Lembretes de Amanhã"
+>
+  <MessageCircle size={20}/>
+</Button>
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';

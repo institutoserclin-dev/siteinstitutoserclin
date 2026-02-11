@@ -1,3 +1,19 @@
+// 1. Importe a nova página
+import { Lembretes } from "./pages/Lembretes";
+
+// 2. Dentro do seu componente de rotas (Routes ou Switch)
+<Routes>
+  {/* Outras rotas já existentes... */}
+  <Route path="/sistema" element={<Dashboard />} />
+  <Route path="/sistema/pacientes" element={<Pacientes />} />
+  <Route path="/sistema/prontuario/:id" element={<Prontuario />} />
+  
+  {/* ADICIONE ESTA NOVA ROTA */}
+  <Route path="/sistema/lembretes" element={<Lembretes />} />
+  
+  {/* Outras rotas... */}
+</Routes>
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
