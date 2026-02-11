@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import SignatureCanvas from 'react-signature-canvas';
+import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import type { View } from 'react-big-calendar';
@@ -7,8 +8,7 @@ import { ptBR } from 'date-fns/locale';
 import { 
   LogOut, Calendar as CalendarIcon, Plus, X, Trash2, 
   FileText, BarChart3, Shield, Clock, Users, Filter, 
-  MessageCircle, CheckCircle, ExternalLink,
-  MessageSquare // <-- Substituído para evitar erro de versão
+  MessageCircle, CheckCircle, ExternalLink, MessageSquare 
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/lib/supabase';
 import { usePerfil } from "@/hooks/usePerfil";
+
+// Bibliotecas para PDF
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import logoSerClin from "@/assets/logo-serclin.png";
@@ -44,6 +48,9 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { isAdmin, isSecretaria } = usePerfil();
 
+  // REFERÊNCIA DO CANVAS
+  const sigCanvas = useRef<SignatureCanvas>(null);
+
   const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
@@ -57,7 +64,8 @@ export function Dashboard() {
   
   const [form, setForm] = useState({ 
     profissional: '', paciente_nome: '', paciente_id: null as number | null,
-    telefone: '', sala: '1', inicio: '', duracao: '50', status: 'Agendado' 
+    telefone: '', sala: '1', inicio: '', duracao: '50', status: 'Agendado',
+    assinatura_url: null as string | null
   });
 
   const fetchData = async () => {
@@ -90,6 +98,62 @@ export function Dashboard() {
     pesquisar();
   }, [buscaPaciente]);
 
+  // FUNÇÃO PARA GERAR ATESTADO EM PDF
+  const gerarComprovante = () => {
+    const doc = new jsPDF();
+    const dataAtual = format(new Date(), "dd/MM/yyyy");
+    const horaAtendimento = format(new Date(form.inicio), "HH:mm");
+
+    // 1. Logo Centralizada no Topo
+    // Dimensões: largura 50mm, altura proporcional
+    doc.addImage(logoSerClin, 'PNG', 80, 15, 50, 25);
+
+    // 2. Título do Documento
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(37, 99, 235); // Azul
+    doc.text("ATESTADO DE COMPARECIMENTO", 105, 55, { align: "center" });
+
+    // Linha divisória fina
+    doc.setDrawColor(200, 200, 200);
+    doc.line(30, 62, 180, 62);
+
+    // 3. Corpo do Texto Justificado com Espaçamento 1.5
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+
+    const textoCorpo = `Declaramos para os devidos fins de comprovação que o(a) paciente ${form.paciente_nome.toUpperCase()} esteve presente no INSTITUTO SERCLIN para atendimento especializado no dia ${format(new Date(form.inicio), "dd/MM/yyyy")}. O atendimento teve início às ${horaAtendimento} sob a responsabilidade do(a) profissional ${form.profissional.toUpperCase()}.`;
+
+    // Configuração de Justificado e Espaçamento 1.5 (LineHeightFactor)
+    // 210mm total - 20mm margem esquerda - 20mm margem direita = 170mm largura útil
+    doc.text(textoCorpo, 20, 80, { 
+      maxWidth: 170, 
+      align: "justify",
+      lineHeightFactor: 1.5 
+    });
+
+    // 4. Área da Assinatura
+    if (form.assinatura_url) {
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("ASSINATURA DIGITAL DO PACIENTE:", 20, 130);
+      doc.addImage(form.assinatura_url, 'PNG', 20, 135, 60, 25);
+      doc.setDrawColor(0, 0, 0);
+      doc.line(20, 160, 85, 160);
+    }
+
+    // 5. Rodapé Informativo
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text("INSTITUTO SERCLIN - GESTÃO INTEGRADA EM SAÚDE", 105, 270, { align: "center" });
+    doc.text("CNPJ: 64.585.207/0001-58 | R. Sorocaba, 140 - Rio Branco, AC", 105, 275, { align: "center" });
+    doc.text(`Documento autenticado digitalmente em ${dataAtual} às ${format(new Date(), "HH:mm")}`, 105, 280, { align: "center" });
+
+    doc.save(`Atestado_${form.paciente_nome.replace(/\s+/g, '_')}.pdf`);
+    toast.success("Atestado gerado com sucesso!");
+  };
+
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.profissional || !form.inicio) return toast.error("Preencha profissional e horário.");
@@ -119,6 +183,11 @@ export function Dashboard() {
         );
       }
 
+      let assinaturaBase64 = form.assinatura_url;
+      if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
+          assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
+      }
+
       const statusFinal = mapearStatusParaBanco(form.status);
 
       const payload = {
@@ -129,7 +198,8 @@ export function Dashboard() {
         paciente_telefone: form.telefone,
         data_inicio: dInicio.toISOString(),
         data_fim: dFim.toISOString(),
-        status: statusFinal
+        status: statusFinal,
+        assinatura_url: assinaturaBase64
       };
 
       const { error } = eventoSelecionadoId 
@@ -145,13 +215,7 @@ export function Dashboard() {
       toast.success("Agenda atualizada!");
     } catch (error: any) { 
       console.error(error);
-      if (error.message?.includes('no_profissional_overlap')) {
-        toast.error("Conflito: Este profissional já tem um atendimento neste horário.");
-      } else if (error.message?.includes('no_sala_overlap')) {
-        toast.error("Conflito: Esta sala já está sendo utilizada neste horário.");
-      } else {
-        toast.error("Erro ao salvar: Verifique se há conflitos de horário.");
-      }
+      toast.error("Erro ao salvar agendamento.");
     } finally { setLoading(false); }
   };
 
@@ -191,14 +255,7 @@ export function Dashboard() {
           {isAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600 hover:bg-purple-50"><Shield size={20}/></Button>}
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 hover:bg-blue-50 mr-2"><Users size={20}/></Button>
           
-          {/* BOTÃO DE LEMBRETES - USANDO MessageSquare PARA COMPATIBILIDADE */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => navigate('/sistema/lembretes')} 
-            className="relative text-emerald-600 hover:bg-emerald-50 mr-2"
-            title="Lembretes de Amanhã"
-          >
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/lembretes')} className="relative text-emerald-600 hover:bg-emerald-50 mr-2" title="Lembretes de Amanhã">
             <MessageSquare size={20}/>
             <span className="absolute top-1 right-1 flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -206,7 +263,7 @@ export function Dashboard() {
             </span>
           </Button>
 
-          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-bold"><Plus size={16} className="mr-1" /> AGENDAR</Button>
+          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-bold"><Plus size={16} className="mr-1" /> AGENDAR</Button>
           <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }}><LogOut size={18} /></Button>
         </div>
       </header>
@@ -222,12 +279,7 @@ export function Dashboard() {
               messages={{ next: "Próx", previous: "Ant", today: "Hoje", month: "Mês", week: "Semana", day: "Dia", agenda: "Lista" }}
               components={{ event: EventoCustomizado }}
               eventPropGetter={(event: any) => ({ 
-                style: { 
-                  backgroundColor: event.color, 
-                  border: 'none', 
-                  borderRadius: '4px', 
-                  opacity: (event.original?.status === 'Falta') ? 0.5 : 1 
-                }
+                style: { backgroundColor: event.color, border: 'none', borderRadius: '4px', opacity: (event.original?.status === 'Falta') ? 0.5 : 1 }
               })}
               onSelectEvent={(e) => {
                 const evt = e.original;
@@ -241,7 +293,8 @@ export function Dashboard() {
                   telefone: evt.paciente_telefone || '', 
                   inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), 
                   duracao: '50', 
-                  status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado')
+                  status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'),
+                  assinatura_url: evt.assinatura_url || null
                 });
                 setIsAgendamentoOpen(true);
               }}
@@ -252,8 +305,8 @@ export function Dashboard() {
       </main>
 
       {isAgendamentoOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-left font-sans">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md my-8 overflow-hidden text-left font-sans">
             <div className="p-6 border-b flex justify-between items-center bg-gray-50">
               <h3 className="font-bold text-gray-800 uppercase text-xs tracking-widest">{eventoSelecionadoId ? 'Editar Detalhes' : 'Agendar Paciente'}</h3>
               <button onClick={() => setIsAgendamentoOpen(false)}><X size={20}/></button>
@@ -323,7 +376,7 @@ export function Dashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase text-left block">WhatsApp</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">WhatsApp</label>
                   <div className="flex gap-1">
                     <Input value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} className="bg-gray-50 border-none h-11" placeholder="(00)" />
                     <Button type="button" onClick={enviarZap} variant="outline" className="text-green-600 border-green-100 h-11 shrink-0"><MessageCircle size={18}/></Button>
@@ -335,13 +388,50 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="pt-4 flex gap-3">
-                {eventoSelecionadoId && (
-                   <Button type="button" variant="ghost" onClick={async () => { if(confirm("Apagar agendamento?")) { await supabase.from('agendamentos').delete().eq('id', eventoSelecionadoId); setIsAgendamentoOpen(false); fetchData(); } }} className="text-red-400 font-bold px-4 hover:bg-red-50"><Trash2 size={18}/></Button>
+              {/* ÁREA DE ASSINATURA */}
+              <div className="space-y-1 pt-2">
+                <label className="text-[10px] font-bold text-gray-400 uppercase flex justify-between">
+                  Assinatura de Presença
+                  {form.assinatura_url && <span className="text-emerald-500 font-black">REGISTRADA</span>}
+                </label>
+                <div className="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden bg-white min-h-[120px] flex items-center justify-center relative">
+                  {form.assinatura_url ? (
+                    <div className="group relative w-full h-full flex flex-col items-center justify-center bg-gray-50 p-2">
+                      <img src={form.assinatura_url} alt="Assinatura" className="max-h-[100px] object-contain" />
+                      <Button type="button" onClick={() => setForm({ ...form, signature_url: null })} className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity font-bold text-[10px] uppercase">Refazer Assinatura</Button>
+                    </div>
+                  ) : (
+                    <SignatureCanvas ref={sigCanvas} penColor='black' canvasProps={{width: 380, height: 120, className: 'sigCanvas w-full h-full'}} />
+                  )}
+                </div>
+                <div className="flex justify-between items-center">
+                   {!form.assinatura_url && (
+                     <Button type="button" variant="ghost" size="sm" className="text-[9px] uppercase font-bold text-red-400" onClick={() => sigCanvas.current?.clear()}>Limpar Campo</Button>
+                   )}
+                   <p className="text-[8px] text-gray-400 font-bold uppercase italic ml-auto">Assine digitalmente no campo acima</p>
+                </div>
+              </div>
+
+              {/* BOTÕES DE AÇÃO COM GERADOR DE PDF */}
+              <div className="pt-4 flex flex-col gap-3">
+                {eventoSelecionadoId && form.status === 'Presença' && (
+                  <Button 
+                    type="button" 
+                    onClick={gerarComprovante}
+                    className="w-full bg-gray-800 hover:bg-black text-white font-bold h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all"
+                  >
+                    <FileText size={16} /> Gerar Atestado de Comparecimento
+                  </Button>
                 )}
-                <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white font-bold h-12 rounded-xl shadow-lg uppercase text-xs">
-                  {loading ? 'Processando...' : 'Confirmar Agenda'}
-                </Button>
+
+                <div className="flex gap-3">
+                  {eventoSelecionadoId && (
+                     <Button type="button" variant="ghost" onClick={async () => { if(confirm("Apagar agendamento?")) { await supabase.from('agendamentos').delete().eq('id', eventoSelecionadoId); setIsAgendamentoOpen(false); fetchData(); } }} className="text-red-400 font-bold px-4 hover:bg-red-50"><Trash2 size={18}/></Button>
+                  )}
+                  <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white font-bold h-12 rounded-xl shadow-lg uppercase text-xs">
+                    {loading ? 'Processando...' : 'Confirmar Agenda'}
+                  </Button>
+                </div>
               </div>
             </form>
           </div>
