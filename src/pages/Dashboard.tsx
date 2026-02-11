@@ -176,7 +176,7 @@ export function Dashboard() {
 
       const statusFinal = mapearStatusParaBanco(form.status);
 
-      // --- CORREÇÃO: CRIAÇÃO DO PRONTUÁRIO ANTES DO AGENDAMENTO ---
+      // --- LOGICA DE CRIACAO DE PRONTUARIO (IDENTITY FIX) ---
       let idDoPaciente = form.paciente_id;
 
       if (!idDoPaciente) {
@@ -190,10 +190,10 @@ export function Dashboard() {
           .select('id')
           .single();
 
-        if (erroPac) {
-          console.error("Erro ao criar prontuário:", erroPac);
-        } else {
+        if (!erroPac && novoPac) {
           idDoPaciente = novoPac.id;
+        } else {
+          console.error("Erro ao criar prontuário:", erroPac);
         }
       }
 
@@ -419,7 +419,6 @@ export function Dashboard() {
                 </div>
               </div>
 
-              {/* BOTÕES DE AÇÃO COM GERADOR DE PDF */}
               <div className="pt-4 flex flex-col gap-3">
                 {eventoSelecionadoId && form.status === 'Presença' && (
                   <Button 
