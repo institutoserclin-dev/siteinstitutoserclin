@@ -48,7 +48,6 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { isAdmin, isSecretaria } = usePerfil();
 
-  // REFERÊNCIA DO CANVAS
   const sigCanvas = useRef<SignatureCanvas>(null);
 
   const [view, setView] = useState<View>(Views.WEEK);
@@ -98,42 +97,30 @@ export function Dashboard() {
     pesquisar();
   }, [buscaPaciente]);
 
-  // FUNÇÃO PARA GERAR ATESTADO EM PDF
   const gerarComprovante = () => {
     const doc = new jsPDF();
     const dataAtual = format(new Date(), "dd/MM/yyyy");
     const horaAtendimento = format(new Date(form.inicio), "HH:mm");
 
-    // 1. Logo Centralizada no Topo
-    // Dimensões: largura 50mm, altura proporcional
     doc.addImage(logoSerClin, 'PNG', 80, 15, 50, 25);
-
-    // 2. Título do Documento
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(37, 99, 235); // Azul
+    doc.setTextColor(37, 99, 235);
     doc.text("ATESTADO DE COMPARECIMENTO", 105, 55, { align: "center" });
-
-    // Linha divisória fina
     doc.setDrawColor(200, 200, 200);
     doc.line(30, 62, 180, 62);
-
-    // 3. Corpo do Texto Justificado com Espaçamento 1.5
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(0, 0, 0);
 
     const textoCorpo = `Declaramos para os devidos fins de comprovação que o(a) paciente ${form.paciente_nome.toUpperCase()} esteve presente no INSTITUTO SERCLIN para atendimento especializado no dia ${format(new Date(form.inicio), "dd/MM/yyyy")}. O atendimento teve início às ${horaAtendimento} sob a responsabilidade do(a) profissional ${form.profissional.toUpperCase()}.`;
 
-    // Configuração de Justificado e Espaçamento 1.5 (LineHeightFactor)
-    // 210mm total - 20mm margem esquerda - 20mm margem direita = 170mm largura útil
     doc.text(textoCorpo, 20, 80, { 
       maxWidth: 170, 
       align: "justify",
       lineHeightFactor: 1.5 
     });
 
-    // 4. Área da Assinatura
     if (form.assinatura_url) {
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
@@ -143,7 +130,6 @@ export function Dashboard() {
       doc.line(20, 160, 85, 160);
     }
 
-    // 5. Rodapé Informativo
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.text("INSTITUTO SERCLIN - GESTÃO INTEGRADA EM SAÚDE", 105, 270, { align: "center" });
@@ -207,6 +193,15 @@ export function Dashboard() {
         : await supabase.from('agendamentos').insert([payload]);
 
       if (error) throw error;
+
+      // --- NOVA LÓGICA: CRIAÇÃO AUTOMÁTICA DE PRONTUÁRIO ---
+      if (!form.paciente_id) {
+        await supabase.from("pacientes").insert([{
+          nome: buscaPaciente,
+          telefone: form.telefone,
+          convenio: "Particular"
+        }]);
+      }
 
       setIsAgendamentoOpen(false);
       setBuscaPaciente("");

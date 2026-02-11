@@ -5,10 +5,11 @@ import { toast } from "sonner";
 import { 
   ArrowLeft, User, Save, History, FilePlus, Edit, AlertCircle, 
   Clock, Paperclip, FileText, Download, Shield, MessageCircle, 
-  CheckCircle, XCircle, Trash2 // <-- Adicionado Trash2
+  CheckCircle, XCircle, Trash2, Camera, Calendar as CalendarIcon 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePerfil } from "@/hooks/usePerfil";
@@ -21,7 +22,7 @@ const formatarDataSegura = (data: string | null | undefined) => {
 export function Prontuario() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isSecretaria, isAdmin } = usePerfil(); // <-- Adicionado isAdmin
+  const { isSecretaria, isAdmin } = usePerfil(); 
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [paciente, setPaciente] = useState<any>(null);
@@ -29,44 +30,64 @@ export function Prontuario() {
   const [loading, setLoading] = useState(true);
   const [resumoPresenca, setResumoPresenca] = useState({ presencas: 0, faltas: 0 });
   const [modoEdicao, setModoEdicao] = useState<string | null>(null);
+  const [editandoPaciente, setEditandoPaciente] = useState(false);
+  const [formPaciente, setFormPaciente] = useState({ nome: "", telefone: "", convenio: "" });
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
-  const [novoRegistro, setNovoRegistro] = useState({ tipo: "Sessão", descricao: "" });
+  // Ajuste: Se for secretária, inicia como Laudo
+  const [novoRegistro, setNovoRegistro] = useState({ 
+    tipo: isSecretaria ? "Laudo" : "Sessão", 
+    descricao: "" 
+  });
 
   const carregarDados = async () => {
     try {
       setLoading(true);
       const { data: p } = await supabase.from("pacientes").select("*").eq("id", id).single();
       setPaciente(p);
-      const { data: r } = await supabase.from("prontuarios").select("*").eq("paciente_id", id).order("created_at", { ascending: false });
-      setRegistros(r || []);
       if (p) {
+        setFormPaciente({ nome: p.nome, telefone: p.telefone || "", convenio: p.convenio || "" });
         const { data: ag } = await supabase.from("agendamentos").select("status").eq("paciente_nome", p.nome);
         if (ag) {
           setResumoPresenca({
-            presencas: ag.filter(a => a.status === 'Presença').length,
+            presencas: ag.filter(a => a.status === 'Presenca' || a.status === 'Presença').length,
             faltas: ag.filter(a => a.status === 'Falta').length
           });
         }
       }
+      const { data: r } = await supabase.from("prontuarios").select("*").eq("paciente_id", id).order("created_at", { ascending: false });
+      setRegistros(r || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
   useEffect(() => { carregarDados(); }, [id]);
 
-  // --- NOVA FUNÇÃO DE EXCLUSÃO ---
-  const handleExcluirRegistro = async (registroId: string) => {
-    if (!confirm("Deseja apagar este registro permanentemente? Esta ação não pode ser desfeita.")) return;
-    
+  const handleAtualizarCadastro = async () => {
     try {
       const { error } = await supabase
-        .from("prontuarios")
-        .delete()
-        .eq("id", registroId);
+        .from("pacientes")
+        .update({ 
+          nome: formPaciente.nome, 
+          telefone: formPaciente.telefone, 
+          convenio: formPaciente.convenio 
+        })
+        .eq("id", id);
 
       if (error) throw error;
+      toast.success("Cadastro atualizado!");
+      setEditandoPaciente(false);
+      carregarDados();
+    } catch (error) {
+      toast.error("Erro ao atualizar cadastro.");
+    }
+  };
 
+  const handleExcluirRegistro = async (registroId: string) => {
+    if (!confirm("Deseja apagar este registro permanentemente? Esta ação não pode ser desfeita.")) return;
+    try {
+      const { error } = await supabase.from("prontuarios").delete().eq("id", registroId);
+      if (error) throw error;
       toast.success("Registro removido!");
-      carregarDados(); // Recarrega a lista
+      carregarDados();
     } catch (error: any) {
       toast.error("Erro ao excluir registro.");
     }
@@ -82,11 +103,8 @@ export function Prontuario() {
     if (!novoRegistro.descricao) return toast.warning("Escreva algo na descrição.");
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
       let nomeProfissional = user?.user_metadata?.full_name || user?.user_metadata?.display_name || user?.email || "Profissional";
-      if (user?.email === 'romulochaves77@gmail.com') {
-        nomeProfissional = "Rômulo Chaves da Silva";
-      }
+      if (user?.email === 'romulochaves77@gmail.com') nomeProfissional = "Rômulo Chaves da Silva";
 
       const emailProfissional = user?.email || "";
       let arquivoUrl: string | null = null;
@@ -140,7 +158,7 @@ export function Prontuario() {
         }]);
         toast.success("Salvo!");
       }
-      setNovoRegistro({ tipo: "Sessão", descricao: "" });
+      setNovoRegistro({ tipo: isSecretaria ? "Laudo" : "Sessão", descricao: "" });
       setArquivoSelecionado(null);
       setModoEdicao(null);
       carregarDados();
@@ -160,12 +178,28 @@ export function Prontuario() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-10 font-sans text-left">
       <div className="max-w-6xl mx-auto space-y-10">
-        <Button variant="ghost" onClick={() => navigate("/sistema/pacientes")} className="gap-2 pl-0 text-gray-500 font-black uppercase text-sm hover:bg-transparent hover:text-blue-600">
-          <ArrowLeft size={22} /> Voltar
-        </Button>
+        
+        {/* CABEÇALHO DE NAVEGAÇÃO */}
+        <div className="flex justify-between items-center">
+          <Button variant="ghost" onClick={() => navigate("/sistema/pacientes")} className="gap-2 pl-0 text-gray-500 font-black uppercase text-sm hover:bg-transparent hover:text-blue-600">
+            <ArrowLeft size={22} /> Voltar
+          </Button>
+          
+          <Button onClick={() => navigate("/sistema")} className="bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-xs px-6 rounded-full gap-2 h-11 shadow-md transition-all active:scale-95">
+            <CalendarIcon size={18} /> Novo Agendamento
+          </Button>
+        </div>
 
-        {/* Cabeçalho do Paciente... */}
-        <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-md border border-gray-100 flex flex-col md:flex-row gap-8 items-center">
+        <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-md border border-gray-100 flex flex-col md:flex-row gap-8 items-center relative">
+          
+          <button 
+            onClick={() => setEditandoPaciente(!editandoPaciente)}
+            className="absolute top-6 right-6 p-3 bg-gray-50 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded-2xl transition-all border border-gray-100"
+            title="Editar Cadastro"
+          >
+            {editandoPaciente ? <XCircle size={24} /> : <Edit size={24} />}
+          </button>
+
           <div className="bg-blue-100 p-1 rounded-3xl shrink-0 shadow-inner">
              {paciente?.foto_url ? (
                 <img src={paciente.foto_url} className="w-28 h-28 rounded-[1.4rem] object-cover border-4 border-white shadow-sm" />
@@ -174,74 +208,92 @@ export function Prontuario() {
               )}
           </div>
           
-          <div className="flex-1 text-center md:text-left space-y-4">
-            <h1 className="text-3xl md:text-4xl font-black text-gray-800 tracking-tight uppercase leading-none">{paciente?.nome}</h1>
-            <div className="flex flex-wrap justify-center md:justify-start gap-5 items-center">
-              <span className="text-xs font-black px-4 py-1.5 bg-blue-600 text-white rounded-lg uppercase tracking-widest">
-                {paciente?.convenio || "Particular"}
-              </span>
-              {paciente?.telefone && (
-                <button onClick={abrirWhatsApp} className="group flex items-center gap-3 bg-green-50 hover:bg-green-600 hover:text-white border border-green-200 px-6 py-2.5 rounded-full transition-all shadow-sm">
-                  <MessageCircle size={20} className="text-green-600 group-hover:text-white fill-current" />
-                  <span className="text-base font-bold tracking-widest font-mono">{paciente.telefone}</span>
-                </button>
-              )}
-            </div>
+          <div className="flex-1 text-center md:text-left space-y-4 w-full">
+            {editandoPaciente ? (
+              <div className="space-y-3 max-w-md">
+                <Input value={formPaciente.nome} onChange={e => setFormPaciente({...formPaciente, nome: e.target.value})} className="font-bold uppercase" placeholder="Nome do Paciente" />
+                <div className="flex gap-2">
+                  <Input value={formPaciente.telefone} onChange={e => setFormPaciente({...formPaciente, telefone: e.target.value})} placeholder="Telefone" />
+                  <Input value={formPaciente.convenio} onChange={e => setFormPaciente({...formPaciente, convenio: e.target.value})} placeholder="Convênio" />
+                </div>
+                <Button onClick={handleAtualizarCadastro} className="bg-green-600 hover:bg-green-700 text-white font-black uppercase text-[10px] w-full h-10 rounded-xl">Salvar Alterações</Button>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-3xl md:text-4xl font-black text-gray-800 tracking-tight uppercase leading-none">{paciente?.nome}</h1>
+                <div className="flex flex-wrap justify-center md:justify-start gap-5 items-center">
+                  <span className="text-xs font-black px-4 py-1.5 bg-blue-600 text-white rounded-lg uppercase tracking-widest">
+                    {paciente?.convenio || "Particular"}
+                  </span>
+                  {paciente?.telefone && (
+                    <button onClick={abrirWhatsApp} className="group flex items-center gap-3 bg-green-50 hover:bg-green-600 hover:text-white border border-green-200 px-6 py-2.5 rounded-full transition-all shadow-sm">
+                      <MessageCircle size={20} className="text-green-600 group-hover:text-white fill-current" />
+                      <span className="text-base font-bold tracking-widest font-mono">{paciente.telefone}</span>
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
-          <div className="flex gap-4 shrink-0">
-            <div className="bg-white border-2 border-green-100 p-5 rounded-[1.5rem] text-center min-w-[110px] shadow-sm">
-              <div className="text-green-600 font-black text-3xl flex items-center justify-center gap-2">
-                <CheckCircle size={24}/> {resumoPresenca.presencas}
+          {!editandoPaciente && (
+            <div className="flex gap-4 shrink-0">
+              <div className="bg-white border-2 border-green-100 p-5 rounded-[1.5rem] text-center min-w-[110px] shadow-sm">
+                <div className="text-green-600 font-black text-3xl flex items-center justify-center gap-2">
+                  <CheckCircle size={24}/> {resumoPresenca.presencas}
+                </div>
+                <p className="text-[10px] text-green-500 font-black uppercase tracking-widest mt-1">Presenças</p>
               </div>
-              <p className="text-[10px] text-green-500 font-black uppercase tracking-widest mt-1">Presenças</p>
-            </div>
-            <div className="bg-white border-2 border-red-100 p-5 rounded-[1.5rem] text-center min-w-[110px] shadow-sm">
-              <div className="text-red-600 font-black text-3xl flex items-center justify-center gap-2">
-                <XCircle size={24}/> {resumoPresenca.faltas}
+              <div className="bg-white border-2 border-red-100 p-5 rounded-[1.5rem] text-center min-w-[110px] shadow-sm">
+                <div className="text-red-600 font-black text-3xl flex items-center justify-center gap-2">
+                  <XCircle size={24}/> {resumoPresenca.faltas}
+                </div>
+                <p className="text-[10px] text-red-500 font-black uppercase tracking-widest mt-1">Faltas</p>
               </div>
-              <p className="text-[10px] text-red-500 font-black uppercase tracking-widest mt-1">Faltas</p>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {!isSecretaria && (
-            <div className="lg:col-span-1 space-y-6">
-              <Card className={`border-none shadow-xl rounded-[2rem] overflow-hidden ${modoEdicao ? 'ring-4 ring-yellow-400' : ''}`}>
-                <div className={`${modoEdicao ? 'bg-yellow-500' : 'bg-gray-800'} px-8 py-5`}>
-                  <h3 className="font-black text-white flex items-center gap-3 text-sm uppercase tracking-[0.2em]">
-                    {modoEdicao ? <><Edit size={20}/> Editando</> : <><FilePlus size={20}/> Nova Evolução</>}
-                  </h3>
-                </div>
-                <CardContent className="p-8 space-y-6 bg-white">
-                  {/* Campos do formulário... */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-400 block uppercase tracking-widest">Tipo</label>
-                    <select className={inputClass} value={novoRegistro.tipo} onChange={e => setNovoRegistro({...novoRegistro, tipo: e.target.value})}>
-                      <option value="Sessão">Sessão Regular</option>
-                      <option value="Anamnese">Anamnese / Inicial</option>
-                      <option value="Avaliação">Avaliação</option>
-                      <option value="Devolutiva">Devolutiva</option>
+          <div className="lg:col-span-1 space-y-6">
+            <Card className={`border-none shadow-xl rounded-[2rem] overflow-hidden ${modoEdicao ? 'ring-4 ring-yellow-400' : ''}`}>
+              <div className={`${modoEdicao ? 'bg-yellow-500' : 'bg-gray-800'} px-8 py-5`}>
+                <h3 className="font-black text-white flex items-center gap-3 text-sm uppercase tracking-[0.2em]">
+                  {modoEdicao ? <><Edit size={20}/> Editando</> : <><FilePlus size={20}/> Novo Registro</>}
+                </h3>
+              </div>
+              <CardContent className="p-8 space-y-6 bg-white">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-gray-400 block uppercase tracking-widest">Tipo</label>
+                  <select className={inputClass} value={novoRegistro.tipo} onChange={e => setNovoRegistro({...novoRegistro, tipo: e.target.value})}>
+                    {isSecretaria ? (
                       <option value="Laudo">Laudo / Documento</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-400 block uppercase tracking-widest">Descrição</label>
-                    <textarea className={`${inputClass} min-h-[300px] resize-none leading-relaxed`} placeholder="Relato clínico..." value={novoRegistro.descricao} onChange={e => setNovoRegistro({...novoRegistro, descricao: e.target.value})} />
-                  </div>
-                  <div className="flex gap-3 pt-4">
-                    {modoEdicao && <Button onClick={() => setModoEdicao(null)} variant="ghost" className="flex-1 font-bold h-14 rounded-xl">Cancelar</Button>}
-                    <Button onClick={handleSalvarRegistro} className={`flex-[2] text-white font-black uppercase tracking-widest h-14 rounded-xl shadow-lg ${modoEdicao ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                      <Save size={20} className="mr-2"/> Salvar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+                    ) : (
+                      <>
+                        <option value="Sessão">Sessão Regular</option>
+                        <option value="Anamnese">Anamnese / Inicial</option>
+                        <option value="Avaliação">Avaliação</option>
+                        <option value="Devolutiva">Devolutiva</option>
+                        <option value="Laudo">Laudo / Documento</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-gray-400 block uppercase tracking-widest">Descrição</label>
+                  <textarea className={`${inputClass} min-h-[300px] resize-none leading-relaxed`} placeholder={isSecretaria ? "Digite o laudo..." : "Relato clínico..."} value={novoRegistro.descricao} onChange={e => setNovoRegistro({...novoRegistro, descricao: e.target.value})} />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  {modoEdicao && <Button onClick={() => setModoEdicao(null)} variant="ghost" className="flex-1 font-bold h-14 rounded-xl">Cancelar</Button>}
+                  <Button onClick={handleSalvarRegistro} className={`flex-[2] text-white font-black uppercase tracking-widest h-14 rounded-xl shadow-lg ${modoEdicao ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                    <Save size={20} className="mr-2"/> Salvar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-          <div className={isSecretaria ? "lg:col-span-3" : "lg:col-span-2 space-y-6"}>
+          <div className="lg:col-span-2 space-y-6">
             <h3 className="font-black text-gray-800 flex items-center gap-3 text-xl uppercase tracking-tighter px-2">
               <History size={26} className="text-blue-600"/> Histórico Clínica ({registros.length})
             </h3>
@@ -260,28 +312,19 @@ export function Prontuario() {
                       </div>
                     </div>
                     
-                    {/* BOTÕES DE AÇÃO: EDITAR E EXCLUIR */}
                     <div className="flex items-center gap-1">
-                      {!isSecretaria && (
+                      {(!isSecretaria || reg.tipo_registro === 'Laudo') && (
                         <button onClick={() => iniciarEdicao(reg)} className="text-gray-300 hover:text-blue-600 p-2 transition-colors" title="Editar"><Edit size={20} /></button>
                       )}
-                      
-                      {/* BOTÃO EXCLUIR: SÓ APARECE PARA ADMIN */}
                       {isAdmin && (
-                        <button 
-                          onClick={() => handleExcluirRegistro(reg.id)} 
-                          className="text-gray-300 hover:text-red-600 p-2 transition-colors"
-                          title="Excluir Permanentemente"
-                        >
-                          <Trash2 size={20} />
-                        </button>
+                        <button onClick={() => handleExcluirRegistro(reg.id)} className="text-gray-300 hover:text-red-600 p-2 transition-colors" title="Excluir Permanentemente"><Trash2 size={20} /></button>
                       )}
                     </div>
                   </div>
 
                   {isSecretaria && reg.tipo_registro !== 'Laudo' ? (
                     <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-2xl text-gray-400 text-sm font-bold uppercase tracking-widest text-center flex flex-col items-center gap-3">
-                      <Shield size={32} className="opacity-20"/> Conteúdo Restrito ao Corpo Clínico
+                      <Shield size={32} className="opacity-20"/> Conteúdo Clínico Restrito
                     </div>
                   ) : (
                     <div className="text-gray-700 whitespace-pre-wrap text-lg leading-relaxed mb-6 font-medium">
@@ -295,7 +338,6 @@ export function Prontuario() {
                     </a>
                   )}
 
-                  {/* Log de edições... */}
                   {!isSecretaria && Array.isArray(reg.historico) && reg.historico.length > 0 && (
                     <div className="mt-6 pt-4 border-t border-gray-50">
                       <details className="group">
