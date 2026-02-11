@@ -1,19 +1,3 @@
-// 1. Importe a nova página
-import { Lembretes } from "./pages/Lembretes";
-
-// 2. Dentro do seu componente de rotas (Routes ou Switch)
-<Routes>
-  {/* Outras rotas já existentes... */}
-  <Route path="/sistema" element={<Dashboard />} />
-  <Route path="/sistema/pacientes" element={<Pacientes />} />
-  <Route path="/sistema/prontuario/:id" element={<Prontuario />} />
-  
-  {/* ADICIONE ESTA NOVA ROTA */}
-  <Route path="/sistema/lembretes" element={<Lembretes />} />
-  
-  {/* Outras rotas... */}
-</Routes>
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,11 +9,12 @@ import { PrivateRoute } from "@/components/PrivateRoute";
 import Home from "@/pages/Home";
 import { Login } from "@/pages/Login";
 import { Dashboard } from "@/pages/Dashboard";
-import { CadastroUsuario } from "@/pages/CadastroUsuario"; // Admin
+import { CadastroUsuario } from "@/pages/CadastroUsuario"; 
 import { Pacientes } from "@/pages/Pacientes"; 
 import { Prontuario } from "@/pages/Prontuario";
 import { Acessos } from "@/pages/Acessos"; 
-import { Horarios } from "@/pages/Horarios"; // <--- ADICIONADO AQUI
+import { Horarios } from "@/pages/Horarios";
+import { Lembretes } from "@/pages/Lembretes"; // Importação correta da nova página
 
 function App() {
   return (
@@ -43,12 +28,11 @@ function App() {
           {/* Rotas Privadas (Sistema) */}
           <Route path="/sistema" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           
-          {/* Admin e Gestão */}
-          <Route path="/sistema/cadastro" element={<PrivateRoute><CadastroUsuario /></PrivateRoute>} />
-          <Route path="/sistema/acessos" element={<PrivateRoute><Acessos /></PrivateRoute>} />
-          
-          {/* NOVA ROTA DE HORÁRIOS ADICIONADA AQUI */}
+          {/* Gestão e Lembretes */}
+          <Route path="/sistema/lembretes" element={<PrivateRoute><Lembretes /></PrivateRoute>} />
           <Route path="/sistema/horarios" element={<PrivateRoute><Horarios /></PrivateRoute>} />
+          <Route path="/sistema/acessos" element={<PrivateRoute><Acessos /></PrivateRoute>} />
+          <Route path="/sistema/cadastro" element={<PrivateRoute><CadastroUsuario /></PrivateRoute>} />
 
           {/* Pacientes e Prontuários */}
           <Route path="/sistema/pacientes" element={<PrivateRoute><Pacientes /></PrivateRoute>} />
