@@ -48,6 +48,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { isAdmin, isSecretaria } = usePerfil();
 
+  // REFERÊNCIA DO CANVAS
   const sigCanvas = useRef<SignatureCanvas>(null);
 
   const [view, setView] = useState<View>(Views.WEEK);
@@ -97,6 +98,7 @@ export function Dashboard() {
     pesquisar();
   }, [buscaPaciente]);
 
+  // FUNÇÃO PARA GERAR ATESTADO EM PDF
   const gerarComprovante = () => {
     const doc = new jsPDF();
     const dataAtual = format(new Date(), "dd/MM/yyyy");
@@ -169,6 +171,7 @@ export function Dashboard() {
         );
       }
 
+      // CAPTURA DA ASSINATURA DIGITAL
       let assinaturaBase64 = form.assinatura_url;
       if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
           assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
@@ -176,11 +179,33 @@ export function Dashboard() {
 
       const statusFinal = mapearStatusParaBanco(form.status);
 
+      // --- AJUSTE: VERIFICAR/CRIAR PRONTUÁRIO ANTES ---
+      let idDoPaciente = form.paciente_id;
+
+      if (!idDoPaciente) {
+        // Se é um nome novo, criamos o paciente primeiro para pegar o ID dele
+        const { data: novoPaciente, error: erroPac } = await supabase
+          .from("pacientes")
+          .insert([{
+            nome: buscaPaciente,
+            telefone: form.telefone,
+            convenio: "Particular"
+          }])
+          .select()
+          .single();
+
+        if (erroPac) {
+          console.error("Erro ao criar prontuário:", erroPac);
+        } else {
+          idDoPaciente = novoPaciente.id; // Vincula o ID real criado
+        }
+      }
+
       const payload = {
         sala_id: salaId,
         profissional_nome: form.profissional,
-        paciente_nome: form.paciente_id ? form.paciente_nome : buscaPaciente,
-        paciente_id: form.paciente_id,
+        paciente_nome: buscaPaciente,
+        paciente_id: idDoPaciente,
         paciente_telefone: form.telefone,
         data_inicio: dInicio.toISOString(),
         data_fim: dFim.toISOString(),
@@ -193,15 +218,6 @@ export function Dashboard() {
         : await supabase.from('agendamentos').insert([payload]);
 
       if (error) throw error;
-
-      // --- NOVA LÓGICA: CRIAÇÃO AUTOMÁTICA DE PRONTUÁRIO ---
-      if (!form.paciente_id) {
-        await supabase.from("pacientes").insert([{
-          nome: buscaPaciente,
-          telefone: form.telefone,
-          convenio: "Particular"
-        }]);
-      }
 
       setIsAgendamentoOpen(false);
       setBuscaPaciente("");
