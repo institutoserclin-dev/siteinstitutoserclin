@@ -48,7 +48,6 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { isAdmin, isSecretaria } = usePerfil();
 
-  // REFERÊNCIA DO CANVAS
   const sigCanvas = useRef<SignatureCanvas>(null);
 
   const [view, setView] = useState<View>(Views.WEEK);
@@ -98,7 +97,6 @@ export function Dashboard() {
     pesquisar();
   }, [buscaPaciente]);
 
-  // FUNÇÃO PARA GERAR ATESTADO EM PDF
   const gerarComprovante = () => {
     const doc = new jsPDF();
     const dataAtual = format(new Date(), "dd/MM/yyyy");
@@ -171,7 +169,6 @@ export function Dashboard() {
         );
       }
 
-      // CAPTURA DA ASSINATURA DIGITAL
       let assinaturaBase64 = form.assinatura_url;
       if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
           assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
@@ -179,25 +176,24 @@ export function Dashboard() {
 
       const statusFinal = mapearStatusParaBanco(form.status);
 
-      // --- AJUSTE: VERIFICAR/CRIAR PRONTUÁRIO ANTES ---
+      // --- CORREÇÃO: CRIAÇÃO DO PRONTUÁRIO ANTES DO AGENDAMENTO ---
       let idDoPaciente = form.paciente_id;
 
       if (!idDoPaciente) {
-        // Se é um nome novo, criamos o paciente primeiro para pegar o ID dele
-        const { data: novoPaciente, error: erroPac } = await supabase
+        const { data: novoPac, error: erroPac } = await supabase
           .from("pacientes")
           .insert([{
             nome: buscaPaciente,
             telefone: form.telefone,
             convenio: "Particular"
           }])
-          .select()
+          .select('id')
           .single();
 
         if (erroPac) {
           console.error("Erro ao criar prontuário:", erroPac);
         } else {
-          idDoPaciente = novoPaciente.id; // Vincula o ID real criado
+          idDoPaciente = novoPac.id;
         }
       }
 
@@ -223,7 +219,7 @@ export function Dashboard() {
       setBuscaPaciente("");
       setEventoSelecionadoId(null);
       await fetchData();
-      toast.success("Agenda atualizada!");
+      toast.success("Agenda e Prontuário atualizados!");
     } catch (error: any) { 
       console.error(error);
       toast.error("Erro ao salvar agendamento.");
@@ -409,7 +405,7 @@ export function Dashboard() {
                   {form.assinatura_url ? (
                     <div className="group relative w-full h-full flex flex-col items-center justify-center bg-gray-50 p-2">
                       <img src={form.assinatura_url} alt="Assinatura" className="max-h-[100px] object-contain" />
-                      <Button type="button" onClick={() => setForm({ ...form, signature_url: null })} className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity font-bold text-[10px] uppercase">Refazer Assinatura</Button>
+                      <Button type="button" onClick={() => setForm({ ...form, assinatura_url: null })} className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity font-bold text-[10px] uppercase">Refazer Assinatura</Button>
                     </div>
                   ) : (
                     <SignatureCanvas ref={sigCanvas} penColor='black' canvasProps={{width: 380, height: 120, className: 'sigCanvas w-full h-full'}} />
