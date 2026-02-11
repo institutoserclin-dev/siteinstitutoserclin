@@ -1,16 +1,3 @@
-// Adicione o ícone MessageCircle nos imports do Dashboard.tsx
-// No Header, ao lado dos outros botões de navegação:
-
-<Button 
-  variant="ghost" 
-  size="icon" 
-  onClick={() => navigate('/sistema/lembretes')} 
-  className="text-green-600 hover:bg-green-50"
-  title="Lembretes de Amanhã"
->
-  <MessageCircle size={20}/>
-</Button>
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
@@ -19,7 +6,9 @@ import { format, parse, startOfWeek, getDay, addMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   LogOut, Calendar as CalendarIcon, Plus, X, Trash2, 
-  FileText, BarChart3, Shield, Clock, Users, Filter, MessageCircle, CheckCircle, ExternalLink
+  FileText, BarChart3, Shield, Clock, Users, Filter, 
+  MessageCircle, CheckCircle, ExternalLink,
+  MessageSquare // <-- Substituído para evitar erro de versão
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -111,7 +100,6 @@ export function Dashboard() {
       const dFim = addMinutes(dInicio, parseInt(form.duracao));
       const salaId = parseInt(form.sala);
 
-      // --- VALIDAÇÃO DE CONFLITO LOCAL (ANTES DE IR PARA O BANCO) ---
       const conflitoLocal = events.find(event => {
         if (eventoSelecionadoId && event.id === eventoSelecionadoId) return false;
         const overlap = dInicio < event.end && dFim > event.start;
@@ -157,7 +145,6 @@ export function Dashboard() {
       toast.success("Agenda atualizada!");
     } catch (error: any) { 
       console.error(error);
-      // Tratamento para as Exclusion Constraints do PostgreSQL
       if (error.message?.includes('no_profissional_overlap')) {
         toast.error("Conflito: Este profissional já tem um atendimento neste horário.");
       } else if (error.message?.includes('no_sala_overlap')) {
@@ -203,6 +190,22 @@ export function Dashboard() {
           {(isAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600 hover:bg-green-50"><Clock size={20}/></Button>}
           {isAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600 hover:bg-purple-50"><Shield size={20}/></Button>}
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 hover:bg-blue-50 mr-2"><Users size={20}/></Button>
+          
+          {/* BOTÃO DE LEMBRETES - USANDO MessageSquare PARA COMPATIBILIDADE */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate('/sistema/lembretes')} 
+            className="relative text-emerald-600 hover:bg-emerald-50 mr-2"
+            title="Lembretes de Amanhã"
+          >
+            <MessageSquare size={20}/>
+            <span className="absolute top-1 right-1 flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+          </Button>
+
           <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-bold"><Plus size={16} className="mr-1" /> AGENDAR</Button>
           <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }}><LogOut size={18} /></Button>
         </div>
