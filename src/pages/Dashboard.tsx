@@ -59,6 +59,7 @@ const mapearStatusParaBanco = (statusVisual: string) => {
 
 const EventoCustomizado = ({ event }: any) => (
   <div className="h-full w-full flex flex-col items-center justify-center text-center p-1 overflow-hidden">
+    {/* GARANTE LETRA BRANCA NOS BLOCOS DO CALENDÁRIO */}
     <span className="text-white font-bold text-[10px] uppercase leading-tight truncate w-full">
       {event.title}
     </span>
@@ -99,19 +100,30 @@ export function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const { data: profs } = await supabase.from('perfis').select('*'); // Usando perfis conforme sua última atualização
-      setEquipe(profs || []);
-      const { data: agendamentos, error } = await supabase.from('agendamentos').select('*');
-      if (!error && agendamentos) {
-        const eventosFormatados = agendamentos.map(evt => ({
-          id: evt.id,
-          title: `${evt.paciente_nome} (S${evt.sala_id})`,
-          start: new Date(evt.data_inicio),
-          end: new Date(evt.data_fim),
-          color: (profs || []).find(p => p.nome === evt.profissional_nome)?.cor || '#1e3a8a',
-          original: evt
-        }));
-        setEvents(eventosFormatados);
+      // --- MECANISMO DE FILTRO DE PROFISSIONAIS (Somente Clínicos) ---
+      const { data: profs } = await supabase.from('perfis').select('*').order('nome');
+      
+      if (profs) {
+        const listaNegra = ['renata', 'instituto', 'recepcao', 'secretaria', 'admin', 'recepção'];
+        const filtrados = profs.filter(p => {
+          const n = (p.nome || "").toLowerCase();
+          const c = (p.cargo || "").toLowerCase();
+          return !listaNegra.some(termo => n.includes(termo) || c.includes(termo));
+        });
+        setEquipe(filtrados);
+
+        const { data: agendamentos, error } = await supabase.from('agendamentos').select('*');
+        if (!error && agendamentos) {
+          const eventosFormatados = agendamentos.map(evt => ({
+            id: evt.id,
+            title: `${evt.paciente_nome} (S${evt.sala_id})`,
+            start: new Date(evt.data_inicio),
+            end: new Date(evt.data_fim),
+            color: (filtrados).find(p => p.nome === evt.profissional_nome)?.cor || '#1e3a8a',
+            original: evt
+          }));
+          setEvents(eventosFormatados);
+        }
       }
     } catch (err) { toast.error("Erro ao carregar agenda."); }
   };
@@ -189,6 +201,13 @@ export function Dashboard() {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
+      {/* CSS PARA FORÇAR LETRA BRANCA NA VISÃO AGENDA */}
+      <style>{`
+        .rbc-agenda-view table.rbc-agenda-table tbody > tr > td { color: white !important; font-weight: bold; }
+        .rbc-agenda-view { background-color: #1e3a8a; border-radius: 1rem; }
+        .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: #fbbf24 !important; }
+      `}</style>
+
       <header className="bg-white border-b px-6 py-3 flex justify-between items-center h-20 shadow-sm z-20 gap-4">
         <div className="flex items-center gap-3 shrink-0">
           <img src={logoSerClin} className="w-12 h-12 object-contain" alt="SerClin" />
@@ -223,7 +242,6 @@ export function Dashboard() {
       <main className="flex-1 p-4 overflow-hidden">
         <Card className="h-full border-none shadow-sm bg-white overflow-hidden rounded-2xl text-left">
           <CardContent className="p-0 h-full">
-            {/* CALENDÁRIO COM TRADUÇÃO APLICADA */}
             <Calendar 
               localizer={localizer} 
               culture='pt-BR' 
@@ -236,7 +254,7 @@ export function Dashboard() {
               views={['day', 'week', 'month', 'agenda']} 
               components={{ event: EventoCustomizado }} 
               eventPropGetter={(event: any) => ({ 
-                style: { backgroundColor: event.color, border: 'none', borderRadius: '4px', opacity: (event.original?.status === 'Falta') ? 0.5 : 1 } 
+                style: { backgroundColor: event.color, color: 'white', border: 'none', borderRadius: '4px', opacity: (event.original?.status === 'Falta') ? 0.5 : 1 } 
               })} 
               onSelectEvent={(e) => { 
                 const evt = e.original; 
@@ -262,7 +280,7 @@ export function Dashboard() {
         </Card>
       </main>
 
-      {/* MODAL DE AGENDAMENTO COM 40 MIN */}
+      {/* MODAL DE AGENDAMENTO */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md my-8 overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -277,7 +295,6 @@ export function Dashboard() {
                     <SelectContent><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem><SelectItem value="Falta">Falta</SelectItem></SelectContent></Select></div>
                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Duração</label>
                   <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}><SelectTrigger className="bg-gray-50 border-none h-10 font-bold"><SelectValue /></SelectTrigger>
-                    {/* ADICIONADO 40 MIN AQUI */}
                     <SelectContent>
                       <SelectItem value="30">30 Min</SelectItem>
                       <SelectItem value="40">40 Min</SelectItem>
@@ -291,7 +308,7 @@ export function Dashboard() {
                   {pacientesSugeridos.length > 0 && (<div className="absolute z-[110] w-full bg-white border shadow-2xl rounded-xl mt-1 overflow-hidden">{pacientesSugeridos.map(p => (<button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: p.telefone || '' }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}><span className="font-bold text-sm uppercase">{p.nome}</span></button>))}</div>)}</div></div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Profissional</label>
+                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Profissional Clínico</label>
                   <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required><SelectTrigger className="bg-gray-50 border-none h-11"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                     <SelectContent className="z-[110]">{equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Sala</label>
@@ -338,5 +355,4 @@ export function Dashboard() {
       )}
     </div>
   );
-  
 }

@@ -159,3 +159,15 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
 }
+/* --- CORREÇÃO DE CORES AGENDA SERCLIN --- */
+@layer utilities {
+  /* Força o texto das células da Agenda a ficar branco */
+  .rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
+    color: white !important;
+  }
+
+  /* Garante que o texto dentro dos blocos de evento também seja branco */
+  .rbc-event-content, .rbc-event {
+    color: white !important;
+  }
+}
