@@ -59,7 +59,6 @@ const mapearStatusParaBanco = (statusVisual: string) => {
 
 const EventoCustomizado = ({ event }: any) => (
   <div className="h-full w-full flex flex-col items-center justify-center text-center p-1 overflow-hidden">
-    {/* GARANTE LETRA BRANCA NOS BLOCOS DO CALENDÁRIO */}
     <span className="text-white font-bold text-[10px] uppercase leading-tight truncate w-full">
       {event.title}
     </span>
@@ -94,18 +93,18 @@ export function Dashboard() {
   
   const [form, setForm] = useState({ 
     profissional: '', paciente_nome: '', paciente_id: null as number | null,
-    telefone: '', sala: '1', inicio: '', duracao: '50', status: 'Agendado',
+    telefone: '', sala: '1', inicio: '', duracao: '40', status: 'Agendado',
     assinatura_url: null as string | null
   });
 
   const fetchData = async () => {
     try {
-      // --- MECANISMO DE FILTRO DE PROFISSIONAIS (Somente Clínicos) ---
-      const { data: profs } = await supabase.from('perfis').select('*').order('nome');
+      const { data: todosPerfis } = await supabase.from('perfis').select('*').order('nome');
       
-      if (profs) {
+      if (todosPerfis) {
+        // FILTRO CLÍNICO: Remove perfis administrativos da lista
         const listaNegra = ['renata', 'instituto', 'recepcao', 'secretaria', 'admin', 'recepção'];
-        const filtrados = profs.filter(p => {
+        const filtrados = todosPerfis.filter(p => {
           const n = (p.nome || "").toLowerCase();
           const c = (p.cargo || "").toLowerCase();
           return !listaNegra.some(termo => n.includes(termo) || c.includes(termo));
@@ -114,18 +113,25 @@ export function Dashboard() {
 
         const { data: agendamentos, error } = await supabase.from('agendamentos').select('*');
         if (!error && agendamentos) {
-          const eventosFormatados = agendamentos.map(evt => ({
-            id: evt.id,
-            title: `${evt.paciente_nome} (S${evt.sala_id})`,
-            start: new Date(evt.data_inicio),
-            end: new Date(evt.data_fim),
-            color: (filtrados).find(p => p.nome === evt.profissional_nome)?.cor || '#1e3a8a',
-            original: evt
-          }));
+          const eventosFormatados = agendamentos.map(evt => {
+            // LÓGICA DE CORES REFORMULADA: Comparação robusta de nomes
+            const perfilEncontrado = todosPerfis.find(p => 
+              p.nome?.trim().toLowerCase() === evt.profissional_nome?.trim().toLowerCase()
+            );
+            
+            return {
+              id: evt.id,
+              title: `${evt.paciente_nome} (S${evt.sala_id})`,
+              start: new Date(evt.data_inicio),
+              end: new Date(evt.data_fim),
+              color: perfilEncontrado?.cor || '#1e3a8a',
+              original: evt
+            };
+          });
           setEvents(eventosFormatados);
         }
       }
-    } catch (err) { toast.error("Erro ao carregar agenda."); }
+    } catch (err) { toast.error("Erro ao carregar dados."); }
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -138,6 +144,20 @@ export function Dashboard() {
     };
     pesquisar();
   }, [buscaPaciente]);
+
+  // --- FUNÇÃO DE EXCLUSÃO (MANTIDA) ---
+  const handleExcluirAgendamento = async () => {
+    if (!eventoSelecionadoId) return;
+    if (!confirm("⚠️ Deseja realmente apagar este agendamento?")) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('agendamentos').delete().eq('id', eventoSelecionadoId);
+      if (error) throw error;
+      toast.success("Agendamento removido!");
+      setIsAgendamentoOpen(false);
+      fetchData();
+    } catch (err) { toast.error("Erro ao excluir."); } finally { setLoading(false); }
+  };
 
   const gerarComprovante = () => {
     const doc = new jsPDF();
@@ -201,10 +221,10 @@ export function Dashboard() {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
-      {/* CSS PARA FORÇAR LETRA BRANCA NA VISÃO AGENDA */}
+      {/* CSS PARA LETRA BRANCA E FUNDO AZUL NA AGENDA */}
       <style>{`
         .rbc-agenda-view table.rbc-agenda-table tbody > tr > td { color: white !important; font-weight: bold; }
-        .rbc-agenda-view { background-color: #1e3a8a; border-radius: 1rem; }
+        .rbc-agenda-view { background-color: #1e3a8a; border-radius: 1rem; overflow: hidden; }
         .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: #fbbf24 !important; }
       `}</style>
 
@@ -212,7 +232,7 @@ export function Dashboard() {
         <div className="flex items-center gap-3 shrink-0">
           <img src={logoSerClin} className="w-12 h-12 object-contain" alt="SerClin" />
           <div className="hidden lg:block text-left">
-            <h1 className="text-md font-bold text-gray-800 uppercase leading-none">SerClin</h1>
+            <h1 className="text-md font-black text-gray-800 uppercase leading-none">SerClin</h1>
             <p className="text-[9px] text-gray-500 font-bold uppercase mt-1">Gestão Integrada</p>
           </div>
         </div>
@@ -230,51 +250,40 @@ export function Dashboard() {
         </div>
 
         <div className="flex gap-1.5 items-center">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500 hover:bg-orange-50" title="Relatórios"><BarChart3 size={20}/></Button>
-          {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600 hover:bg-green-50"><Clock size={20}/></Button>}
-          {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600 hover:bg-purple-50" title="Gestão de Equipe"><Shield size={20}/></Button>}
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 hover:bg-blue-50 mr-2"><Users size={20}/></Button>
-          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-bold"><Plus size={16} className="mr-1" /> AGENDAR</Button>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500" title="Relatórios"><BarChart3 size={20}/></Button>
+          {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600"><Clock size={20}/></Button>}
+          {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Gestão de Equipe"><Shield size={20}/></Button>}
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2"><Users size={20}/></Button>
+          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg"><Plus size={16} className="mr-1" /> AGENDAR</Button>
           <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }}><LogOut size={18} /></Button>
         </div>
       </header>
 
       <main className="flex-1 p-4 overflow-hidden">
-        <Card className="h-full border-none shadow-sm bg-white overflow-hidden rounded-2xl text-left">
+        <Card className="h-full border-none shadow-sm bg-white overflow-hidden rounded-[2rem] text-left">
           <CardContent className="p-0 h-full">
             <Calendar 
               localizer={localizer} 
               culture='pt-BR' 
               messages={mensagensPortugues}
               events={filtroProfissional === "geral" ? events : events.filter(e => e.original?.profissional_nome === filtroProfissional)} 
-              view={view} 
-              onView={setView} 
-              date={date} 
-              onNavigate={setDate} 
+              view={view} onView={setView} date={date} onNavigate={setDate} 
               views={['day', 'week', 'month', 'agenda']} 
               components={{ event: EventoCustomizado }} 
               eventPropGetter={(event: any) => ({ 
-                style: { backgroundColor: event.color, color: 'white', border: 'none', borderRadius: '4px', opacity: (event.original?.status === 'Falta') ? 0.5 : 1 } 
+                style: { backgroundColor: event.color, color: 'white', border: 'none', borderRadius: '6px', opacity: (event.original?.status === 'Falta') ? 0.5 : 1 } 
               })} 
               onSelectEvent={(e) => { 
                 const evt = e.original; 
                 setEventoSelecionadoId(evt.id); 
                 setBuscaPaciente(evt.paciente_nome); 
                 setForm({ 
-                  ...form, 
-                  profissional: evt.profissional_nome, 
-                  paciente_nome: evt.paciente_nome, 
-                  paciente_id: evt.paciente_id, 
-                  telefone: evt.paciente_telefone || '', 
-                  inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), 
-                  duracao: '50', 
-                  status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), 
-                  assinatura_url: evt.assinatura_url || null 
+                  ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: evt.paciente_telefone || '', 
+                  inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), duracao: '40', status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), assinatura_url: evt.assinatura_url || null 
                 }); 
                 setIsAgendamentoOpen(true); 
               }} 
-              min={new Date(0, 0, 0, 7, 0, 0)} 
-              max={new Date(0, 0, 0, 21, 0, 0)} 
+              min={new Date(0, 0, 0, 7, 0, 0)} max={new Date(0, 0, 0, 21, 0, 0)} 
             />
           </CardContent>
         </Card>
@@ -284,16 +293,16 @@ export function Dashboard() {
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md my-8 overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800 uppercase text-xs tracking-widest">{eventoSelecionadoId ? 'Editar Detalhes' : 'Agendar Paciente'}</h3>
-              <button onClick={() => setIsAgendamentoOpen(false)}><X size={20}/></button>
+            <div className="p-6 border-b flex justify-between items-center bg-[#1e3a8a]">
+              <h3 className="font-black text-white uppercase text-xs tracking-widest">{eventoSelecionadoId ? 'Editar Agendamento' : 'Agendar Paciente'}</h3>
+              <button onClick={() => setIsAgendamentoOpen(false)}><X size={20} className="text-white"/></button>
             </div>
-            <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4">
+            <form onSubmit={handleSalvarAgendamento} className="p-8 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Status</label>
+                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Status</label>
                   <Select value={form.status} onValueChange={(v) => setForm({...form, status: v})}><SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10 uppercase text-[10px]"><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem><SelectItem value="Falta">Falta</SelectItem></SelectContent></Select></div>
-                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Duração</label>
+                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Duração</label>
                   <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}><SelectTrigger className="bg-gray-50 border-none h-10 font-bold"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="30">30 Min</SelectItem>
@@ -303,28 +312,28 @@ export function Dashboard() {
                     </SelectContent></Select></div>
               </div>
               
-              <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Paciente</label>
+              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Paciente</label>
                 <div className="relative"><Input placeholder="Buscar..." className="bg-gray-50 border-none font-bold uppercase text-xs h-11" value={buscaPaciente} onChange={(e) => setBuscaPaciente(e.target.value)} required />
                   {pacientesSugeridos.length > 0 && (<div className="absolute z-[110] w-full bg-white border shadow-2xl rounded-xl mt-1 overflow-hidden">{pacientesSugeridos.map(p => (<button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: p.telefone || '' }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}><span className="font-bold text-sm uppercase">{p.nome}</span></button>))}</div>)}</div></div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Profissional Clínico</label>
+                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Profissional Clínico</label>
                   <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required><SelectTrigger className="bg-gray-50 border-none h-11"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                     <SelectContent className="z-[110]">{equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Sala</label>
+                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Sala</label>
                   <Select value={form.sala} onValueChange={(v) => setForm({...form, sala: v})}><SelectTrigger className="bg-gray-50 border-none h-11"><SelectValue /></SelectTrigger>
                     <SelectContent className="z-[110]"><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem></SelectContent></Select></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">WhatsApp</label>
+                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">WhatsApp</label>
                   <Input value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} className="bg-gray-50 border-none h-11" /></div>
-                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Horário</label>
+                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Horário</label>
                   <input type="datetime-local" required className="w-full bg-gray-50 rounded-md p-2.5 text-xs font-bold h-11 outline-none border-none" value={form.inicio} onChange={e => setForm({...form, inicio: e.target.value})} /></div>
               </div>
               
               <div className="space-y-1 pt-2">
-                <label className="text-[10px] font-bold text-gray-400 uppercase flex justify-between">Assinatura Digital {form.assinatura_url && <span className="text-emerald-500 font-black">OK</span>}</label>
+                <label className="text-[10px] font-black text-gray-400 uppercase flex justify-between ml-1">Assinatura Digital {form.assinatura_url && <span className="text-emerald-500 font-black">OK</span>}</label>
                 <div className="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden bg-white min-h-[100px] flex items-center justify-center relative">
                   {form.assinatura_url ? (
                     <div className="group relative w-full h-full flex flex-col items-center justify-center bg-gray-50 p-2">
@@ -335,18 +344,24 @@ export function Dashboard() {
                     <SignatureCanvas ref={sigCanvas} penColor='black' canvasProps={{width: 380, height: 100, className: 'sigCanvas w-full h-full'}} />
                   )}
                 </div>
-                {!form.assinatura_url && <Button type="button" variant="ghost" size="sm" className="text-[9px] uppercase font-bold text-red-400" onClick={() => sigCanvas.current?.clear()}>Limpar Campo</Button>}
               </div>
 
-              <div className="pt-4 flex flex-col gap-3">
+              <div className="pt-6 flex flex-col gap-3">
                 {eventoSelecionadoId && form.status === 'Presença' && (
-                  <Button type="button" onClick={gerarComprovante} className="w-full bg-[#1e3a8a] text-white font-bold h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all">
+                  <Button type="button" onClick={gerarComprovante} className="w-full bg-[#1e3a8a] text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all">
                     <FileText size={16} /> Gerar Atestado
                   </Button>
                 )}
                 <div className="flex gap-3">
-                  {eventoSelecionadoId && (<Button type="button" variant="ghost" onClick={async () => { if(confirm("Apagar?")) { await supabase.from('agendamentos').delete().eq('id', eventoSelecionadoId); setIsAgendamentoOpen(false); fetchData(); } }} className="text-red-400 font-bold px-4 hover:bg-red-50"><Trash2 size={18}/></Button>)}
-                  <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl shadow-lg uppercase text-xs">{loading ? 'Processando...' : 'Confirmar Agenda'}</Button>
+                  {/* --- BOTÃO DE EXCLUIR RESTAURADO --- */}
+                  {eventoSelecionadoId && (
+                    <Button type="button" variant="outline" onClick={handleExcluirAgendamento} className="px-6 border-red-200 text-red-500 hover:bg-red-50 h-14 rounded-2xl transition-all">
+                      <Trash2 size={20} />
+                    </Button>
+                  )}
+                  <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-black text-white font-black h-14 rounded-2xl shadow-xl uppercase text-xs transition-all">
+                    {loading ? <RefreshCw className="animate-spin" /> : 'Confirmar Agenda'}
+                  </Button>
                 </div>
               </div>
             </form>

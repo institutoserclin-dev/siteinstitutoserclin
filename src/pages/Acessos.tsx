@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, Trash2, ArrowLeft, UserPlus, 
-  RefreshCw, Search, Filter, Crown, Stethoscope, FileText, Check 
+  RefreshCw, Search, Filter, Crown, Stethoscope, FileText, Check, Palette 
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,8 @@ export function Acessos() {
   const navigate = useNavigate();
   const [listaUsuarios, setListaUsuarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [novoColaborador, setNovoColaborador] = useState({ nome: "", email: "", role: "profissional" });
+  // INTEGRADO: Adicionado 'cor' ao estado inicial
+  const [novoColaborador, setNovoColaborador] = useState({ nome: "", email: "", role: "profissional", cor: "#1e3a8a" });
   const [filtro, setFiltro] = useState("");
 
   const fetchEquipe = async () => {
@@ -50,7 +51,7 @@ export function Acessos() {
       if (error) throw error;
 
       toast.success("Membro adicionado!");
-      setNovoColaborador({ nome: "", email: "", role: "profissional" });
+      setNovoColaborador({ nome: "", email: "", role: "profissional", cor: "#1e3a8a" });
       fetchEquipe();
     } catch (err) {
       toast.error("Erro ao cadastrar.");
@@ -60,7 +61,6 @@ export function Acessos() {
   };
 
   const handleAlterarRole = async (userId: string, newRole: string) => {
-    // Atualização Otimista (Muda na tela antes do banco para parecer instantâneo)
     setListaUsuarios(current => 
       current.map(u => u.id === userId ? { ...u, role: newRole } : u)
     );
@@ -71,7 +71,22 @@ export function Acessos() {
       toast.success(`Nível alterado para ${newRole.toUpperCase()}`);
     } catch (err) {
       toast.error("Erro ao salvar no banco.");
-      fetchEquipe(); // Reverte se der erro
+      fetchEquipe();
+    }
+  };
+
+  // INTEGRADO: Nova função para salvar a cor do profissional no banco
+  const handleAlterarCor = async (userId: string, novaCor: string) => {
+    setListaUsuarios(current => 
+      current.map(u => u.id === userId ? { ...u, cor: novaCor } : u)
+    );
+
+    try {
+      const { error } = await supabase.from("perfis").update({ cor: novaCor }).eq("id", userId);
+      if (error) throw error;
+    } catch (err) {
+      toast.error("Erro ao salvar cor.");
+      fetchEquipe();
     }
   };
 
@@ -95,7 +110,6 @@ export function Acessos() {
   return (
     <div className="min-h-screen bg-white font-sans flex flex-col">
       
-      {/* HEADER */}
       <header className="bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center h-20 shadow-sm sticky top-0 z-20">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema')} className="text-gray-400 hover:text-[#1e3a8a]">
@@ -103,7 +117,7 @@ export function Acessos() {
           </Button>
           <div className="flex items-center gap-3">
             <img src={logoSerClin} className="w-12 h-12 object-contain" alt="SerClin" />
-            <div className="hidden sm:block">
+            <div className="hidden sm:block text-left">
               <h1 className="text-lg font-bold text-[#1e3a8a] uppercase leading-none">Gestão de Acessos</h1>
               <p className="text-[10px] text-amber-600 font-bold uppercase mt-1 tracking-widest">Instituto SerClin</p>
             </div>
@@ -116,20 +130,20 @@ export function Acessos() {
 
       <main className="flex-1 p-6 max-w-5xl mx-auto w-full space-y-8">
         
-        {/* CADASTRO RÁPIDO */}
+        {/* CADASTRO RÁPIDO COM SELETOR DE COR */}
         <div className="bg-[#1e3a8a] rounded-3xl p-6 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
           <div className="relative z-10 flex flex-col md:flex-row gap-4 items-end">
-            <div className="flex-1 w-full space-y-1">
+            <div className="flex-[2] w-full space-y-1 text-left">
               <label className="text-[10px] font-bold text-blue-200 uppercase ml-1">Nome Completo</label>
               <Input 
                 value={novoColaborador.nome} 
                 onChange={e => setNovoColaborador({...novoColaborador, nome: e.target.value})} 
-                placeholder="Ex: Dr. Rômulo" 
+                placeholder="Ex: Dr. Antônio" 
                 className="bg-white/10 border-blue-800/30 text-white placeholder:text-blue-300/50 h-11 focus:ring-amber-400 font-medium"
               />
             </div>
-            <div className="flex-1 w-full space-y-1">
+            <div className="flex-[2] w-full space-y-1 text-left">
               <label className="text-[10px] font-bold text-blue-200 uppercase ml-1">E-mail</label>
               <Input 
                 value={novoColaborador.email} 
@@ -137,6 +151,19 @@ export function Acessos() {
                 placeholder="email@serclin.com" 
                 className="bg-white/10 border-blue-800/30 text-white placeholder:text-blue-300/50 h-11 focus:ring-amber-400"
               />
+            </div>
+            {/* INTEGRADO: Seletor de cor no cadastro */}
+            <div className="flex-1 w-full space-y-1 text-left">
+              <label className="text-[10px] font-bold text-blue-200 uppercase ml-1">Cor Agenda</label>
+              <div className="flex items-center gap-2 bg-white/10 border border-blue-800/30 h-11 rounded-md px-2">
+                <input 
+                  type="color" 
+                  value={novoColaborador.cor} 
+                  onChange={e => setNovoColaborador({...novoColaborador, cor: e.target.value})}
+                  className="w-8 h-8 rounded cursor-pointer bg-transparent border-none"
+                />
+                <span className="text-[10px] text-white font-mono uppercase">{novoColaborador.cor}</span>
+              </div>
             </div>
             <Button onClick={handleCadastrarColaborador} disabled={loading} className="bg-amber-500 hover:bg-amber-600 text-white font-black h-11 px-8 rounded-xl uppercase text-[10px] tracking-wide shadow-lg border border-amber-400/20">
               {loading ? "..." : "Adicionar"}
@@ -165,10 +192,19 @@ export function Acessos() {
             {listaFiltrada.map((u) => (
               <div key={u.id} className="group bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-md transition-all">
                 
-                {/* Info */}
-                <div className="flex items-center gap-4 pl-2">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-sm ${u.role === 'admin' ? 'bg-amber-500' : u.role === 'secretaria' ? 'bg-slate-500' : 'bg-[#1e3a8a]'}`}>
-                    {u.role === 'admin' ? <Crown size={18}/> : u.role === 'secretaria' ? <FileText size={18}/> : <Stethoscope size={18}/>}
+                <div className="flex items-center gap-4 pl-2 text-left">
+                  {/* INTEGRADO: Seletor de cor individual na lista */}
+                  <div className="relative">
+                    <input 
+                      type="color"
+                      value={u.cor || "#1e3a8a"}
+                      onChange={(e) => handleAlterarCor(u.id, e.target.value)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      title="Mudar cor na agenda"
+                    />
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-sm" style={{ backgroundColor: u.cor || '#1e3a8a' }}>
+                      {u.role === 'admin' ? <Crown size={18}/> : u.role === 'secretaria' ? <FileText size={18}/> : <Stethoscope size={18}/>}
+                    </div>
                   </div>
                   <div>
                     <p className="text-sm font-black text-gray-800 uppercase">{u.nome}</p>
@@ -176,10 +212,8 @@ export function Acessos() {
                   </div>
                 </div>
 
-                {/* CONTROLES DE NÍVEL (CAIXAS DE SELEÇÃO) */}
                 <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-100">
                   
-                  {/* Botão Profissional */}
                   <button 
                     onClick={() => handleAlterarRole(u.id, 'profissional')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
@@ -191,7 +225,6 @@ export function Acessos() {
                     <Stethoscope size={12} /> Profissional
                   </button>
 
-                  {/* Botão Secretária */}
                   <button 
                     onClick={() => handleAlterarRole(u.id, 'secretaria')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
@@ -203,7 +236,6 @@ export function Acessos() {
                     <FileText size={12} /> Secretária
                   </button>
 
-                  {/* Botão Admin */}
                   <button 
                     onClick={() => handleAlterarRole(u.id, 'admin')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
