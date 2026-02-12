@@ -8,13 +8,14 @@ import { PrivateRoute } from "@/components/PrivateRoute";
 // Páginas
 import Home from "@/pages/Home";
 import { Login } from "@/pages/Login";
+import { RedefinirSenha } from "@/pages/RedefinirSenha"; // Importação integrada
 import { Dashboard } from "@/pages/Dashboard";
 import { CadastroUsuario } from "@/pages/CadastroUsuario"; 
 import { Pacientes } from "@/pages/Pacientes"; 
 import { Prontuario } from "@/pages/Prontuario";
 import { Acessos } from "@/pages/Acessos"; 
 import { Horarios } from "@/pages/Horarios";
-import { Lembretes } from "@/pages/Lembretes"; // Importação correta da nova página
+import { Lembretes } from "@/pages/Lembretes";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           {/* Rotas Públicas */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/redefinir-senha" element={<RedefinirSenha />} />
 
           {/* Rotas Privadas (Sistema) */}
           <Route path="/sistema" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
