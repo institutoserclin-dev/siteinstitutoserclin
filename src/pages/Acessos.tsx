@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, Trash2, ArrowLeft, UserPlus, 
-  RefreshCw, Search, Filter, Crown, Stethoscope, FileText, Check, Palette 
+  RefreshCw, Search, Filter, Crown, Stethoscope, FileText, Check, Palette, Eye, EyeOff, Lock, Shuffle 
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,16 @@ export function Acessos() {
   const navigate = useNavigate();
   const [listaUsuarios, setListaUsuarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  // INTEGRADO: Adicionado 'cor' ao estado inicial
-  const [novoColaborador, setNovoColaborador] = useState({ nome: "", email: "", role: "profissional", cor: "#1e3a8a" });
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  
+  // ESTADO CONSOLIDADO: Nome, Email, Senha, Role e Cor
+  const [novoColaborador, setNovoColaborador] = useState({ 
+    nome: "", 
+    email: "", 
+    senha: "", 
+    role: "profissional", 
+    cor: "#1e3a8a" 
+  });
   const [filtro, setFiltro] = useState("");
 
   const fetchEquipe = async () => {
@@ -29,77 +37,92 @@ export function Acessos() {
       if (error) throw error;
       setListaUsuarios(data || []);
     } catch (err) {
-      console.error(err);
-      toast.error("Erro ao carregar lista. Verifique o SQL.");
+      toast.error("Erro ao carregar equipe.");
     }
   };
 
   useEffect(() => { fetchEquipe(); }, []);
 
+  // FUNÇÃO INTEGRADA: Gera uma senha segura de 8 dígitos
+  const gerarSenhaAleatoria = () => {
+    const caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#";
+    let senha = "";
+    for (let i = 0; i < 8; i++) {
+      senha += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+    }
+    setNovoColaborador({ ...novoColaborador, senha });
+    setMostrarSenha(true);
+    toast.info("Senha gerada! Anote antes de salvar.");
+  };
+
   const handleCadastrarColaborador = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (novoColaborador.senha.length < 6) return toast.warning("A senha deve ter no mínimo 6 caracteres.");
+    
     setLoading(true);
     try {
-      const { data: existente } = await supabase.from("perfis").select("*").eq("email", novoColaborador.email).single();
-      if (existente) {
-        toast.error("Este e-mail já está na equipe.");
-        setLoading(false);
-        return;
+      // 1. CRIA O USUÁRIO NO AUTH DO SUPABASE (Mecanismo de Login)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: novoColaborador.email,
+        password: novoColaborador.senha,
+        options: {
+          data: {
+            full_name: novoColaborador.nome,
+            role: novoColaborador.role
+          }
+        }
+      });
+
+      if (authError) throw authError;
+
+      // 2. VINCULA A COR E O NOME NO PERFIL (Reflete no Dashboard)
+      if (authData.user) {
+        const { error: perfilError } = await supabase
+          .from("perfis")
+          .update({ 
+            nome: novoColaborador.nome, 
+            cor: novoColaborador.cor,
+            role: novoColaborador.role 
+          })
+          .eq("id", authData.user.id);
+          
+        if (perfilError) throw perfilError;
       }
 
-      const { error } = await supabase.from("perfis").insert([novoColaborador]);
-      if (error) throw error;
-
-      toast.success("Membro adicionado!");
-      setNovoColaborador({ nome: "", email: "", role: "profissional", cor: "#1e3a8a" });
+      toast.success("Acesso criado! O usuário já pode logar.");
+      setNovoColaborador({ nome: "", email: "", senha: "", role: "profissional", cor: "#1e3a8a" });
+      setMostrarSenha(false);
       fetchEquipe();
-    } catch (err) {
-      toast.error("Erro ao cadastrar.");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao cadastrar profissional.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAlterarRole = async (userId: string, newRole: string) => {
-    setListaUsuarios(current => 
-      current.map(u => u.id === userId ? { ...u, role: newRole } : u)
-    );
-
+  const handleAlterarCor = async (userId: string, novaCor: string) => {
+    setListaUsuarios(current => current.map(u => u.id === userId ? { ...u, cor: novaCor } : u));
     try {
-      const { error } = await supabase.from("perfis").update({ role: newRole }).eq("id", userId);
-      if (error) throw error;
-      toast.success(`Nível alterado para ${newRole.toUpperCase()}`);
-    } catch (err) {
-      toast.error("Erro ao salvar no banco.");
-      fetchEquipe();
-    }
+      await supabase.from("perfis").update({ cor: novaCor }).eq("id", userId);
+      toast.success("Cor da agenda atualizada!");
+    } catch (err) { toast.error("Erro ao salvar cor."); fetchEquipe(); }
   };
 
-  // INTEGRADO: Nova função para salvar a cor do profissional no banco
-  const handleAlterarCor = async (userId: string, novaCor: string) => {
-    setListaUsuarios(current => 
-      current.map(u => u.id === userId ? { ...u, cor: novaCor } : u)
-    );
-
+  const handleAlterarRole = async (userId: string, newRole: string) => {
+    setListaUsuarios(current => current.map(u => u.id === userId ? { ...u, role: newRole } : u));
     try {
-      const { error } = await supabase.from("perfis").update({ cor: novaCor }).eq("id", userId);
-      if (error) throw error;
-    } catch (err) {
-      toast.error("Erro ao salvar cor.");
-      fetchEquipe();
-    }
+      await supabase.from("perfis").update({ role: newRole }).eq("id", userId);
+      toast.success(`Nível alterado para ${newRole.toUpperCase()}`);
+    } catch (err) { toast.error("Erro ao salvar nível."); fetchEquipe(); }
   };
 
   const handleRemover = async (id: string, nome: string) => {
     if (!confirm(`Remover acesso de ${nome}?`)) return;
     try {
-      const { error } = await supabase.from("perfis").delete().eq("id", id);
-      if (error) throw error;
+      await supabase.from("perfis").delete().eq("id", id);
       toast.success("Acesso removido.");
       fetchEquipe();
-    } catch (err) {
-      toast.error("Erro ao remover.");
-    }
+    } catch (err) { toast.error("Erro ao remover."); }
   };
 
   const listaFiltrada = listaUsuarios.filter(u => 
@@ -108,8 +131,8 @@ export function Acessos() {
   );
 
   return (
-    <div className="min-h-screen bg-white font-sans flex flex-col">
-      
+    <div className="min-h-screen bg-white font-sans flex flex-col text-left">
+      {/* HEADER */}
       <header className="bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center h-20 shadow-sm sticky top-0 z-20">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema')} className="text-gray-400 hover:text-[#1e3a8a]">
@@ -117,159 +140,114 @@ export function Acessos() {
           </Button>
           <div className="flex items-center gap-3">
             <img src={logoSerClin} className="w-12 h-12 object-contain" alt="SerClin" />
-            <div className="hidden sm:block text-left">
-              <h1 className="text-lg font-bold text-[#1e3a8a] uppercase leading-none">Gestão de Acessos</h1>
+            <div className="hidden sm:block">
+              <h1 className="text-lg font-bold text-[#1e3a8a] uppercase leading-none text-left">Gestão de Acessos</h1>
               <p className="text-[10px] text-amber-600 font-bold uppercase mt-1 tracking-widest">Instituto SerClin</p>
             </div>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={fetchEquipe} className="text-gray-400 hover:text-[#1e3a8a]">
-          <RefreshCw size={18} />
-        </Button>
+        <Button variant="ghost" size="sm" onClick={fetchEquipe} className="text-gray-400 hover:text-[#1e3a8a]"><RefreshCw size={18} /></Button>
       </header>
 
-      <main className="flex-1 p-6 max-w-5xl mx-auto w-full space-y-8">
+      <main className="flex-1 p-6 max-w-6xl mx-auto w-full space-y-8">
         
-        {/* CADASTRO RÁPIDO COM SELETOR DE COR */}
-        <div className="bg-[#1e3a8a] rounded-3xl p-6 shadow-xl relative overflow-hidden">
+        {/* FORMULÁRIO DE CADASTRO CONSOLIDADO */}
+        <div className="bg-[#1e3a8a] rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
-          <div className="relative z-10 flex flex-col md:flex-row gap-4 items-end">
-            <div className="flex-[2] w-full space-y-1 text-left">
+          
+          <form onSubmit={handleCadastrarColaborador} className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            <div className="md:col-span-3 space-y-1">
               <label className="text-[10px] font-bold text-blue-200 uppercase ml-1">Nome Completo</label>
-              <Input 
-                value={novoColaborador.nome} 
-                onChange={e => setNovoColaborador({...novoColaborador, nome: e.target.value})} 
-                placeholder="Ex: Dr. Antônio" 
-                className="bg-white/10 border-blue-800/30 text-white placeholder:text-blue-300/50 h-11 focus:ring-amber-400 font-medium"
-              />
+              <Input value={novoColaborador.nome} onChange={e => setNovoColaborador({...novoColaborador, nome: e.target.value})} placeholder="Dr. Antônio Pinto" className="bg-white/10 border-blue-800/30 text-white placeholder:text-blue-300/50 h-11 focus:ring-amber-400" required />
             </div>
-            <div className="flex-[2] w-full space-y-1 text-left">
-              <label className="text-[10px] font-bold text-blue-200 uppercase ml-1">E-mail</label>
-              <Input 
-                value={novoColaborador.email} 
-                onChange={e => setNovoColaborador({...novoColaborador, email: e.target.value})} 
-                placeholder="email@serclin.com" 
-                className="bg-white/10 border-blue-800/30 text-white placeholder:text-blue-300/50 h-11 focus:ring-amber-400"
-              />
+            
+            <div className="md:col-span-3 space-y-1">
+              <label className="text-[10px] font-bold text-blue-200 uppercase ml-1">E-mail (Login)</label>
+              <Input type="email" value={novoColaborador.email} onChange={e => setNovoColaborador({...novoColaborador, email: e.target.value})} placeholder="email@serclin.com" className="bg-white/10 border-blue-800/30 text-white placeholder:text-blue-300/50 h-11 focus:ring-amber-400" required />
             </div>
-            {/* INTEGRADO: Seletor de cor no cadastro */}
-            <div className="flex-1 w-full space-y-1 text-left">
-              <label className="text-[10px] font-bold text-blue-200 uppercase ml-1">Cor Agenda</label>
-              <div className="flex items-center gap-2 bg-white/10 border border-blue-800/30 h-11 rounded-md px-2">
-                <input 
-                  type="color" 
-                  value={novoColaborador.cor} 
-                  onChange={e => setNovoColaborador({...novoColaborador, cor: e.target.value})}
-                  className="w-8 h-8 rounded cursor-pointer bg-transparent border-none"
+
+            <div className="md:col-span-2 space-y-1">
+              <label className="text-[10px] font-bold text-blue-200 uppercase ml-1 flex justify-between">
+                Senha 
+                <button type="button" onClick={gerarSenhaAleatoria} className="text-amber-400 hover:text-white flex items-center gap-1">
+                  <Shuffle size={10}/> Gerar
+                </button>
+              </label>
+              <div className="relative">
+                <Input 
+                  type={mostrarSenha ? "text" : "password"} 
+                  value={novoColaborador.senha} 
+                  onChange={e => setNovoColaborador({...novoColaborador, senha: e.target.value})} 
+                  placeholder="******" 
+                  className="bg-white/10 border-blue-800/30 text-white h-11 pr-10" 
+                  required 
                 />
-                <span className="text-[10px] text-white font-mono uppercase">{novoColaborador.cor}</span>
+                <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)} className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-300">
+                  {mostrarSenha ? <EyeOff size={16}/> : <Eye size={16}/>}
+                </button>
               </div>
             </div>
-            <Button onClick={handleCadastrarColaborador} disabled={loading} className="bg-amber-500 hover:bg-amber-600 text-white font-black h-11 px-8 rounded-xl uppercase text-[10px] tracking-wide shadow-lg border border-amber-400/20">
-              {loading ? "..." : "Adicionar"}
-            </Button>
-          </div>
+
+            <div className="md:col-span-2 space-y-1">
+              <label className="text-[10px] font-bold text-blue-200 uppercase ml-1">Cor na Agenda</label>
+              <div className="flex items-center gap-2 bg-white/10 border border-blue-800/30 h-11 rounded-md px-3">
+                <input type="color" value={novoColaborador.cor} onChange={e => setNovoColaborador({...novoColaborador, cor: e.target.value})} className="w-8 h-8 rounded cursor-pointer bg-transparent border-none" />
+                <span className="text-[9px] text-white font-mono uppercase">{novoColaborador.cor}</span>
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <Button type="submit" disabled={loading} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black h-11 rounded-xl uppercase text-[10px] tracking-wide shadow-lg">
+                {loading ? <RefreshCw className="animate-spin" /> : "Criar Acesso"}
+              </Button>
+            </div>
+          </form>
         </div>
 
-        {/* LISTA DE MEMBROS */}
+        {/* LISTA DE EQUIPE */}
         <div className="space-y-4">
           <div className="flex items-center justify-between px-2">
-            <h3 className="font-bold text-[#1e3a8a] uppercase text-xs flex items-center gap-2">
-              <Users size={16}/> Equipe ({listaUsuarios.length})
-            </h3>
+            <h3 className="font-bold text-[#1e3a8a] uppercase text-xs flex items-center gap-2"><Users size={16}/> Membros Ativos ({listaUsuarios.length})</h3>
             <div className="relative w-56 group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#1e3a8a]" size={14} />
-              <Input 
-                placeholder="Buscar..." 
-                value={filtro}
-                onChange={e => setFiltro(e.target.value)}
-                className="h-9 pl-9 bg-gray-50 border-gray-200 text-xs rounded-full focus:bg-white focus:border-amber-400 transition-all"
-              />
+              <Input placeholder="Buscar por nome ou e-mail..." value={filtro} onChange={e => setFiltro(e.target.value)} className="h-9 pl-9 bg-gray-50 border-gray-200 text-xs rounded-full focus:bg-white transition-all" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-3">
             {listaFiltrada.map((u) => (
-              <div key={u.id} className="group bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-md transition-all">
-                
-                <div className="flex items-center gap-4 pl-2 text-left">
-                  {/* INTEGRADO: Seletor de cor individual na lista */}
-                  <div className="relative">
+              <div key={u.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-md transition-all">
+                <div className="flex items-center gap-4 pl-2">
+                  {/* Seletor de Cor na Foto do Perfil */}
+                  <div className="relative group">
                     <input 
-                      type="color"
-                      value={u.cor || "#1e3a8a"}
-                      onChange={(e) => handleAlterarCor(u.id, e.target.value)}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      type="color" 
+                      value={u.cor || "#1e3a8a"} 
+                      onChange={(e) => handleAlterarCor(u.id, e.target.value)} 
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                       title="Mudar cor na agenda"
                     />
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-sm" style={{ backgroundColor: u.cor || '#1e3a8a' }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md transition-transform group-hover:scale-110" style={{ backgroundColor: u.cor || '#1e3a8a' }}>
                       {u.role === 'admin' ? <Crown size={18}/> : u.role === 'secretaria' ? <FileText size={18}/> : <Stethoscope size={18}/>}
                     </div>
                   </div>
-                  <div>
+                  <div className="text-left">
                     <p className="text-sm font-black text-gray-800 uppercase">{u.nome}</p>
                     <p className="text-[11px] text-gray-400">{u.email}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-100">
-                  
-                  <button 
-                    onClick={() => handleAlterarRole(u.id, 'profissional')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
-                      u.role === 'profissional' 
-                      ? 'bg-[#1e3a8a] text-white shadow-md' 
-                      : 'text-gray-400 hover:bg-white hover:text-[#1e3a8a]'
-                    }`}
-                  >
-                    <Stethoscope size={12} /> Profissional
-                  </button>
-
-                  <button 
-                    onClick={() => handleAlterarRole(u.id, 'secretaria')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
-                      u.role === 'secretaria' 
-                      ? 'bg-slate-600 text-white shadow-md' 
-                      : 'text-gray-400 hover:bg-white hover:text-slate-600'
-                    }`}
-                  >
-                    <FileText size={12} /> Secretária
-                  </button>
-
-                  <button 
-                    onClick={() => handleAlterarRole(u.id, 'admin')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
-                      u.role === 'admin' 
-                      ? 'bg-amber-500 text-white shadow-md' 
-                      : 'text-gray-400 hover:bg-white hover:text-amber-600'
-                    }`}
-                  >
-                    <Crown size={12} /> Admin
-                  </button>
-
+                  <button onClick={() => handleAlterarRole(u.id, 'profissional')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${u.role === 'profissional' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-400 hover:bg-white hover:text-[#1e3a8a]'}`}>Profissional</button>
+                  <button onClick={() => handleAlterarRole(u.id, 'secretaria')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${u.role === 'secretaria' ? 'bg-slate-600 text-white shadow-md' : 'text-gray-400 hover:bg-white hover:text-slate-600'}`}>Secretária</button>
+                  <button onClick={() => handleAlterarRole(u.id, 'admin')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${u.role === 'admin' ? 'bg-amber-500 text-white shadow-md' : 'text-gray-400 hover:text-amber-600'}`}>Admin</button>
                   <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-                  <button 
-                    onClick={() => handleRemover(u.id, u.nome)}
-                    className="text-gray-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
-                    title="Remover"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <button onClick={() => handleRemover(u.id, u.nome)} className="text-gray-300 hover:text-red-500 p-1.5 transition-colors"><Trash2 size={16} /></button>
                 </div>
-
               </div>
             ))}
-
-            {listaFiltrada.length === 0 && (
-              <div className="text-center py-12 text-gray-400 text-sm">
-                <Filter className="mx-auto mb-2 opacity-50" size={32}/>
-                Nenhum membro encontrado.
-              </div>
-            )}
           </div>
         </div>
-
       </main>
     </div>
   );
