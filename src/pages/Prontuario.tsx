@@ -4,13 +4,14 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { 
   ArrowLeft, User, Save, History, FilePlus, Edit, AlertCircle, 
-  Clock, Paperclip, FileText, Download, Shield, MessageCircle, 
-  CheckCircle, XCircle, Trash2, Camera, Calendar as CalendarIcon 
+  Paperclip, FileText, Shield, CheckCircle, XCircle, Trash2, 
+  Calendar as CalendarIcon, X, Plus, RefreshCw, Clock 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, addMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePerfil } from "@/hooks/usePerfil";
 
@@ -33,11 +34,23 @@ export function Prontuario() {
   const [editandoPaciente, setEditandoPaciente] = useState(false);
   const [formPaciente, setFormPaciente] = useState({ nome: "", telefone: "", convenio: "" });
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
-  // Ajuste: Se for secretária, inicia como Laudo
+  
+  const [isAgendamentoOpen, setIsAgendamentoOpen] = useState(false);
+  const [equipe, setEquipe] = useState<any[]>([]);
+  const [loadingAgendamento, setLoadingAgendamento] = useState(false);
+  const [formAgendamento, setFormAgendamento] = useState({ 
+    profissional: '', sala: '1', inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), duracao: '40', status: 'Agendado'
+  });
+
   const [novoRegistro, setNovoRegistro] = useState({ 
     tipo: isSecretaria ? "Laudo" : "Sessão", 
     descricao: "" 
   });
+
+  const getCorProfissional = (nome: string) => {
+    const prof = equipe.find(p => p.nome === nome);
+    return prof?.cor || "#1e3a8a";
+  };
 
   const carregarDados = async () => {
     try {
@@ -56,114 +69,12 @@ export function Prontuario() {
       }
       const { data: r } = await supabase.from("prontuarios").select("*").eq("paciente_id", id).order("created_at", { ascending: false });
       setRegistros(r || []);
+      const { data: profs } = await supabase.from('perfis').select('*');
+      setEquipe(profs || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
   useEffect(() => { carregarDados(); }, [id]);
-
-  const handleAtualizarCadastro = async () => {
-    try {
-      const { error } = await supabase
-        .from("pacientes")
-        .update({ 
-          nome: formPaciente.nome, 
-          telefone: formPaciente.telefone, 
-          convenio: formPaciente.convenio 
-        })
-        .eq("id", id);
-
-      if (error) throw error;
-      toast.success("Cadastro atualizado!");
-      setEditandoPaciente(false);
-      carregarDados();
-    } catch (error) {
-      toast.error("Erro ao atualizar cadastro.");
-    }
-  };
-
-  const handleExcluirRegistro = async (registroId: string) => {
-    if (!confirm("Deseja apagar este registro permanentemente? Esta ação não pode ser desfeita.")) return;
-    try {
-      const { error } = await supabase.from("prontuarios").delete().eq("id", registroId);
-      if (error) throw error;
-      toast.success("Registro removido!");
-      carregarDados();
-    } catch (error: any) {
-      toast.error("Erro ao excluir registro.");
-    }
-  };
-
-  const abrirWhatsApp = () => {
-    if (!paciente?.telefone) return toast.error("Telefone não encontrado.");
-    const numeroLimpo = paciente.telefone.replace(/\D/g, "");
-    window.open(`https://wa.me/55${numeroLimpo}`, "_blank");
-  };
-
-  const handleSalvarRegistro = async () => {
-    if (!novoRegistro.descricao) return toast.warning("Escreva algo na descrição.");
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      let nomeProfissional = user?.user_metadata?.full_name || user?.user_metadata?.display_name || user?.email || "Profissional";
-      if (user?.email === 'romulochaves77@gmail.com') nomeProfissional = "Rômulo Chaves da Silva";
-
-      const emailProfissional = user?.email || "";
-      let arquivoUrl: string | null = null;
-      let arquivoNome: string | null = null;
-
-      if (arquivoSelecionado) {
-        const fileExt = arquivoSelecionado.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `${id}/${fileName}`; 
-        const { error: uploadError } = await supabase.storage.from('documentos').upload(filePath, arquivoSelecionado);
-        if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(filePath);
-        arquivoUrl = publicUrl;
-        arquivoNome = arquivoSelecionado.name;
-      }
-
-      if (modoEdicao) {
-        const registroOriginal = registros.find(r => r.id === modoEdicao);
-        if (!registroOriginal) return;
-        const finalUrl = arquivoUrl || registroOriginal.arquivo_url;
-        const finalNome = arquivoNome || registroOriginal.arquivo_nome;
-        const versaoAntiga = {
-          texto: registroOriginal.descricao,
-          data: new Date().toISOString(),
-          autor: registroOriginal.profissional_nome || "Desconhecido",
-          arquivo: registroOriginal.arquivo_nome
-        };
-        const historicoAntigo = Array.isArray(registroOriginal.historico) ? registroOriginal.historico : [];
-        const historicoAtualizado = [ ...historicoAntigo, versaoAntiga ];
-
-        await supabase.from("prontuarios").update({
-          descricao: novoRegistro.descricao,
-          updated_at: new Date().toISOString(),
-          profissional_nome: nomeProfissional,
-          profissional_email: emailProfissional,
-          historico: historicoAtualizado,
-          arquivo_url: finalUrl,
-          arquivo_nome: finalNome
-        }).eq("id", modoEdicao);
-        toast.success("Atualizado!");
-      } else {
-        await supabase.from("prontuarios").insert([{
-          paciente_id: id,
-          tipo_registro: novoRegistro.tipo,
-          descricao: novoRegistro.descricao,
-          profissional_nome: nomeProfissional,
-          profissional_email: emailProfissional,
-          historico: [],
-          arquivo_url: arquivoUrl,
-          arquivo_nome: arquivoNome
-        }]);
-        toast.success("Salvo!");
-      }
-      setNovoRegistro({ tipo: isSecretaria ? "Laudo" : "Sessão", descricao: "" });
-      setArquivoSelecionado(null);
-      setModoEdicao(null);
-      carregarDados();
-    } catch (error: any) { toast.error("Erro ao salvar."); }
-  };
 
   const iniciarEdicao = (reg: any) => {
     setModoEdicao(reg.id);
@@ -171,189 +82,215 @@ export function Prontuario() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const inputClass = "flex w-full rounded-xl border border-gray-300 bg-white px-5 py-4 text-base focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium";
-  
-  if (loading) return <div className="p-20 text-center font-black uppercase text-gray-400 tracking-widest animate-pulse">Carregando Prontuário...</div>;
+  const handleSalvarRegistro = async () => {
+    if (!novoRegistro.descricao) return toast.warning("Descreva o atendimento.");
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      let nomeAutor = user?.email === 'romulochaves77@gmail.com' ? "Rômulo Chaves da Silva" : (user?.user_metadata?.full_name || "Profissional SerClin");
+      
+      let arquivoUrl: string | null = null;
+      let arquivoNome: string | null = null;
+
+      if (arquivoSelecionado) {
+        const fileName = `${id}/${Date.now()}_${arquivoSelecionado.name}`;
+        const { error: upErr } = await supabase.storage.from('documentos').upload(fileName, arquivoSelecionado);
+        if (upErr) throw upErr;
+        const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(fileName);
+        arquivoUrl = publicUrl;
+        arquivoNome = arquivoSelecionado.name;
+      }
+
+      if (modoEdicao) {
+        // --- LÓGICA DE RASTRO (HISTÓRICO) ---
+        const registroOriginal = registros.find(r => r.id === modoEdicao);
+        const versaoAntiga = {
+          texto: registroOriginal.descricao,
+          data: new Date().toISOString(),
+          autor: registroOriginal.profissional_nome || "Desconhecido"
+        };
+        const historicoAtualizado = [ ...(registroOriginal.historico || []), versaoAntiga ];
+
+        await supabase.from("prontuarios").update({
+          descricao: novoRegistro.descricao,
+          tipo_registro: novoRegistro.tipo,
+          profissional_nome: nomeAutor, // Atualiza para o nome de quem editou agora
+          historico: historicoAtualizado,
+          arquivo_url: arquivoUrl || registroOriginal.arquivo_url,
+          arquivo_nome: arquivoNome || registroOriginal.arquivo_nome,
+          updated_at: new Date().toISOString()
+        }).eq("id", modoEdicao);
+        toast.success("Prontuário atualizado com rastro salvo!");
+      } else {
+        await supabase.from("prontuarios").insert([{
+          paciente_id: id,
+          tipo_registro: novoRegistro.tipo,
+          descricao: novoRegistro.descricao,
+          profissional_nome: nomeAutor,
+          historico: [],
+          arquivo_url: arquivoUrl,
+          arquivo_nome: arquivoNome
+        }]);
+        toast.success("Novo registro salvo!");
+      }
+
+      setNovoRegistro({ tipo: isSecretaria ? "Laudo" : "Sessão", descricao: "" });
+      setArquivoSelecionado(null);
+      setModoEdicao(null);
+      carregarDados();
+    } catch (error) { toast.error("Erro ao salvar registro."); } finally { setLoading(false); }
+  };
+
+  const handleExcluirPacienteGeral = async () => {
+    if (!confirm("⚠️ ATENÇÃO: Isso excluirá o PACIENTE e TODO O HISTÓRICO. Confirma?")) return;
+    try {
+      const { error } = await supabase.from("pacientes").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Prontuário removido!");
+      navigate("/sistema/pacientes");
+    } catch (error) { toast.error("Erro ao excluir."); }
+  };
+
+  const handleSalvarAgendamento = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formAgendamento.profissional) return toast.error("Selecione o profissional.");
+    setLoadingAgendamento(true);
+    try {
+      const dInicio = new Date(formAgendamento.inicio);
+      const dFim = addMinutes(dInicio, parseInt(formAgendamento.duracao));
+      const { error } = await supabase.from('agendamentos').insert([{
+        sala_id: parseInt(formAgendamento.sala),
+        profissional_nome: formAgendamento.profissional,
+        paciente_nome: paciente.nome,
+        paciente_id: id,
+        paciente_telefone: paciente.telefone,
+        data_inicio: dInicio.toISOString(),
+        data_fim: dFim.toISOString(),
+        status: 'Agendado'
+      }]);
+      if (error) throw error;
+      setIsAgendamentoOpen(false);
+      toast.success("Agendado!");
+    } catch (err) { toast.error("Erro ao agendar."); } finally { setLoadingAgendamento(false); }
+  };
+
+  if (loading && !paciente) return <div className="p-20 text-center font-black uppercase text-gray-400">Carregando...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-10 font-sans text-left">
-      <div className="max-w-6xl mx-auto space-y-10">
+      <div className="max-w-6xl mx-auto space-y-8">
         
-        {/* CABEÇALHO DE NAVEGAÇÃO */}
+        {/* HEADER */}
         <div className="flex justify-between items-center">
-          <Button variant="ghost" onClick={() => navigate("/sistema/pacientes")} className="gap-2 pl-0 text-gray-500 font-black uppercase text-sm hover:bg-transparent hover:text-blue-600">
-            <ArrowLeft size={22} /> Voltar
+          <Button variant="ghost" onClick={() => navigate("/sistema/pacientes")} className="gap-2 text-gray-500 font-black uppercase text-xs">
+            <ArrowLeft size={20} /> Voltar
           </Button>
-          
-          <Button onClick={() => navigate("/sistema")} className="bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-xs px-6 rounded-full gap-2 h-11 shadow-md transition-all active:scale-95">
-            <CalendarIcon size={18} /> Novo Agendamento
-          </Button>
-        </div>
-
-        <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-md border border-gray-100 flex flex-col md:flex-row gap-8 items-center relative">
-          
-          <button 
-            onClick={() => setEditandoPaciente(!editandoPaciente)}
-            className="absolute top-6 right-6 p-3 bg-gray-50 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded-2xl transition-all border border-gray-100"
-            title="Editar Cadastro"
-          >
-            {editandoPaciente ? <XCircle size={24} /> : <Edit size={24} />}
-          </button>
-
-          <div className="bg-blue-100 p-1 rounded-3xl shrink-0 shadow-inner">
-             {paciente?.foto_url ? (
-                <img src={paciente.foto_url} className="w-28 h-28 rounded-[1.4rem] object-cover border-4 border-white shadow-sm" />
-              ) : (
-                <div className="w-28 h-28 flex items-center justify-center text-blue-600"><User size={50} /></div>
-              )}
-          </div>
-          
-          <div className="flex-1 text-center md:text-left space-y-4 w-full">
-            {editandoPaciente ? (
-              <div className="space-y-3 max-w-md">
-                <Input value={formPaciente.nome} onChange={e => setFormPaciente({...formPaciente, nome: e.target.value})} className="font-bold uppercase" placeholder="Nome do Paciente" />
-                <div className="flex gap-2">
-                  <Input value={formPaciente.telefone} onChange={e => setFormPaciente({...formPaciente, telefone: e.target.value})} placeholder="Telefone" />
-                  <Input value={formPaciente.convenio} onChange={e => setFormPaciente({...formPaciente, convenio: e.target.value})} placeholder="Convênio" />
-                </div>
-                <Button onClick={handleAtualizarCadastro} className="bg-green-600 hover:bg-green-700 text-white font-black uppercase text-[10px] w-full h-10 rounded-xl">Salvar Alterações</Button>
-              </div>
-            ) : (
-              <>
-                <h1 className="text-3xl md:text-4xl font-black text-gray-800 tracking-tight uppercase leading-none">{paciente?.nome}</h1>
-                <div className="flex flex-wrap justify-center md:justify-start gap-5 items-center">
-                  <span className="text-xs font-black px-4 py-1.5 bg-blue-600 text-white rounded-lg uppercase tracking-widest">
-                    {paciente?.convenio || "Particular"}
-                  </span>
-                  {paciente?.telefone && (
-                    <button onClick={abrirWhatsApp} className="group flex items-center gap-3 bg-green-50 hover:bg-green-600 hover:text-white border border-green-200 px-6 py-2.5 rounded-full transition-all shadow-sm">
-                      <MessageCircle size={20} className="text-green-600 group-hover:text-white fill-current" />
-                      <span className="text-base font-bold tracking-widest font-mono">{paciente.telefone}</span>
-                    </button>
-                  )}
-                </div>
-              </>
+          <div className="flex gap-2">
+            {isAdmin && (
+               <Button onClick={handleExcluirPacienteGeral} variant="ghost" className="text-red-400 hover:text-red-600 hover:bg-red-50 font-black uppercase text-[10px] gap-2">
+                <Trash2 size={16} /> Excluir Tudo
+              </Button>
             )}
+            <Button onClick={() => setIsAgendamentoOpen(true)} className="bg-[#1e3a8a] text-white font-black uppercase text-[10px] px-6 rounded-full h-10 shadow-md">
+              <CalendarIcon size={16} className="mr-2" /> Agendar Consulta
+            </Button>
           </div>
-
-          {!editandoPaciente && (
-            <div className="flex gap-4 shrink-0">
-              <div className="bg-white border-2 border-green-100 p-5 rounded-[1.5rem] text-center min-w-[110px] shadow-sm">
-                <div className="text-green-600 font-black text-3xl flex items-center justify-center gap-2">
-                  <CheckCircle size={24}/> {resumoPresenca.presencas}
-                </div>
-                <p className="text-[10px] text-green-500 font-black uppercase tracking-widest mt-1">Presenças</p>
-              </div>
-              <div className="bg-white border-2 border-red-100 p-5 rounded-[1.5rem] text-center min-w-[110px] shadow-sm">
-                <div className="text-red-600 font-black text-3xl flex items-center justify-center gap-2">
-                  <XCircle size={24}/> {resumoPresenca.faltas}
-                </div>
-                <p className="text-[10px] text-red-500 font-black uppercase tracking-widest mt-1">Faltas</p>
-              </div>
-            </div>
-          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          <div className="lg:col-span-1 space-y-6">
-            <Card className={`border-none shadow-xl rounded-[2rem] overflow-hidden ${modoEdicao ? 'ring-4 ring-yellow-400' : ''}`}>
-              <div className={`${modoEdicao ? 'bg-yellow-500' : 'bg-gray-800'} px-8 py-5`}>
-                <h3 className="font-black text-white flex items-center gap-3 text-sm uppercase tracking-[0.2em]">
-                  {modoEdicao ? <><Edit size={20}/> Editando</> : <><FilePlus size={20}/> Novo Registro</>}
-                </h3>
+        {/* INFO PACIENTE */}
+        <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8 items-center">
+          <div className="w-24 h-24 bg-blue-50 rounded-3xl flex items-center justify-center text-[#1e3a8a] shadow-inner"><User size={40} /></div>
+          <div className="flex-1 text-center md:text-left">
+            <h1 className="text-2xl font-black text-gray-800 uppercase leading-none">{paciente?.nome}</h1>
+            <p className="text-sm font-bold text-gray-400 mt-2">{paciente?.telefone} | {paciente?.convenio}</p>
+          </div>
+          <div className="flex gap-3 text-center">
+            <div className="bg-green-50 px-5 py-2 rounded-2xl border border-green-100 min-w-[90px]">
+              <p className="text-xl font-black text-green-600">{resumoPresenca.presencas}</p>
+              <p className="text-[8px] font-black uppercase text-green-400">Presenças</p>
+            </div>
+            <div className="bg-red-50 px-5 py-2 rounded-2xl border border-red-100 min-w-[90px]">
+              <p className="text-xl font-black text-red-600">{resumoPresenca.faltas}</p>
+              <p className="text-[8px] font-black uppercase text-red-400">Faltas</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* COLUNA: NOVO REGISTRO / EDIÇÃO */}
+          <div className="lg:col-span-1">
+            <Card className={`border-none shadow-lg rounded-[2rem] overflow-hidden ${modoEdicao ? 'ring-4 ring-amber-400' : ''}`}>
+              <div className={`${modoEdicao ? 'bg-amber-500' : 'bg-[#1e3a8a]'} px-6 py-4 text-white font-black uppercase text-[10px] tracking-widest flex items-center gap-2`}>
+                {modoEdicao ? <Edit size={16}/> : <FilePlus size={16}/>}
+                {modoEdicao ? 'Editando Registro' : 'Novo Registro'}
               </div>
-              <CardContent className="p-8 space-y-6 bg-white">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 block uppercase tracking-widest">Tipo</label>
-                  <select className={inputClass} value={novoRegistro.tipo} onChange={e => setNovoRegistro({...novoRegistro, tipo: e.target.value})}>
-                    {isSecretaria ? (
-                      <option value="Laudo">Laudo / Documento</option>
-                    ) : (
-                      <>
-                        <option value="Sessão">Sessão Regular</option>
-                        <option value="Anamnese">Anamnese / Inicial</option>
-                        <option value="Avaliação">Avaliação</option>
-                        <option value="Devolutiva">Devolutiva</option>
-                        <option value="Laudo">Laudo / Documento</option>
-                      </>
-                    )}
-                  </select>
+              <CardContent className="p-6 space-y-4">
+                <select className="w-full rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-xs font-bold uppercase outline-none" value={novoRegistro.tipo} onChange={e => setNovoRegistro({...novoRegistro, tipo: e.target.value})}>
+                  <option value="Sessão">Sessão</option>
+                  <option value="Laudo">Laudo / PDF</option>
+                  <option value="Avaliação">Avaliação</option>
+                  <option value="Anamnese">Anamnese</option>
+                </select>
+                <textarea className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm min-h-[200px] outline-none leading-relaxed" placeholder="Descreva o atendimento aqui..." value={novoRegistro.descricao} onChange={e => setNovoRegistro({...novoRegistro, descricao: e.target.value})} />
+                <div className="flex gap-2">
+                   <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1 border-dashed border-2 text-[10px] font-black uppercase h-12">
+                    <Paperclip size={16} className="mr-2" /> {arquivoSelecionado ? arquivoSelecionado.name : "Anexar PDF"}
+                  </Button>
+                  <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => setArquivoSelecionado(e.target.files?.[0] || null)} />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 block uppercase tracking-widest">Descrição</label>
-                  <textarea className={`${inputClass} min-h-[300px] resize-none leading-relaxed`} placeholder={isSecretaria ? "Digite o laudo..." : "Relato clínico..."} value={novoRegistro.descricao} onChange={e => setNovoRegistro({...novoRegistro, descricao: e.target.value})} />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  {modoEdicao && <Button onClick={() => setModoEdicao(null)} variant="ghost" className="flex-1 font-bold h-14 rounded-xl">Cancelar</Button>}
-                  <Button onClick={handleSalvarRegistro} className={`flex-[2] text-white font-black uppercase tracking-widest h-14 rounded-xl shadow-lg ${modoEdicao ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                    <Save size={20} className="mr-2"/> Salvar
+                <div className="flex gap-2">
+                  {modoEdicao && <Button onClick={() => {setModoEdicao(null); setNovoRegistro({tipo: 'Sessão', descricao: ''})}} variant="ghost" className="flex-1 font-bold text-gray-400">Cancelar</Button>}
+                  <Button onClick={handleSalvarRegistro} className={`flex-[2] text-white font-black uppercase text-xs h-12 rounded-xl shadow-lg ${modoEdicao ? 'bg-amber-600' : 'bg-[#1e3a8a]'}`}>
+                    <Save size={18} className="mr-2"/> {modoEdicao ? 'Atualizar' : 'Salvar'}
                   </Button>
                 </div>
               </CardContent>
             </Card>
           </div>
 
+          {/* COLUNA: HISTÓRICO COM RASTRO */}
           <div className="lg:col-span-2 space-y-6">
-            <h3 className="font-black text-gray-800 flex items-center gap-3 text-xl uppercase tracking-tighter px-2">
-              <History size={26} className="text-blue-600"/> Histórico Clínica ({registros.length})
-            </h3>
-
+            <h3 className="font-black text-gray-400 uppercase text-[10px] flex items-center gap-2 px-2"><History size={16}/> Linha do Tempo Clínica</h3>
             <div className="space-y-6">
               {registros.map((reg) => (
-                <div key={reg.id} className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 relative group transition-all hover:shadow-md text-left">
-                  <div className="flex justify-between items-start mb-6 pb-4 border-b border-gray-50">
-                    <div className="flex items-center gap-4">
-                      <span className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-[0.15em] ${reg.tipo_registro === 'Laudo' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                        {reg.tipo_registro}
-                      </span>
+                <div key={reg.id} className="bg-white p-6 pl-8 rounded-[1.5rem] shadow-sm border border-gray-100 space-y-4 relative overflow-hidden group">
+                  <div className="absolute left-0 top-0 bottom-0 w-2.5" style={{ backgroundColor: getCorProfissional(reg.profissional_nome) }} />
+                  
+                  <div className="flex justify-between items-start border-b border-gray-50 pb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[9px] font-black uppercase px-2 py-1 bg-blue-50 text-[#1e3a8a] rounded-md">{reg.tipo_registro}</span>
                       <div className="flex flex-col">
-                        <span className="text-sm font-black text-gray-700 uppercase">{reg.profissional_nome}</span>
-                        <span className="text-xs font-bold text-gray-400">{formatarDataSegura(reg.created_at)}</span>
+                        <span className="text-[11px] font-black text-gray-800 uppercase tracking-tight">{reg.profissional_nome}</span>
+                        <span className="text-[9px] font-bold text-gray-300 flex items-center gap-1"><Clock size={10}/> {formatarDataSegura(reg.created_at)}</span>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center gap-1">
-                      {(!isSecretaria || reg.tipo_registro === 'Laudo') && (
-                        <button onClick={() => iniciarEdicao(reg)} className="text-gray-300 hover:text-blue-600 p-2 transition-colors" title="Editar"><Edit size={20} /></button>
-                      )}
-                      {isAdmin && (
-                        <button onClick={() => handleExcluirRegistro(reg.id)} className="text-gray-300 hover:text-red-600 p-2 transition-colors" title="Excluir Permanentemente"><Trash2 size={20} /></button>
-                      )}
-                    </div>
+                    <button onClick={() => iniciarEdicao(reg)} className="text-gray-200 group-hover:text-amber-500 transition-colors"><Edit size={18}/></button>
                   </div>
 
-                  {isSecretaria && reg.tipo_registro !== 'Laudo' ? (
-                    <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-2xl text-gray-400 text-sm font-bold uppercase tracking-widest text-center flex flex-col items-center gap-3">
-                      <Shield size={32} className="opacity-20"/> Conteúdo Clínico Restrito
-                    </div>
-                  ) : (
-                    <div className="text-gray-700 whitespace-pre-wrap text-lg leading-relaxed mb-6 font-medium">
-                      {reg.descricao}
-                    </div>
-                  )}
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed font-medium">{reg.descricao}</p>
 
+                  {/* EXIBIÇÃO DE ANEXO */}
                   {reg.arquivo_url && (
-                    <a href={reg.arquivo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 px-6 py-3 bg-blue-50 border-2 border-blue-100 rounded-2xl text-blue-700 text-sm font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm">
-                      <Download size={18} /> Ver Anexo
+                    <a href={reg.arquivo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-[10px] font-black text-[#1e3a8a] uppercase hover:underline bg-blue-50/50 p-2 rounded-lg">
+                      <FileText size={14} /> Documento: {reg.arquivo_nome}
                     </a>
                   )}
 
-                  {!isSecretaria && Array.isArray(reg.historico) && reg.historico.length > 0 && (
-                    <div className="mt-6 pt-4 border-t border-gray-50">
+                  {/* --- O RASTRO DE EDIÇÕES (HISTÓRICO ANTERIOR) --- */}
+                  {reg.historico && reg.historico.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-dashed border-gray-100">
                       <details className="group">
-                        <summary className="flex items-center gap-2 text-[11px] font-black text-yellow-600 cursor-pointer select-none uppercase tracking-widest hover:text-yellow-700">
-                          <AlertCircle size={14} /> Log de edições anteriores ({reg.historico.length})
+                        <summary className="text-[9px] font-black text-amber-600 uppercase cursor-pointer hover:text-amber-700 flex items-center gap-2 list-none">
+                          <AlertCircle size={12}/> Ver alterações anteriores ({reg.historico.length})
                         </summary>
-                        <div className="mt-4 space-y-4 bg-yellow-50/50 p-6 rounded-3xl border border-yellow-100">
-                          {reg.historico.map((h: any, index: number) => (
-                            <div key={index} className="text-sm border-b border-yellow-200/50 pb-4 last:border-0 last:pb-0">
-                              <div className="flex justify-between text-gray-400 mb-2 font-black uppercase text-[10px] tracking-tighter">
-                                <span>Alterado por: {h.autor}</span>
+                        <div className="mt-3 space-y-3 pl-2 border-l-2 border-amber-100">
+                          {reg.historico.map((h: any, i: number) => (
+                            <div key={i} className="bg-amber-50/30 p-3 rounded-xl">
+                              <div className="flex justify-between text-[9px] font-bold text-amber-700 uppercase mb-2">
+                                <span>Por: {h.autor}</span>
                                 <span>{formatarDataSegura(h.data)}</span>
                               </div>
-                              <p className="text-gray-500 italic line-through bg-white/80 p-4 rounded-xl border border-yellow-100 opacity-70 mb-2 font-medium">
-                                {h.texto}
-                              </p>
+                              <p className="text-xs text-gray-400 italic line-through">{h.texto}</p>
                             </div>
                           ))}
                         </div>
@@ -365,6 +302,57 @@ export function Prontuario() {
             </div>
           </div>
         </div>
+
+        {/* MODAL AGENDAMENTO (40 MIN) */}
+        {isAgendamentoOpen && (
+          <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
+            <Card className="w-full max-w-md rounded-[2.5rem] bg-white overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+              <div className="bg-[#1e3a8a] p-6 flex justify-between items-center text-white font-black uppercase text-xs tracking-widest">
+                <span>Agendar para {paciente?.nome}</span>
+                <button onClick={() => setIsAgendamentoOpen(false)}><X size={24}/></button>
+              </div>
+              <form onSubmit={handleSalvarAgendamento} className="p-8 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase">Profissional</label>
+                    <Select value={formAgendamento.profissional} onValueChange={(v) => setFormAgendamento({...formAgendamento, profissional: v})}>
+                      <SelectTrigger className="h-11 text-xs font-bold uppercase border-gray-100 bg-gray-50"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent className="z-[110]">
+                        {equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase">Sala</label>
+                    <Select value={formAgendamento.sala} onValueChange={(v) => setFormAgendamento({...formAgendamento, sala: v})}>
+                      <SelectTrigger className="h-11 text-xs font-bold uppercase border-gray-100 bg-gray-50"><SelectValue /></SelectTrigger>
+                      <SelectContent className="z-[110]"><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase">Início</label>
+                    <input type="datetime-local" className="w-full h-11 bg-gray-50 border-gray-100 rounded-xl px-4 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-[#1e3a8a]" value={formAgendamento.inicio} onChange={e => setFormAgendamento({...formAgendamento, inicio: e.target.value})} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase">Duração</label>
+                    <Select value={formAgendamento.duracao} onValueChange={(v) => setFormAgendamento({...formAgendamento, duracao: v})}>
+                      <SelectTrigger className="h-11 text-xs font-bold uppercase border-gray-100 bg-gray-50"><SelectValue /></SelectTrigger>
+                      <SelectContent className="z-[110]">
+                        <SelectItem value="30">30 Min</SelectItem><SelectItem value="40">40 Min</SelectItem><SelectItem value="50">50 Min</SelectItem><SelectItem value="60">60 Min</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button type="submit" disabled={loadingAgendamento} className="w-full bg-[#1e3a8a] text-white font-black uppercase text-xs h-14 rounded-2xl shadow-xl transition-all">
+                  {loadingAgendamento ? <RefreshCw className="animate-spin" /> : "Confirmar Agendamento"}
+                </Button>
+              </form>
+            </Card>
+          </div>
+        )}
+
       </div>
     </div>
   );

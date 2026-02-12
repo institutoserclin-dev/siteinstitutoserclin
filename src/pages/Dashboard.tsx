@@ -8,7 +8,7 @@ import { ptBR } from 'date-fns/locale';
 import { 
   LogOut, Calendar as CalendarIcon, Plus, X, Trash2, 
   FileText, BarChart3, Shield, Clock, Users, Filter, 
-  MessageCircle, CheckCircle, ExternalLink, MessageSquare 
+  MessageCircle, CheckCircle, ExternalLink, MessageSquare
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +18,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from '@/lib/supabase';
 import { usePerfil } from "@/hooks/usePerfil";
 
-// Bibliotecas para PDF
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 
@@ -36,7 +35,7 @@ const mapearStatusParaBanco = (statusVisual: string) => {
 };
 
 const EventoCustomizado = ({ event }: any) => (
-  <div className="h-full w-full flex flex-col items-center justify-center text-center p-1 overflow-hidden">
+  <div className="h-full w-full flex flex-col items-center justify-center text-center p-1 overflow-hidden text-left">
     <span className="text-white font-bold text-[10px] uppercase leading-tight truncate w-full">
       {event.title}
     </span>
@@ -48,8 +47,17 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { isAdmin, isSecretaria } = usePerfil();
 
-  const sigCanvas = useRef<SignatureCanvas>(null);
+  // --- TRAVA DE SEGURANÇA PARA SEU E-MAIL ---
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) setUserEmail(data.user.email ?? null);
+    });
+  }, []);
 
+  const souEuOAdmin = isAdmin || userEmail === 'romulochaves77@gmail.com';
+
+  const sigCanvas = useRef<SignatureCanvas>(null);
   const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
@@ -101,55 +109,35 @@ export function Dashboard() {
     const doc = new jsPDF();
     const dataAtual = format(new Date(), "dd/MM/yyyy");
     const horaAtendimento = format(new Date(form.inicio), "HH:mm");
-
     doc.addImage(logoSerClin, 'PNG', 80, 15, 50, 25);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(37, 99, 235);
+    doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.setTextColor(37, 99, 235);
     doc.text("ATESTADO DE COMPARECIMENTO", 105, 55, { align: "center" });
-    doc.setDrawColor(200, 200, 200);
-    doc.line(30, 62, 180, 62);
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(0, 0, 0);
-
+    doc.setDrawColor(200, 200, 200); doc.line(30, 62, 180, 62);
+    doc.setFontSize(12); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
     const textoCorpo = `Declaramos para os devidos fins de comprovação que o(a) paciente ${form.paciente_nome.toUpperCase()} esteve presente no INSTITUTO SERCLIN para atendimento especializado no dia ${format(new Date(form.inicio), "dd/MM/yyyy")}. O atendimento teve início às ${horaAtendimento} sob a responsabilidade do(a) profissional ${form.profissional.toUpperCase()}.`;
-
-    doc.text(textoCorpo, 20, 80, { 
-      maxWidth: 170, 
-      align: "justify",
-      lineHeightFactor: 1.5 
-    });
-
+    doc.text(textoCorpo, 20, 80, { maxWidth: 170, align: "justify", lineHeightFactor: 1.5 });
     if (form.assinatura_url) {
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.text("ASSINATURA DIGITAL DO PACIENTE:", 20, 130);
+      doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text("ASSINATURA DIGITAL DO PACIENTE:", 20, 130);
       doc.addImage(form.assinatura_url, 'PNG', 20, 135, 60, 25);
-      doc.setDrawColor(0, 0, 0);
-      doc.line(20, 160, 85, 160);
+      doc.setDrawColor(0, 0, 0); doc.line(20, 160, 85, 160);
     }
-
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(8); doc.setTextColor(100, 100, 100);
     doc.text("INSTITUTO SERCLIN - GESTÃO INTEGRADA EM SAÚDE", 105, 270, { align: "center" });
     doc.text("CNPJ: 64.585.207/0001-58 | R. Sorocaba, 140 - Rio Branco, AC", 105, 275, { align: "center" });
     doc.text(`Documento autenticado digitalmente em ${dataAtual} às ${format(new Date(), "HH:mm")}`, 105, 280, { align: "center" });
-
     doc.save(`Atestado_${form.paciente_nome.replace(/\s+/g, '_')}.pdf`);
     toast.success("Atestado gerado com sucesso!");
   };
 
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.profissional || !form.inicio) return toast.error("Preencha profissional e horário.");
-    
+    if (!form.profissional || !form.inicio) return toast.error("Preencha profissional.");
     setLoading(true);
     try {
       const dInicio = new Date(form.inicio);
       const dFim = addMinutes(dInicio, parseInt(form.duracao));
       const salaId = parseInt(form.sala);
-
+      
       const conflitoLocal = events.find(event => {
         if (eventoSelecionadoId && event.id === eventoSelecionadoId) return false;
         const overlap = dInicio < event.end && dFim > event.start;
@@ -162,11 +150,13 @@ export function Dashboard() {
 
       if (conflitoLocal) {
         setLoading(false);
-        return toast.error(
-          conflitoLocal === "profissional" 
-          ? `O(A) ${form.profissional} já tem agenda neste horário!` 
-          : `A Sala ${salaId} já está ocupada neste horário!`
-        );
+        return toast.error(conflitoLocal === "profissional" ? "Profissional ocupado!" : "Sala ocupada!");
+      }
+
+      let idDoPaciente = form.paciente_id;
+      if (!idDoPaciente) {
+        const { data: novoPac } = await supabase.from("pacientes").insert([{ nome: buscaPaciente, telefone: form.telefone, convenio: "Particular" }]).select('id').single();
+        if (novoPac) idDoPaciente = novoPac.id;
       }
 
       let assinaturaBase64 = form.assinatura_url;
@@ -174,56 +164,18 @@ export function Dashboard() {
           assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
       }
 
-      const statusFinal = mapearStatusParaBanco(form.status);
-
-      // --- LOGICA DE CRIACAO DE PRONTUARIO (IDENTITY FIX) ---
-      let idDoPaciente = form.paciente_id;
-
-      if (!idDoPaciente) {
-        const { data: novoPac, error: erroPac } = await supabase
-          .from("pacientes")
-          .insert([{
-            nome: buscaPaciente,
-            telefone: form.telefone,
-            convenio: "Particular"
-          }])
-          .select('id')
-          .single();
-
-        if (!erroPac && novoPac) {
-          idDoPaciente = novoPac.id;
-        } else {
-          console.error("Erro ao criar prontuário:", erroPac);
-        }
-      }
-
       const payload = {
-        sala_id: salaId,
-        profissional_nome: form.profissional,
-        paciente_nome: buscaPaciente,
-        paciente_id: idDoPaciente,
-        paciente_telefone: form.telefone,
-        data_inicio: dInicio.toISOString(),
-        data_fim: dFim.toISOString(),
-        status: statusFinal,
-        assinatura_url: assinaturaBase64
+        sala_id: salaId, profissional_nome: form.profissional, paciente_nome: buscaPaciente,
+        paciente_id: idDoPaciente, paciente_telefone: form.telefone,
+        data_inicio: dInicio.toISOString(), data_fim: dFim.toISOString(),
+        status: mapearStatusParaBanco(form.status), assinatura_url: assinaturaBase64
       };
-
       const { error } = eventoSelecionadoId 
         ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId)
         : await supabase.from('agendamentos').insert([payload]);
-
       if (error) throw error;
-
-      setIsAgendamentoOpen(false);
-      setBuscaPaciente("");
-      setEventoSelecionadoId(null);
-      await fetchData();
-      toast.success("Agenda e Prontuário atualizados!");
-    } catch (error: any) { 
-      console.error(error);
-      toast.error("Erro ao salvar agendamento.");
-    } finally { setLoading(false); }
+      setIsAgendamentoOpen(false); await fetchData(); toast.success("Agenda salva!");
+    } catch (err) { toast.error("Erro ao salvar."); } finally { setLoading(false); }
   };
 
   const enviarZap = () => {
@@ -246,7 +198,7 @@ export function Dashboard() {
 
         <div className="flex-1 max-w-xs">
           <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
-            <SelectTrigger className="bg-gray-50 border-none h-9 text-[10px] font-bold uppercase tracking-widest">
+            <SelectTrigger className="bg-gray-50 border-none h-9 text-[10px] font-bold uppercase tracking-widest text-left">
               <Filter size={14} className="mr-2 text-blue-600"/><SelectValue placeholder="Filtrar" />
             </SelectTrigger>
             <SelectContent>
@@ -256,18 +208,20 @@ export function Dashboard() {
           </Select>
         </div>
 
+        {/* --- BOTÕES DO HEADER --- */}
         <div className="flex gap-1.5 items-center">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500 hover:bg-orange-50"><BarChart3 size={20}/></Button>
-          {(isAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600 hover:bg-green-50"><Clock size={20}/></Button>}
-          {isAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600 hover:bg-purple-50"><Shield size={20}/></Button>}
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500 hover:bg-orange-50" title="Relatórios"><BarChart3 size={20}/></Button>
+          {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600 hover:bg-green-50"><Clock size={20}/></Button>}
+          
+          {/* BOTÃO ESCUDO - AGORA VAI PARA A PÁGINA DE ACESSOS */}
+          {souEuOAdmin && (
+            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600 hover:bg-purple-50" title="Gestão de Equipe"><Shield size={20}/></Button>
+          )}
+          
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 hover:bg-blue-50 mr-2"><Users size={20}/></Button>
           
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/lembretes')} className="relative text-emerald-600 hover:bg-emerald-50 mr-2" title="Lembretes de Amanhã">
-            <MessageSquare size={20}/>
-            <span className="absolute top-1 right-1 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/lembretes')} className="relative text-emerald-600 hover:bg-emerald-50 mr-2" title="Lembretes">
+            <MessageSquare size={20}/><span className="absolute top-1 right-1 flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
           </Button>
 
           <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-bold"><Plus size={16} className="mr-1" /> AGENDAR</Button>
@@ -276,167 +230,71 @@ export function Dashboard() {
       </header>
 
       <main className="flex-1 p-4 overflow-hidden">
-        <Card className="h-full border-none shadow-sm bg-white overflow-hidden rounded-2xl">
+        <Card className="h-full border-none shadow-sm bg-white overflow-hidden rounded-2xl text-left">
           <CardContent className="p-0 h-full">
-            <Calendar
-              localizer={localizer} 
-              events={filtroProfissional === "geral" ? events : events.filter(e => e.original?.profissional_nome === filtroProfissional)}
-              view={view} onView={setView} date={date} onNavigate={setDate} 
-              views={['day', 'week', 'month', 'agenda']} culture='pt-BR'
-              messages={{ next: "Próx", previous: "Ant", today: "Hoje", month: "Mês", week: "Semana", day: "Dia", agenda: "Lista" }}
-              components={{ event: EventoCustomizado }}
-              eventPropGetter={(event: any) => ({ 
-                style: { backgroundColor: event.color, border: 'none', borderRadius: '4px', opacity: (event.original?.status === 'Falta') ? 0.5 : 1 }
-              })}
-              onSelectEvent={(e) => {
-                const evt = e.original;
-                setEventoSelecionadoId(evt.id);
-                setBuscaPaciente(evt.paciente_nome);
-                setForm({ 
-                  ...form, 
-                  profissional: evt.profissional_nome, 
-                  paciente_nome: evt.paciente_nome, 
-                  paciente_id: evt.paciente_id, 
-                  telefone: evt.paciente_telefone || '', 
-                  inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), 
-                  duracao: '50', 
-                  status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'),
-                  assinatura_url: evt.assinatura_url || null
-                });
-                setIsAgendamentoOpen(true);
-              }}
-              min={new Date(0, 0, 0, 7, 0, 0)} max={new Date(0, 0, 0, 21, 0, 0)}
-            />
+            <Calendar localizer={localizer} culture='pt-BR' events={filtroProfissional === "geral" ? events : events.filter(e => e.original?.profissional_nome === filtroProfissional)} view={view} onView={setView} date={date} onNavigate={setDate} views={['day', 'week', 'month', 'agenda']} components={{ event: EventoCustomizado }} eventPropGetter={(event: any) => ({ style: { backgroundColor: event.color, border: 'none', borderRadius: '4px', opacity: (event.original?.status === 'Falta') ? 0.5 : 1 } })} onSelectEvent={(e) => { const evt = e.original; setEventoSelecionadoId(evt.id); setBuscaPaciente(evt.paciente_nome); setForm({ ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: evt.paciente_telefone || '', inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), duracao: '50', status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), assinatura_url: evt.assinatura_url || null }); setIsAgendamentoOpen(true); }} min={new Date(0, 0, 0, 7, 0, 0)} max={new Date(0, 0, 0, 21, 0, 0)} />
           </CardContent>
         </Card>
       </main>
 
+      {/* MODAL DE AGENDAMENTO */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md my-8 overflow-hidden text-left font-sans">
-            <div className="p-6 border-b flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800 uppercase text-xs tracking-widest">{eventoSelecionadoId ? 'Editar Detalhes' : 'Agendar Paciente'}</h3>
+            <div className="p-6 border-b flex justify-between items-center bg-gray-50 text-left">
+              <h3 className="font-bold text-gray-800 uppercase text-xs tracking-widest text-left">{eventoSelecionadoId ? 'Editar Detalhes' : 'Agendar Paciente'}</h3>
               <button onClick={() => setIsAgendamentoOpen(false)}><X size={20}/></button>
             </div>
             <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4">
-              {eventoSelecionadoId && form.paciente_id && (
-                <Button type="button" onClick={() => navigate(`/sistema/pacientes/${form.paciente_id}`)} className="w-full bg-blue-50 text-blue-700 font-bold py-4 rounded-xl flex items-center justify-center gap-2 mb-2 uppercase text-[10px] border border-blue-100"><FileText size={18} /> Ver Prontuário <ExternalLink size={12}/></Button>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Status</label>
-                  <Select value={form.status} onValueChange={(v) => setForm({...form, status: v})}>
-                    <SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10 uppercase text-[10px]">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Agendado">Agendado</SelectItem>
-                      <SelectItem value="Presença">Presença</SelectItem>
-                      <SelectItem value="Falta">Falta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Duração (Min)</label>
-                  <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}>
-                    <SelectTrigger className="bg-gray-50 border-none h-10 font-bold"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="30">30 Min</SelectItem><SelectItem value="40">40 Min</SelectItem><SelectItem value="50">50 Min</SelectItem><SelectItem value="60">60 Min</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="grid grid-cols-2 gap-4 text-left">
+                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase text-left">Status</label>
+                  <Select value={form.status} onValueChange={(v) => setForm({...form, status: v})}><SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10 uppercase text-[10px]"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem><SelectItem value="Falta">Falta</SelectItem></SelectContent></Select></div>
+                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase text-left">Duração</label>
+                  <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}><SelectTrigger className="bg-gray-50 border-none h-10 font-bold"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="30">30 Min</SelectItem><SelectItem value="50">50 Min</SelectItem><SelectItem value="60">60 Min</SelectItem></SelectContent></Select></div>
               </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Paciente</label>
-                <div className="relative">
-                  <Input placeholder="Buscar nome..." className="bg-gray-50 border-none font-bold uppercase text-xs h-11" value={buscaPaciente} onChange={(e) => setBuscaPaciente(e.target.value)} required />
-                  {pacientesSugeridos.length > 0 && (
-                    <div className="absolute z-[100] w-full bg-white border shadow-2xl rounded-xl mt-1 overflow-hidden">
-                      {pacientesSugeridos.map(p => (
-                        <button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b last:border-none flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: p.telefone || '' }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}>
-                          <span className="font-bold text-sm text-gray-800 uppercase">{p.nome}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-gray-400 uppercase text-left">Paciente</label>
+                <div className="relative"><Input placeholder="Buscar..." className="bg-gray-50 border-none font-bold uppercase text-xs h-11" value={buscaPaciente} onChange={(e) => setBuscaPaciente(e.target.value)} required />
+                  {pacientesSugeridos.length > 0 && (<div className="absolute z-[100] w-full bg-white border shadow-2xl rounded-xl mt-1 overflow-hidden">{pacientesSugeridos.map(p => (<button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: p.telefone || '' }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}><span className="font-bold text-sm uppercase">{p.nome}</span></button>))}</div>)}</div></div>
+              <div className="grid grid-cols-2 gap-4 text-left">
+                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase text-left">Profissional</label>
+                  <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required><SelectTrigger className="bg-gray-50 border-none h-11 text-left"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                    <SelectContent>{equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase text-left">Sala</label>
+                  <Select value={form.sala} onValueChange={(v) => setForm({...form, sala: v})}><SelectTrigger className="bg-gray-50 border-none h-11 text-left"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem></SelectContent></Select></div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Profissional</label>
-                  <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required>
-                    <SelectTrigger className="bg-gray-50 border-none h-11"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
-                    <SelectContent>{equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Sala</label>
-                  <Select value={form.sala} onValueChange={(v) => setForm({...form, sala: v})}>
-                    <SelectTrigger className="bg-gray-50 border-none h-11"><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem></SelectContent>
-                  </Select>
-                </div>
+              <div className="grid grid-cols-2 gap-4 text-left">
+                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase text-left">WhatsApp</label>
+                  <div className="flex gap-1"><Input value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} className="bg-gray-50 border-none h-11" /><Button type="button" onClick={() => window.open(`https://wa.me/55${form.telefone.replace(/\D/g,'')}`)} variant="outline" className="text-green-600 h-11 shrink-0"><MessageCircle size={18}/></Button></div></div>
+                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase text-left">Horário</label><input type="datetime-local" required className="w-full bg-gray-50 rounded-md p-2.5 text-sm h-11 outline-none text-left" value={form.inicio} onChange={e => setForm({...form, inicio: e.target.value})} /></div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">WhatsApp</label>
-                  <div className="flex gap-1">
-                    <Input value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} className="bg-gray-50 border-none h-11" placeholder="(00)" />
-                    <Button type="button" onClick={enviarZap} variant="outline" className="text-green-600 border-green-100 h-11 shrink-0"><MessageCircle size={18}/></Button>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Horário</label>
-                  <input type="datetime-local" required className="w-full bg-gray-50 rounded-md p-2.5 text-sm h-11 outline-none" value={form.inicio} onChange={e => setForm({...form, inicio: e.target.value})} />
-                </div>
-              </div>
-
-              {/* ÁREA DE ASSINATURA */}
-              <div className="space-y-1 pt-2">
-                <label className="text-[10px] font-bold text-gray-400 uppercase flex justify-between">
-                  Assinatura de Presença
-                  {form.assinatura_url && <span className="text-emerald-500 font-black">REGISTRADA</span>}
-                </label>
+              
+              <div className="space-y-1 pt-2 text-left">
+                <label className="text-[10px] font-bold text-gray-400 uppercase flex justify-between">Assinatura Digital {form.assinatura_url && <span className="text-emerald-500 font-black">OK</span>}</label>
                 <div className="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden bg-white min-h-[120px] flex items-center justify-center relative">
                   {form.assinatura_url ? (
                     <div className="group relative w-full h-full flex flex-col items-center justify-center bg-gray-50 p-2">
                       <img src={form.assinatura_url} alt="Assinatura" className="max-h-[100px] object-contain" />
-                      <Button type="button" onClick={() => setForm({ ...form, assinatura_url: null })} className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity font-bold text-[10px] uppercase">Refazer Assinatura</Button>
+                      <Button type="button" onClick={() => setForm({ ...form, assinatura_url: null })} className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity font-bold text-[10px] uppercase">Refazer</Button>
                     </div>
                   ) : (
                     <SignatureCanvas ref={sigCanvas} penColor='black' canvasProps={{width: 380, height: 120, className: 'sigCanvas w-full h-full'}} />
                   )}
                 </div>
-                <div className="flex justify-between items-center">
-                   {!form.assinatura_url && (
-                     <Button type="button" variant="ghost" size="sm" className="text-[9px] uppercase font-bold text-red-400" onClick={() => sigCanvas.current?.clear()}>Limpar Campo</Button>
-                   )}
-                   <p className="text-[8px] text-gray-400 font-bold uppercase italic ml-auto">Assine digitalmente no campo acima</p>
-                </div>
+                {!form.assinatura_url && <Button type="button" variant="ghost" size="sm" className="text-[9px] uppercase font-bold text-red-400" onClick={() => sigCanvas.current?.clear()}>Limpar Campo</Button>}
               </div>
 
               <div className="pt-4 flex flex-col gap-3">
                 {eventoSelecionadoId && form.status === 'Presença' && (
-                  <Button 
-                    type="button" 
-                    onClick={gerarComprovante}
-                    className="w-full bg-gray-800 hover:bg-black text-white font-bold h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all"
-                  >
-                    <FileText size={16} /> Gerar Atestado de Comparecimento
+                  <Button type="button" onClick={gerarComprovante} className="w-full bg-gray-800 text-white font-bold h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all">
+                    <FileText size={16} /> Gerar Atestado
                   </Button>
                 )}
-
                 <div className="flex gap-3">
-                  {eventoSelecionadoId && (
-                     <Button type="button" variant="ghost" onClick={async () => { if(confirm("Apagar agendamento?")) { await supabase.from('agendamentos').delete().eq('id', eventoSelecionadoId); setIsAgendamentoOpen(false); fetchData(); } }} className="text-red-400 font-bold px-4 hover:bg-red-50"><Trash2 size={18}/></Button>
-                  )}
-                  <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white font-bold h-12 rounded-xl shadow-lg uppercase text-xs">
-                    {loading ? 'Processando...' : 'Confirmar Agenda'}
-                  </Button>
+                  {eventoSelecionadoId && (<Button type="button" variant="ghost" onClick={async () => { if(confirm("Apagar?")) { await supabase.from('agendamentos').delete().eq('id', eventoSelecionadoId); setIsAgendamentoOpen(false); fetchData(); } }} className="text-red-400 font-bold px-4 hover:bg-red-50"><Trash2 size={18}/></Button>)}
+                  <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white font-bold h-12 rounded-xl shadow-lg uppercase text-xs">{loading ? 'Processando...' : 'Confirmar Agenda'}</Button>
                 </div>
               </div>
             </form>

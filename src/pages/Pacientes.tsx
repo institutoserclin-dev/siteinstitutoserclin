@@ -5,13 +5,14 @@ import { toast } from "sonner";
 import Cropper from "react-easy-crop";
 import { 
   User, Plus, Search, FileText, Trash2, Edit, X, Save, ArrowLeft, 
-  Camera, ImageIcon, Check, ZoomIn, MessageCircle 
+  Camera, ImageIcon, Check, ZoomIn, MessageCircle, Cake, AlertTriangle, ShieldAlert, MapPin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePerfil } from "@/hooks/usePerfil";
+import { format, differenceInDays, isSameDay, parseISO } from "date-fns";
 
 // --- UTILITÁRIOS PARA CORTE DE IMAGEM ---
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -43,7 +44,7 @@ const CONVENIOS = ["Particular", "SINODONTO", "SINPROAC", "SINTEAC", "COMUNIDADE
 
 export function Pacientes() {
   const navigate = useNavigate();
-  const { isAdmin } = usePerfil();
+  const { isAdmin, isSecretaria } = usePerfil();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [pacientes, setPacientes] = useState<any[]>([]);
@@ -60,17 +61,47 @@ export function Pacientes() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", endereco: "", telefone: "", convenio: "Particular", foto_url: ""
+    id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", 
+    endereco: "", telefone: "", convenio: "Particular", foto_url: "",
+    responsavel_nome: "", responsavel_cpf: ""
   });
 
   const fetchPacientes = async () => {
     setLoading(true);
-    const { data } = await supabase.from("pacientes").select("*").order("nome", { ascending: true });
-    setPacientes(data || []);
+    const { data, error } = await supabase
+      .from("pacientes")
+      .select(`*, agendamentos (data_inicio)`)
+      .order("nome", { ascending: true });
+
+    if (!error && data) {
+      const processados = data.map(pac => {
+        const datas = pac.agendamentos?.map((a: any) => new Date(a.data_inicio)) || [];
+        const ultima = datas.length > 0 ? new Date(Math.max(...datas.map(d => d.getTime()))) : null;
+        return { ...pac, ultimaConsulta: ultima };
+      });
+      setPacientes(processados);
+    }
     setLoading(false);
   };
 
   useEffect(() => { fetchPacientes(); }, []);
+
+  // --- FUNÇÃO WHATSAPP PERSONALIZADA COM NOME DO PROFISSIONAL ---
+  const abrirWhatsApp = async (numero: string, nomePaciente: string) => {
+    const limpo = numero.replace(/\D/g, "");
+    if (limpo.length < 10) return toast.error("Telefone inválido.");
+
+    const { data: { user } } = await supabase.auth.getUser();
+    let remetente = user?.user_metadata?.full_name || "Equipe SerClin";
+
+    if (user?.email === 'romulochaves77@gmail.com') {
+      remetente = "Dr. Rômulo Chaves";
+    }
+
+    const saudacao = `Olá ${nomePaciente}, tudo bem? Aqui é o(a) ${remetente} do Instituto SerClin.`;
+    const mensagem = encodeURIComponent(saudacao);
+    window.open(`https://wa.me/55${limpo}?text=${mensagem}`, "_blank");
+  };
 
   const handleTelefone = (e: React.ChangeEvent<HTMLInputElement>) => {
     let v = e.target.value.replace(/\D/g, "");
@@ -119,9 +150,18 @@ export function Pacientes() {
         const { data } = supabase.storage.from('fotos-perfil').getPublicUrl(fileName);
         urlDaFoto = data.publicUrl;
       }
-      const payload = { ...form, foto_url: urlDaFoto };
-      if (form.id) { await supabase.from("pacientes").update(payload).eq("id", form.id); toast.success("Atualizado!"); }
-      else { const { id, ...newPayload } = payload; await supabase.from("pacientes").insert([newPayload]); toast.success("Cadastrado!"); }
+      
+      const { ultimaConsulta, agendamentos, ...newPayload } = form as any;
+      const payload = { ...newPayload, foto_url: urlDaFoto };
+
+      if (form.id) { 
+        await supabase.from("pacientes").update(payload).eq("id", form.id); 
+        toast.success("Atualizado!"); 
+      } else { 
+        const { id, ...insertPayload } = payload; 
+        await supabase.from("pacientes").insert([insertPayload]); 
+        toast.success("Cadastrado!"); 
+      }
       limparModal(); fetchPacientes();
     } catch (error: any) { toast.error(error.message); }
   };
@@ -138,7 +178,7 @@ export function Pacientes() {
         <ArrowLeft size={20} /> Voltar ao Painel
       </Button>
 
-      <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 text-left">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
         <div>
           <h1 className="text-3xl font-black text-gray-800 uppercase tracking-tight">Pacientes</h1>
           <p className="text-sm text-gray-400 font-bold uppercase tracking-widest mt-1">Instituto SerClin • Gestão Integrada</p>
@@ -148,8 +188,8 @@ export function Pacientes() {
             <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
             <Input placeholder="Buscar por nome ou CPF..." className="bg-white border-none shadow-sm h-12 pl-10 text-base" value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
-          {isAdmin && (
-            <Button onClick={() => { setForm({id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", endereco: "", telefone: "", convenio: "Particular", foto_url: ""}); setIsModalOpen(true); }} className="bg-blue-600 font-bold uppercase text-sm h-12 px-8 rounded-full shadow-lg">
+          {(isAdmin || isSecretaria) && (
+            <Button onClick={() => { setForm({id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", endereco: "", telefone: "", convenio: "Particular", foto_url: "", responsavel_nome: "", responsavel_cpf: ""}); setIsModalOpen(true); }} className="bg-blue-600 font-bold uppercase text-sm h-12 px-8 rounded-full shadow-lg">
               <Plus size={20} className="mr-2"/> Novo
             </Button>
           )}
@@ -157,41 +197,59 @@ export function Pacientes() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {pacientes.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()) || p.cpf?.includes(busca)).map((p) => (
-          <Card key={p.id} className="border-none shadow-md bg-white overflow-hidden rounded-3xl hover:shadow-xl transition-all">
-            <CardContent className="p-8">
-              <div className="flex gap-5 items-start mb-6">
-                <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 text-2xl font-black uppercase shrink-0 overflow-hidden border-2 border-white shadow-md">
-                  {p.foto_url ? <img src={p.foto_url} className="w-full h-full object-cover" /> : p.nome.charAt(0)}
+        {pacientes.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()) || p.cpf?.includes(busca)).map((p) => {
+           const diasAusente = p.ultimaConsulta ? differenceInDays(new Date(), p.ultimaConsulta) : null;
+           const eAniversariante = p.data_nascimento && isSameDay(new Date(), parseISO(p.data_nascimento));
+
+           return (
+            <Card key={p.id} className="border-none shadow-md bg-white overflow-hidden rounded-[2.5rem] hover:shadow-xl transition-all border border-gray-100">
+              <CardContent className="p-8">
+                <div className="flex gap-5 items-start mb-6">
+                  <div className="w-20 h-20 bg-blue-100 rounded-3xl flex items-center justify-center text-blue-600 text-2xl font-black uppercase shrink-0 overflow-hidden border-2 border-white shadow-sm">
+                    {p.foto_url ? <img src={p.foto_url} className="w-full h-full object-cover" /> : p.nome.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-800 uppercase text-lg leading-tight truncate mb-1">{p.nome}</h3>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                        <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded uppercase">{p.convenio}</span>
+                        {eAniversariante && <span className="text-[10px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase flex items-center gap-1"><Cake size={10}/> Níver Hoje!</span>}
+                    </div>
+                    
+                    {p.telefone && (
+                      <button 
+                        onClick={() => abrirWhatsApp(p.telefone, p.nome)}
+                        className="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full text-xs font-bold border border-green-100 hover:bg-green-600 hover:text-white transition-all shadow-sm"
+                      >
+                        <MessageCircle size={14} className="fill-current" /> {p.telefone}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-gray-800 uppercase text-lg leading-tight truncate mb-1">{p.nome}</h3>
-                  <span className="inline-block text-[11px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded uppercase tracking-tighter mb-4">{p.convenio}</span>
-                  
-                  {p.telefone && (
-                    <button 
-                      onClick={() => window.open(`https://wa.me/55${p.telefone.replace(/\D/g, "")}`, "_blank")}
-                      className="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm font-bold border border-green-100 hover:bg-green-100 transition-all w-full md:w-auto"
-                    >
-                      <MessageCircle size={18} fill="currentColor" /> {p.telefone}
-                    </button>
+
+                {diasAusente !== null && diasAusente >= 90 && (
+                   <div className="mb-4 bg-amber-50 border border-amber-100 p-3 rounded-2xl flex items-center justify-between text-amber-700">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle size={18} />
+                        <span className="text-[10px] font-bold uppercase">Ausente há {diasAusente} dias</span>
+                      </div>
+                      <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase text-amber-600 hover:bg-amber-100" onClick={() => abrirWhatsApp(p.telefone, p.nome)}>Chamar</Button>
+                   </div>
+                )}
+
+                <div className="flex gap-3 pt-6 border-t border-gray-100">
+                  <Button variant="outline" className="flex-1 h-12 rounded-2xl font-bold uppercase text-xs border-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white transition-all shadow-sm" onClick={() => navigate(`/sistema/pacientes/${p.id}`)}>
+                    <FileText size={18} className="mr-2"/> Prontuário
+                  </Button>
+                  {(isAdmin || isSecretaria) && (
+                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl text-gray-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => { setForm(p); setPreviewUrl(p.foto_url); setIsModalOpen(true); }}>
+                      <Edit size={20}/>
+                    </Button>
                   )}
                 </div>
-              </div>
-
-              <div className="flex gap-3 pt-6 border-t border-gray-100">
-                <Button variant="outline" className="flex-1 h-12 rounded-2xl font-bold uppercase text-xs border-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white transition-all shadow-sm" onClick={() => navigate(`/sistema/pacientes/${p.id}`)}>
-                  <FileText size={18} className="mr-2"/> Abrir Prontuário
-                </Button>
-                {isAdmin && (
-                  <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl text-gray-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => { setForm(p); setPreviewUrl(p.foto_url); setIsModalOpen(true); }}>
-                    <Edit size={20}/>
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+           )
+        })}
       </div>
 
       {isModalOpen && (
@@ -200,7 +258,7 @@ export function Pacientes() {
             {isCropping ? (
               <div className="h-full flex flex-col bg-gray-900">
                 <div className="p-6 flex justify-between items-center text-white">
-                  <h3 className="font-bold uppercase text-sm tracking-widest">Ajustar Foto de Perfil</h3>
+                  <h3 className="font-bold uppercase text-sm tracking-widest">Ajustar Foto</h3>
                   <X className="cursor-pointer" onClick={() => setIsCropping(false)} />
                 </div>
                 <div className="relative flex-1 min-h-[400px]">
@@ -214,7 +272,14 @@ export function Pacientes() {
             ) : (
               <>
                 <div className="bg-gray-50 px-8 py-6 flex justify-between items-center border-b">
-                  <h3 className="font-black text-gray-800 uppercase text-base tracking-widest">{form.id ? "Editar Registro" : "Novo Cadastro de Paciente"}</h3>
+                  <div className="flex items-center gap-4">
+                    <h3 className="font-black text-gray-800 uppercase text-base tracking-widest">{form.id ? "Editar Registro" : "Novo Cadastro"}</h3>
+                    {form.telefone && (
+                      <button onClick={() => abrirWhatsApp(form.telefone, form.nome)} className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors shadow-sm">
+                        <MessageCircle size={16} />
+                      </button>
+                    )}
+                  </div>
                   <X className="text-gray-400 cursor-pointer hover:text-red-500" size={28} onClick={limparModal} />
                 </div>
                 <div className="overflow-y-auto p-8">
@@ -227,35 +292,59 @@ export function Pacientes() {
                         <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-3 rounded-2xl shadow-lg"><ImageIcon size={18}/></div>
                       </div>
                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={onFileChange} />
-                      <span className="text-xs font-bold text-gray-400 uppercase mt-4 tracking-tighter">Clique acima para alterar foto</span>
+                      <span className="text-xs font-bold text-gray-400 uppercase mt-4">Alterar Foto</span>
                     </div>
 
-                    <div className="md:col-span-2 space-y-2">
-                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Nome Completo</label>
-                      <input required value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} className={inputClass} placeholder="Nome do Paciente" />
+                    <div className="md:col-span-2 space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Nome Completo</label>
+                      <input required value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} className={inputClass} />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">CPF</label>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">CPF</label>
                       <input value={form.cpf} onChange={e => setForm({...form, cpf: e.target.value})} className={inputClass} placeholder="000.000.000-00" />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Telefone</label>
-                      <input value={form.telefone} onChange={handleTelefone} className={inputClass} placeholder="(00) 00000 - 0000" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Data de Nascimento</label>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Data de Nascimento</label>
                       <input type="date" value={form.data_nascimento} onChange={e => setForm({...form, data_nascimento: e.target.value})} className={inputClass} />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Convênio</label>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Telefone / WhatsApp</label>
+                      <input value={form.telefone} onChange={handleTelefone} className={inputClass} placeholder="(00) 00000-0000" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Convênio</label>
                       <Select value={form.convenio} onValueChange={v => setForm({...form, convenio: v})}>
                         <SelectTrigger className="bg-white h-[50px] text-base"><SelectValue /></SelectTrigger>
                         <SelectContent>{CONVENIOS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
+
+                    <div className="md:col-span-2 space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1"><MapPin size={12}/> Endereço Residencial</label>
+                      <input value={form.endereco} onChange={e => setForm({...form, endereco: e.target.value})} className={inputClass} placeholder="Rua, número, bairro..." />
+                    </div>
+
+                    <div className="md:col-span-2 pt-4 mt-2 border-t border-dashed">
+                       <p className="text-[11px] font-black text-blue-600 uppercase mb-4 flex items-center gap-2"><ShieldAlert size={14}/> Responsável Legal</p>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase">Nome do Responsável</label>
+                            <input value={form.responsavel_nome} onChange={e => setForm({...form, responsavel_nome: e.target.value})} className={inputClass} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase">CPF do Responsável</label>
+                            <input value={form.responsavel_cpf} onChange={e => setForm({...form, responsavel_cpf: e.target.value})} className={inputClass} />
+                          </div>
+                       </div>
+                    </div>
+
                     <div className="md:col-span-2 pt-6 border-t flex gap-4 mt-4">
-                      <Button type="button" variant="ghost" onClick={limparModal} className="flex-1 font-bold h-14 rounded-2xl text-base uppercase">CANCELAR</Button>
-                      <Button type="submit" className="flex-[2] bg-blue-600 text-white font-black uppercase tracking-widest h-14 rounded-2xl shadow-xl text-base">SALVAR DADOS</Button>
+                      <Button type="button" variant="ghost" onClick={limparModal} className="flex-1 font-bold h-14 rounded-2xl uppercase">CANCELAR</Button>
+                      <Button type="submit" className="flex-[2] bg-blue-600 text-white font-black uppercase tracking-widest h-14 rounded-2xl shadow-xl">SALVAR DADOS</Button>
                     </div>
                   </form>
                 </div>
