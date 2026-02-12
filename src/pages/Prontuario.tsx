@@ -102,7 +102,6 @@ export function Prontuario() {
       }
 
       if (modoEdicao) {
-        // --- LÓGICA DE RASTRO (HISTÓRICO) ---
         const registroOriginal = registros.find(r => r.id === modoEdicao);
         const versaoAntiga = {
           texto: registroOriginal.descricao,
@@ -114,7 +113,7 @@ export function Prontuario() {
         await supabase.from("prontuarios").update({
           descricao: novoRegistro.descricao,
           tipo_registro: novoRegistro.tipo,
-          profissional_nome: nomeAutor, // Atualiza para o nome de quem editou agora
+          profissional_nome: nomeAutor,
           historico: historicoAtualizado,
           arquivo_url: arquivoUrl || registroOriginal.arquivo_url,
           arquivo_nome: arquivoNome || registroOriginal.arquivo_nome,
@@ -142,7 +141,7 @@ export function Prontuario() {
   };
 
   const handleExcluirPacienteGeral = async () => {
-    if (!confirm("⚠️ ATENÇÃO: Isso excluirá o PACIENTE e TODO O HISTÓRICO. Confirma?")) return;
+    if (!confirm("⚠️ ATENÇÃO: Isso excluirá o PACIENTE e TODO O HISTÓRICO permanentemente. Confirma?")) return;
     try {
       const { error } = await supabase.from("pacientes").delete().eq("id", id);
       if (error) throw error;
@@ -174,7 +173,7 @@ export function Prontuario() {
     } catch (err) { toast.error("Erro ao agendar."); } finally { setLoadingAgendamento(false); }
   };
 
-  if (loading && !paciente) return <div className="p-20 text-center font-black uppercase text-gray-400">Carregando...</div>;
+  if (loading && !paciente) return <div className="p-20 text-center font-black uppercase text-gray-400">Carregando Prontuário...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-10 font-sans text-left">
@@ -197,9 +196,15 @@ export function Prontuario() {
           </div>
         </div>
 
-        {/* INFO PACIENTE */}
+        {/* INFO PACIENTE COM FOTO RECUPERADA */}
         <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8 items-center">
-          <div className="w-24 h-24 bg-blue-50 rounded-3xl flex items-center justify-center text-[#1e3a8a] shadow-inner"><User size={40} /></div>
+          <div className="w-24 h-24 bg-blue-50 rounded-3xl flex items-center justify-center text-[#1e3a8a] shadow-inner overflow-hidden border-2 border-white">
+            {paciente?.foto_url ? (
+              <img src={paciente.foto_url} alt={paciente.nome} className="w-full h-full object-cover" />
+            ) : (
+              <User size={40} />
+            )}
+          </div>
           <div className="flex-1 text-center md:text-left">
             <h1 className="text-2xl font-black text-gray-800 uppercase leading-none">{paciente?.nome}</h1>
             <p className="text-sm font-bold text-gray-400 mt-2">{paciente?.telefone} | {paciente?.convenio}</p>
@@ -216,8 +221,8 @@ export function Prontuario() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* COLUNA: NOVO REGISTRO / EDIÇÃO */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-left">
+          {/* NOVO REGISTRO */}
           <div className="lg:col-span-1">
             <Card className={`border-none shadow-lg rounded-[2rem] overflow-hidden ${modoEdicao ? 'ring-4 ring-amber-400' : ''}`}>
               <div className={`${modoEdicao ? 'bg-amber-500' : 'bg-[#1e3a8a]'} px-6 py-4 text-white font-black uppercase text-[10px] tracking-widest flex items-center gap-2`}>
@@ -231,52 +236,42 @@ export function Prontuario() {
                   <option value="Avaliação">Avaliação</option>
                   <option value="Anamnese">Anamnese</option>
                 </select>
-                <textarea className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm min-h-[200px] outline-none leading-relaxed" placeholder="Descreva o atendimento aqui..." value={novoRegistro.descricao} onChange={e => setNovoRegistro({...novoRegistro, descricao: e.target.value})} />
-                <div className="flex gap-2">
-                   <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1 border-dashed border-2 text-[10px] font-black uppercase h-12">
-                    <Paperclip size={16} className="mr-2" /> {arquivoSelecionado ? arquivoSelecionado.name : "Anexar PDF"}
-                  </Button>
-                  <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => setArquivoSelecionado(e.target.files?.[0] || null)} />
-                </div>
-                <div className="flex gap-2">
-                  {modoEdicao && <Button onClick={() => {setModoEdicao(null); setNovoRegistro({tipo: 'Sessão', descricao: ''})}} variant="ghost" className="flex-1 font-bold text-gray-400">Cancelar</Button>}
-                  <Button onClick={handleSalvarRegistro} className={`flex-[2] text-white font-black uppercase text-xs h-12 rounded-xl shadow-lg ${modoEdicao ? 'bg-amber-600' : 'bg-[#1e3a8a]'}`}>
-                    <Save size={18} className="mr-2"/> {modoEdicao ? 'Atualizar' : 'Salvar'}
-                  </Button>
-                </div>
+                <textarea className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm min-h-[180px] outline-none leading-relaxed" placeholder="Descreva o atendimento..." value={novoRegistro.descricao} onChange={e => setNovoRegistro({...novoRegistro, descricao: e.target.value})} />
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full border-dashed border-2 text-[10px] font-black uppercase h-12">
+                  <Paperclip size={16} className="mr-2" /> {arquivoSelecionado ? arquivoSelecionado.name : "Anexar PDF"}
+                </Button>
+                <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => setArquivoSelecionado(e.target.files?.[0] || null)} />
+                <Button onClick={handleSalvarRegistro} className={`w-full text-white font-black uppercase text-xs h-12 rounded-xl shadow-lg ${modoEdicao ? 'bg-amber-600' : 'bg-[#1e3a8a]'}`}>
+                  <Save size={18} className="mr-2"/> {modoEdicao ? 'Atualizar' : 'Salvar no Prontuário'}
+                </Button>
               </CardContent>
             </Card>
           </div>
 
-          {/* COLUNA: HISTÓRICO COM RASTRO */}
+          {/* HISTÓRICO COM BARRA DE CORES E RASTRO */}
           <div className="lg:col-span-2 space-y-6">
             <h3 className="font-black text-gray-400 uppercase text-[10px] flex items-center gap-2 px-2"><History size={16}/> Linha do Tempo Clínica</h3>
             <div className="space-y-6">
               {registros.map((reg) => (
                 <div key={reg.id} className="bg-white p-6 pl-8 rounded-[1.5rem] shadow-sm border border-gray-100 space-y-4 relative overflow-hidden group">
                   <div className="absolute left-0 top-0 bottom-0 w-2.5" style={{ backgroundColor: getCorProfissional(reg.profissional_nome) }} />
-                  
                   <div className="flex justify-between items-start border-b border-gray-50 pb-3">
                     <div className="flex items-center gap-3">
                       <span className="text-[9px] font-black uppercase px-2 py-1 bg-blue-50 text-[#1e3a8a] rounded-md">{reg.tipo_registro}</span>
-                      <div className="flex flex-col">
+                      <div className="flex flex-col text-left">
                         <span className="text-[11px] font-black text-gray-800 uppercase tracking-tight">{reg.profissional_nome}</span>
                         <span className="text-[9px] font-bold text-gray-300 flex items-center gap-1"><Clock size={10}/> {formatarDataSegura(reg.created_at)}</span>
                       </div>
                     </div>
                     <button onClick={() => iniciarEdicao(reg)} className="text-gray-200 group-hover:text-amber-500 transition-colors"><Edit size={18}/></button>
                   </div>
-
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed font-medium">{reg.descricao}</p>
-
-                  {/* EXIBIÇÃO DE ANEXO */}
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed font-medium text-left">{reg.descricao}</p>
                   {reg.arquivo_url && (
                     <a href={reg.arquivo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-[10px] font-black text-[#1e3a8a] uppercase hover:underline bg-blue-50/50 p-2 rounded-lg">
                       <FileText size={14} /> Documento: {reg.arquivo_nome}
                     </a>
                   )}
-
-                  {/* --- O RASTRO DE EDIÇÕES (HISTÓRICO ANTERIOR) --- */}
+                  {/* HISTÓRICO DE EDIÇÕES (RASTRO) */}
                   {reg.historico && reg.historico.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-dashed border-gray-100">
                       <details className="group">
@@ -285,7 +280,7 @@ export function Prontuario() {
                         </summary>
                         <div className="mt-3 space-y-3 pl-2 border-l-2 border-amber-100">
                           {reg.historico.map((h: any, i: number) => (
-                            <div key={i} className="bg-amber-50/30 p-3 rounded-xl">
+                            <div key={i} className="bg-amber-50/30 p-3 rounded-xl text-left">
                               <div className="flex justify-between text-[9px] font-bold text-amber-700 uppercase mb-2">
                                 <span>Por: {h.autor}</span>
                                 <span>{formatarDataSegura(h.data)}</span>
@@ -303,7 +298,7 @@ export function Prontuario() {
           </div>
         </div>
 
-        {/* MODAL AGENDAMENTO (40 MIN) */}
+        {/* MODAL AGENDAMENTO (40 MIN INCLUSO) */}
         {isAgendamentoOpen && (
           <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
             <Card className="w-full max-w-md rounded-[2.5rem] bg-white overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
@@ -311,12 +306,12 @@ export function Prontuario() {
                 <span>Agendar para {paciente?.nome}</span>
                 <button onClick={() => setIsAgendamentoOpen(false)}><X size={24}/></button>
               </div>
-              <form onSubmit={handleSalvarAgendamento} className="p-8 space-y-4">
+              <form onSubmit={handleSalvarAgendamento} className="p-8 space-y-4 text-left">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase">Profissional</label>
                     <Select value={formAgendamento.profissional} onValueChange={(v) => setFormAgendamento({...formAgendamento, profissional: v})}>
-                      <SelectTrigger className="h-11 text-xs font-bold uppercase border-gray-100 bg-gray-50"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectTrigger className="h-11 text-xs font-bold uppercase border-gray-100 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a]"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                       <SelectContent className="z-[110]">
                         {equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}
                       </SelectContent>
@@ -325,20 +320,20 @@ export function Prontuario() {
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase">Sala</label>
                     <Select value={formAgendamento.sala} onValueChange={(v) => setFormAgendamento({...formAgendamento, sala: v})}>
-                      <SelectTrigger className="h-11 text-xs font-bold uppercase border-gray-100 bg-gray-50"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-11 text-xs font-bold uppercase border-gray-100 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a]"><SelectValue /></SelectTrigger>
                       <SelectContent className="z-[110]"><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem></SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-400 uppercase">Início</label>
-                    <input type="datetime-local" className="w-full h-11 bg-gray-50 border-gray-100 rounded-xl px-4 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-[#1e3a8a]" value={formAgendamento.inicio} onChange={e => setFormAgendamento({...formAgendamento, inicio: e.target.value})} />
+                    <label className="text-[10px] font-black text-gray-400 uppercase">Horário</label>
+                    <input type="datetime-local" className="w-full h-11 bg-gray-50 border border-gray-100 rounded-xl px-4 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-[#1e3a8a]" value={formAgendamento.inicio} onChange={e => setFormAgendamento({...formAgendamento, inicio: e.target.value})} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase">Duração</label>
                     <Select value={formAgendamento.duracao} onValueChange={(v) => setFormAgendamento({...formAgendamento, duracao: v})}>
-                      <SelectTrigger className="h-11 text-xs font-bold uppercase border-gray-100 bg-gray-50"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-11 text-xs font-bold uppercase border-gray-100 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a]"><SelectValue /></SelectTrigger>
                       <SelectContent className="z-[110]">
                         <SelectItem value="30">30 Min</SelectItem><SelectItem value="40">40 Min</SelectItem><SelectItem value="50">50 Min</SelectItem><SelectItem value="60">60 Min</SelectItem>
                       </SelectContent>
@@ -352,7 +347,6 @@ export function Prontuario() {
             </Card>
           </div>
         )}
-
       </div>
     </div>
   );
