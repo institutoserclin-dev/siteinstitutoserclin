@@ -22,7 +22,8 @@ import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import logoSerClin from "@/assets/logo-serclin.png";
+// ALTERADO PARA O NOVO ARQUIVO
+import logoSer2 from "@/assets/ser2.png";
 
 // --- CONFIGURAÇÃO DE TRADUÇÃO ---
 const locales = { 'pt-BR': ptBR };
@@ -102,7 +103,6 @@ export function Dashboard() {
       const { data: todosPerfis } = await supabase.from('perfis').select('*').order('nome');
       
       if (todosPerfis) {
-        // FILTRO CLÍNICO: Remove perfis administrativos da lista
         const listaNegra = ['renata', 'instituto', 'recepcao', 'secretaria', 'admin', 'recepção'];
         const filtrados = todosPerfis.filter(p => {
           const n = (p.nome || "").toLowerCase();
@@ -114,7 +114,6 @@ export function Dashboard() {
         const { data: agendamentos, error } = await supabase.from('agendamentos').select('*');
         if (!error && agendamentos) {
           const eventosFormatados = agendamentos.map(evt => {
-            // LÓGICA DE CORES REFORMULADA: Comparação robusta de nomes
             const perfilEncontrado = todosPerfis.find(p => 
               p.nome?.trim().toLowerCase() === evt.profissional_nome?.trim().toLowerCase()
             );
@@ -145,7 +144,6 @@ export function Dashboard() {
     pesquisar();
   }, [buscaPaciente]);
 
-  // --- FUNÇÃO DE EXCLUSÃO (MANTIDA) ---
   const handleExcluirAgendamento = async () => {
     if (!eventoSelecionadoId) return;
     if (!confirm("⚠️ Deseja realmente apagar este agendamento?")) return;
@@ -163,22 +161,34 @@ export function Dashboard() {
     const doc = new jsPDF();
     const dataAtual = format(new Date(), "dd/MM/yyyy");
     const horaAtendimento = format(new Date(form.inicio), "HH:mm");
-    doc.addImage(logoSerClin, 'PNG', 80, 15, 50, 25);
+
+    // --- CORREÇÃO PROPORCIONAL DO LOGO 'SER2' ---
+    // Aumentamos a largura para 60mm e a altura para 40mm (proporção natural da imagem)
+    // Centralizado no eixo X (105 - 30 = 75)
+    doc.addImage(logoSer2, 'PNG', 75, 10, 60, 40);
+
     doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
-    doc.text("ATESTADO DE COMPARECIMENTO", 105, 55, { align: "center" });
-    doc.setDrawColor(200, 200, 200); doc.line(30, 62, 180, 62);
+    // Descemos o título um pouco para não bater no logo maior
+    doc.text("ATESTADO DE COMPARECIMENTO", 105, 60, { align: "center" });
+    doc.setDrawColor(200, 200, 200); doc.line(30, 65, 180, 65);
+
     doc.setFontSize(12); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
     const textoCorpo = `Declaramos para os devidos fins de comprovação que o(a) paciente ${form.paciente_nome.toUpperCase()} esteve presente no INSTITUTO SERCLIN para atendimento especializado no dia ${format(new Date(form.inicio), "dd/MM/yyyy")}. O atendimento teve início às ${horaAtendimento} sob a responsabilidade do(a) profissional ${form.profissional.toUpperCase()}.`;
-    doc.text(textoCorpo, 20, 80, { maxWidth: 170, align: "justify", lineHeightFactor: 1.5 });
+    
+    // Descemos o corpo do texto proporcionalmente
+    doc.text(textoCorpo, 20, 85, { maxWidth: 170, align: "justify", lineHeightFactor: 1.5 });
+
     if (form.assinatura_url) {
-      doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text("ASSINATURA DIGITAL DO PACIENTE:", 20, 130);
-      doc.addImage(form.assinatura_url, 'PNG', 20, 135, 60, 25);
-      doc.setDrawColor(0, 0, 0); doc.line(20, 160, 85, 160);
+      doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text("ASSINATURA DIGITAL DO PACIENTE:", 20, 140);
+      doc.addImage(form.assinatura_url, 'PNG', 20, 145, 60, 25);
+      doc.setDrawColor(0, 0, 0); doc.line(20, 170, 85, 170);
     }
+
     doc.setFontSize(8); doc.setTextColor(100, 100, 100);
     doc.text("INSTITUTO SERCLIN - GESTÃO INTEGRADA EM SAÚDE", 105, 270, { align: "center" });
     doc.text("CNPJ: 64.585.207/0001-58 | R. Sorocaba, 140 - Rio Branco, AC", 105, 275, { align: "center" });
     doc.text(`Documento autenticado digitalmente em ${dataAtual} às ${format(new Date(), "HH:mm")}`, 105, 280, { align: "center" });
+    
     doc.save(`Atestado_${form.paciente_nome.replace(/\s+/g, '_')}.pdf`);
     toast.success("Atestado gerado com sucesso!");
   };
@@ -221,7 +231,6 @@ export function Dashboard() {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
-      {/* CSS PARA LETRA BRANCA E FUNDO AZUL NA AGENDA */}
       <style>{`
         .rbc-agenda-view table.rbc-agenda-table tbody > tr > td { color: white !important; font-weight: bold; }
         .rbc-agenda-view { background-color: #1e3a8a; border-radius: 1rem; overflow: hidden; }
@@ -230,7 +239,7 @@ export function Dashboard() {
 
       <header className="bg-white border-b px-6 py-3 flex justify-between items-center h-20 shadow-sm z-20 gap-4">
         <div className="flex items-center gap-3 shrink-0">
-          <img src={logoSerClin} className="w-12 h-12 object-contain" alt="SerClin" />
+          <img src={logoSer2} className="w-12 h-12 object-contain" alt="SerClin" />
           <div className="hidden lg:block text-left">
             <h1 className="text-md font-black text-gray-800 uppercase leading-none">SerClin</h1>
             <p className="text-[9px] text-gray-500 font-bold uppercase mt-1">Gestão Integrada</p>
@@ -289,7 +298,6 @@ export function Dashboard() {
         </Card>
       </main>
 
-      {/* MODAL DE AGENDAMENTO */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md my-8 overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -353,7 +361,6 @@ export function Dashboard() {
                   </Button>
                 )}
                 <div className="flex gap-3">
-                  {/* --- BOTÃO DE EXCLUIR RESTAURADO --- */}
                   {eventoSelecionadoId && (
                     <Button type="button" variant="outline" onClick={handleExcluirAgendamento} className="px-6 border-red-200 text-red-500 hover:bg-red-50 h-14 rounded-2xl transition-all">
                       <Trash2 size={20} />
