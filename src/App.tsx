@@ -8,7 +8,8 @@ import { PrivateRoute } from "@/components/PrivateRoute";
 // Páginas
 import Home from "@/pages/Home";
 import { Login } from "@/pages/Login";
-import { RedefinirSenha } from "@/pages/RedefinirSenha"; // Importação integrada
+import { RedefinirSenha } from "@/pages/RedefinirSenha";
+import { Validar } from "@/pages/Validar"; // INTEGRADO: Importação da página de validação
 import { Dashboard } from "@/pages/Dashboard";
 import { CadastroUsuario } from "@/pages/CadastroUsuario"; 
 import { Pacientes } from "@/pages/Pacientes"; 
@@ -26,6 +27,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+          <Route path="/validar/:id" element={<Validar />} /> {/* INTEGRADO: Rota do QR Code */}
 
           {/* Rotas Privadas (Sistema) */}
           <Route path="/sistema" element={<PrivateRoute><Dashboard /></PrivateRoute>} />

@@ -20,9 +20,9 @@ import { usePerfil } from "@/hooks/usePerfil";
 
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
+import QRCode from 'qrcode'; // ADICIONADO: Biblioteca de QR Code
 
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-// ALTERADO PARA O NOVO ARQUIVO
 import logoSer2 from "@/assets/ser2.png";
 
 // --- CONFIGURAÇÃO DE TRADUÇÃO ---
@@ -157,40 +157,61 @@ export function Dashboard() {
     } catch (err) { toast.error("Erro ao excluir."); } finally { setLoading(false); }
   };
 
-  const gerarComprovante = () => {
-    const doc = new jsPDF();
-    const dataAtual = format(new Date(), "dd/MM/yyyy");
-    const horaAtendimento = format(new Date(form.inicio), "HH:mm");
+  const gerarComprovante = async () => {
+    setLoading(true);
+    try {
+      // 1. Criar registro de validação no banco
+      const { data: val, error } = await supabase.from('validacoes').insert([{
+        paciente_nome: form.paciente_nome,
+        profissional_nome: form.profissional
+      }]).select('id').single();
 
-    // --- CORREÇÃO PROPORCIONAL DO LOGO 'SER2' ---
-    // Aumentamos a largura para 60mm e a altura para 40mm (proporção natural da imagem)
-    // Centralizado no eixo X (105 - 30 = 75)
-    doc.addImage(logoSer2, 'PNG', 75, 10, 60, 40);
+      if (error) throw error;
 
-    doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
-    // Descemos o título um pouco para não bater no logo maior
-    doc.text("ATESTADO DE COMPARECIMENTO", 105, 60, { align: "center" });
-    doc.setDrawColor(200, 200, 200); doc.line(30, 65, 180, 65);
+      // 2. Gerar QR Code
+      const urlValidacao = `https://institutoserclin.vercel.app/validar/${val.id}`;
+      const qrCodeDataUrl = await QRCode.toDataURL(urlValidacao);
 
-    doc.setFontSize(12); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
-    const textoCorpo = `Declaramos para os devidos fins de comprovação que o(a) paciente ${form.paciente_nome.toUpperCase()} esteve presente no INSTITUTO SERCLIN para atendimento especializado no dia ${format(new Date(form.inicio), "dd/MM/yyyy")}. O atendimento teve início às ${horaAtendimento} sob a responsabilidade do(a) profissional ${form.profissional.toUpperCase()}.`;
-    
-    // Descemos o corpo do texto proporcionalmente
-    doc.text(textoCorpo, 20, 85, { maxWidth: 170, align: "justify", lineHeightFactor: 1.5 });
+      const doc = new jsPDF();
+      const dataAtual = format(new Date(), "dd/MM/yyyy");
+      const horaAtendimento = format(new Date(form.inicio), "HH:mm");
 
-    if (form.assinatura_url) {
-      doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text("ASSINATURA DIGITAL DO PACIENTE:", 20, 140);
-      doc.addImage(form.assinatura_url, 'PNG', 20, 145, 60, 25);
-      doc.setDrawColor(0, 0, 0); doc.line(20, 170, 85, 170);
+      // LOGO SER2
+      doc.addImage(logoSer2, 'PNG', 75, 10, 60, 40);
+
+      doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
+      doc.text("ATESTADO DE COMPARECIMENTO", 105, 60, { align: "center" });
+      doc.setDrawColor(200, 200, 200); doc.line(30, 65, 180, 65);
+
+      doc.setFontSize(12); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
+      const textoCorpo = `Declaramos para os devidos fins de comprovação que o(a) paciente ${form.paciente_nome.toUpperCase()} esteve presente no INSTITUTO SERCLIN para atendimento especializado no dia ${format(new Date(form.inicio), "dd/MM/yyyy")}. O atendimento teve início às ${horaAtendimento} sob a responsabilidade do(a) profissional ${form.profissional.toUpperCase()}.`;
+      doc.text(textoCorpo, 20, 85, { maxWidth: 170, align: "justify", lineHeightFactor: 1.5 });
+
+      if (form.assinatura_url) {
+        doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text("ASSINATURA DIGITAL DO PACIENTE:", 20, 135);
+        doc.addImage(form.assinatura_url, 'PNG', 20, 140, 50, 20);
+        doc.setDrawColor(0, 0, 0); doc.line(20, 160, 70, 160);
+      }
+
+      // --- QR CODE DE VALIDAÇÃO ---
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.text("Para validar a autenticidade deste documento, escaneie o código abaixo:", 105, 190, { align: "center" });
+      doc.addImage(qrCodeDataUrl, 'PNG', 87, 195, 30, 30);
+      doc.text(urlValidacao, 105, 230, { align: "center" });
+
+      doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+      doc.text("INSTITUTO SERCLIN - GESTÃO INTEGRADA EM SAÚDE", 105, 270, { align: "center" });
+      doc.text("CNPJ: 64.585.207/0001-58 | R. Sorocaba, 140 - Rio Branco, AC", 105, 275, { align: "center" });
+      doc.text(`Documento autenticado digitalmente em ${dataAtual} às ${format(new Date(), "HH:mm")}`, 105, 280, { align: "center" });
+      
+      doc.save(`Atestado_${form.paciente_nome.replace(/\s+/g, '_')}.pdf`);
+      toast.success("Atestado com QR Code gerado!");
+    } catch (err) {
+      toast.error("Erro ao gerar validador digital.");
+    } finally {
+      setLoading(false);
     }
-
-    doc.setFontSize(8); doc.setTextColor(100, 100, 100);
-    doc.text("INSTITUTO SERCLIN - GESTÃO INTEGRADA EM SAÚDE", 105, 270, { align: "center" });
-    doc.text("CNPJ: 64.585.207/0001-58 | R. Sorocaba, 140 - Rio Branco, AC", 105, 275, { align: "center" });
-    doc.text(`Documento autenticado digitalmente em ${dataAtual} às ${format(new Date(), "HH:mm")}`, 105, 280, { align: "center" });
-    
-    doc.save(`Atestado_${form.paciente_nome.replace(/\s+/g, '_')}.pdf`);
-    toast.success("Atestado gerado com sucesso!");
   };
 
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
