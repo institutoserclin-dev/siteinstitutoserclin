@@ -16,6 +16,7 @@ export default defineConfig({
     tailwindcss(),
   ],
   resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
-  base: "./",
+  // ALTERADO: de "./" para "/" para garantir caminhos absolutos
+  base: "/", 
   build: { outDir: "dist", emptyOutDir: true },
 });
