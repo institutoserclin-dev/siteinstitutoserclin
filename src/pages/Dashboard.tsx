@@ -8,7 +8,8 @@ import { ptBR } from 'date-fns/locale';
 import { 
   LogOut, Calendar as CalendarIcon, Plus, X, Trash2, 
   FileText, BarChart3, Shield, Clock, Users, Filter, 
-  MessageCircle, CheckCircle, ExternalLink, MessageSquare, RefreshCw
+  MessageCircle, CheckCircle, ExternalLink, MessageSquare, RefreshCw,
+  Wallet, Receipt, Calculator // Ícones financeiros adicionados
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,7 +21,7 @@ import { usePerfil } from "@/hooks/usePerfil";
 
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
-import QRCode from 'qrcode'; // ADICIONADO: Biblioteca de QR Code
+import QRCode from 'qrcode'; 
 
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import logoSer2 from "@/assets/ser2.png";
@@ -95,7 +96,8 @@ export function Dashboard() {
   const [form, setForm] = useState({ 
     profissional: '', paciente_nome: '', paciente_id: null as number | null,
     telefone: '', sala: '1', inicio: '', duracao: '40', status: 'Agendado',
-    assinatura_url: null as string | null
+    assinatura_url: null as string | null,
+    valor_atendimento: "0.00" // Adicionado para controle financeiro
   });
 
   const fetchData = async () => {
@@ -160,7 +162,6 @@ export function Dashboard() {
   const gerarComprovante = async () => {
     setLoading(true);
     try {
-      // 1. Criar registro de validação no banco
       const { data: val, error } = await supabase.from('validacoes').insert([{
         paciente_nome: form.paciente_nome,
         profissional_nome: form.profissional
@@ -168,7 +169,6 @@ export function Dashboard() {
 
       if (error) throw error;
 
-      // 2. Gerar QR Code
       const urlValidacao = `https://institutoserclin.vercel.app/validar/${val.id}`;
       const qrCodeDataUrl = await QRCode.toDataURL(urlValidacao);
 
@@ -176,9 +176,7 @@ export function Dashboard() {
       const dataAtual = format(new Date(), "dd/MM/yyyy");
       const horaAtendimento = format(new Date(form.inicio), "HH:mm");
 
-      // LOGO SER2
       doc.addImage(logoSer2, 'PNG', 75, 10, 60, 40);
-
       doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
       doc.text("ATESTADO DE COMPARECIMENTO", 105, 60, { align: "center" });
       doc.setDrawColor(200, 200, 200); doc.line(30, 65, 180, 65);
@@ -193,7 +191,6 @@ export function Dashboard() {
         doc.setDrawColor(0, 0, 0); doc.line(20, 160, 70, 160);
       }
 
-      // --- QR CODE DE VALIDAÇÃO ---
       doc.setFontSize(7);
       doc.setTextColor(150, 150, 150);
       doc.text("Para validar a autenticidade deste documento, escaneie o código abaixo:", 105, 190, { align: "center" });
@@ -238,7 +235,8 @@ export function Dashboard() {
         sala_id: salaId, profissional_nome: form.profissional, paciente_nome: buscaPaciente,
         paciente_id: idDoPaciente, paciente_telefone: form.telefone,
         data_inicio: dInicio.toISOString(), data_fim: dFim.toISOString(),
-        status: mapearStatusParaBanco(form.status), assinatura_url: assinaturaBase64
+        status: mapearStatusParaBanco(form.status), assinatura_url: assinaturaBase64,
+        valor_atendimento: parseFloat(form.valor_atendimento) // Salvando o valor
       };
 
       const { error } = eventoSelecionadoId 
@@ -280,11 +278,29 @@ export function Dashboard() {
         </div>
 
         <div className="flex gap-1.5 items-center">
+          
+          {/* BLOCO FINANCEIRO INTEGRADO NO HEADER */}
+          {(souEuOAdmin || isSecretaria) && (
+            <>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600" title="Receitas e Planos">
+                <Wallet size={20}/>
+              </Button>
+
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500" title="Gestão de Despesas">
+                <Receipt size={20}/>
+              </Button>
+
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600" title="Repasses e Lucros">
+                <Calculator size={20}/>
+              </Button>
+            </>
+          )}
+
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500" title="Relatórios"><BarChart3 size={20}/></Button>
           {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600"><Clock size={20}/></Button>}
           {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Gestão de Equipe"><Shield size={20}/></Button>}
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2"><Users size={20}/></Button>
-          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg"><Plus size={16} className="mr-1" /> AGENDAR</Button>
+          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), valor_atendimento: "0.00"}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg"><Plus size={16} className="mr-1" /> AGENDAR</Button>
           <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }}><LogOut size={18} /></Button>
         </div>
       </header>
@@ -309,7 +325,8 @@ export function Dashboard() {
                 setBuscaPaciente(evt.paciente_nome); 
                 setForm({ 
                   ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: evt.paciente_telefone || '', 
-                  inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), duracao: '40', status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), assinatura_url: evt.assinatura_url || null 
+                  inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), duracao: '40', status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), assinatura_url: evt.assinatura_url || null,
+                  valor_atendimento: evt.valor_atendimento?.toString() || "0.00" // Carrega o valor salvo
                 }); 
                 setIsAgendamentoOpen(true); 
               }} 
@@ -321,7 +338,7 @@ export function Dashboard() {
 
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md my-8 overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-md my-8 overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b flex justify-between items-center bg-[#1e3a8a]">
               <h3 className="font-black text-white uppercase text-xs tracking-widest">{eventoSelecionadoId ? 'Editar Agendamento' : 'Agendar Paciente'}</h3>
               <button onClick={() => setIsAgendamentoOpen(false)}><X size={20} className="text-white"/></button>
@@ -331,14 +348,10 @@ export function Dashboard() {
                 <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Status</label>
                   <Select value={form.status} onValueChange={(v) => setForm({...form, status: v})}><SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10 uppercase text-[10px]"><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem><SelectItem value="Falta">Falta</SelectItem></SelectContent></Select></div>
-                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Duração</label>
-                  <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}><SelectTrigger className="bg-gray-50 border-none h-10 font-bold"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="30">30 Min</SelectItem>
-                      <SelectItem value="40">40 Min</SelectItem>
-                      <SelectItem value="50">50 Min</SelectItem>
-                      <SelectItem value="60">60 Min</SelectItem>
-                    </SelectContent></Select></div>
+                
+                {/* CAMPO NOVO: VALOR DA SESSÃO */}
+                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Valor da Sessão (R$)</label>
+                  <Input type="number" step="0.01" value={form.valor_atendimento} onChange={e => setForm({...form, valor_atendimento: e.target.value})} className="bg-gray-50 border-none h-10 font-bold" /></div>
               </div>
               
               <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Paciente</label>
@@ -349,9 +362,14 @@ export function Dashboard() {
                 <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Profissional Clínico</label>
                   <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required><SelectTrigger className="bg-gray-50 border-none h-11"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                     <SelectContent className="z-[110]">{equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Sala</label>
-                  <Select value={form.sala} onValueChange={(v) => setForm({...form, sala: v})}><SelectTrigger className="bg-gray-50 border-none h-11"><SelectValue /></SelectTrigger>
-                    <SelectContent className="z-[110]"><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem></SelectContent></Select></div>
+                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Duração</label>
+                  <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}><SelectTrigger className="bg-gray-50 border-none h-10 font-bold"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30">30 Min</SelectItem>
+                      <SelectItem value="40">40 Min</SelectItem>
+                      <SelectItem value="50">50 Min</SelectItem>
+                      <SelectItem value="60">60 Min</SelectItem>
+                    </SelectContent></Select></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
