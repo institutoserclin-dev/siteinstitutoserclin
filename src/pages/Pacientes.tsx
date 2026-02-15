@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import Cropper from "react-easy-crop";
 import { 
   User, Plus, Search, FileText, Trash2, Edit, X, Save, ArrowLeft, 
-  Camera, ImageIcon, Check, ZoomIn, MessageCircle, Cake, AlertTriangle, ShieldAlert, MapPin
+  Camera, ImageIcon, Check, ZoomIn, MessageCircle, Cake, AlertTriangle, ShieldAlert, MapPin, ClipboardList
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import { usePerfil } from "@/hooks/usePerfil";
 import { format, differenceInDays, isSameDay, parseISO } from "date-fns";
 
 // --- UTILITÁRIOS PARA CORTE DE IMAGEM ---
-const createImage = (url: string): Promise<HTMLImageElement> =>
+const createImage = (url: string): Promise<HTMLElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();
     image.addEventListener('load', () => resolve(image));
@@ -24,7 +24,7 @@ const createImage = (url: string): Promise<HTMLImageElement> =>
   });
 
 async function getCroppedImg(imageSrc: string, pixelCrop: any): Promise<Blob | null> {
-  const image = await createImage(imageSrc);
+  const image = await createImage(imageSrc) as HTMLImageElement;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
@@ -63,7 +63,8 @@ export function Pacientes() {
   const [form, setForm] = useState({
     id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", 
     endereco: "", telefone: "", convenio: "Particular", foto_url: "",
-    responsavel_nome: "", responsavel_cpf: ""
+    responsavel_nome: "", responsavel_cpf: "",
+    anamnese: "", observacoes: "" // CAMPOS RESTAURADOS NO ESTADO
   });
 
   const fetchPacientes = async () => {
@@ -86,21 +87,14 @@ export function Pacientes() {
 
   useEffect(() => { fetchPacientes(); }, []);
 
-  // --- FUNÇÃO WHATSAPP PERSONALIZADA COM NOME DO PROFISSIONAL ---
   const abrirWhatsApp = async (numero: string, nomePaciente: string) => {
     const limpo = numero.replace(/\D/g, "");
     if (limpo.length < 10) return toast.error("Telefone inválido.");
-
     const { data: { user } } = await supabase.auth.getUser();
     let remetente = user?.user_metadata?.full_name || "Equipe SerClin";
-
-    if (user?.email === 'romulochaves77@gmail.com') {
-      remetente = "Dr. Rômulo Chaves";
-    }
-
+    if (user?.email === 'romulochaves77@gmail.com') remetente = "Dr. Rômulo Chaves";
     const saudacao = `Olá ${nomePaciente}, tudo bem? Aqui é o(a) ${remetente} do Instituto SerClin.`;
-    const mensagem = encodeURIComponent(saudacao);
-    window.open(`https://wa.me/55${limpo}?text=${mensagem}`, "_blank");
+    window.open(`https://wa.me/55${limpo}?text=${encodeURIComponent(saudacao)}`, "_blank");
   };
 
   const handleTelefone = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -141,6 +135,7 @@ export function Pacientes() {
 
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     try {
       let urlDaFoto = form.foto_url;
       if (fotoFinal) {
@@ -155,25 +150,28 @@ export function Pacientes() {
       const payload = { ...newPayload, foto_url: urlDaFoto };
 
       if (form.id) { 
-        await supabase.from("pacientes").update(payload).eq("id", form.id); 
+        const { error } = await supabase.from("pacientes").update(payload).eq("id", form.id); 
+        if (error) throw error;
         toast.success("Atualizado!"); 
       } else { 
         const { id, ...insertPayload } = payload; 
-        await supabase.from("pacientes").insert([insertPayload]); 
+        const { error } = await supabase.from("pacientes").insert([insertPayload]); 
+        if (error) throw error;
         toast.success("Cadastrado!"); 
       }
       limparModal(); fetchPacientes();
-    } catch (error: any) { toast.error(error.message); }
+    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
   const limparModal = () => {
     setIsModalOpen(false); setIsCropping(false); setFotoFinal(null); setPreviewUrl(null); setImageSrc(null);
+    setForm({id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", endereco: "", telefone: "", convenio: "Particular", foto_url: "", responsavel_nome: "", responsavel_cpf: "", anamnese: "", observacoes: ""});
   };
 
   const inputClass = "flex w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium";
 
   return (
-    <div className="p-4 md:p-10 max-w-7xl mx-auto bg-gray-50 min-h-screen font-sans text-left">
+    <div className="p-4 md:p-10 max-w-7xl mx-auto bg-gray-50 min-h-screen font-sans text-left text-gray-800">
       <Button variant="ghost" onClick={() => navigate("/sistema")} className="gap-2 mb-6 font-bold uppercase text-sm text-gray-500 hover:bg-transparent">
         <ArrowLeft size={20} /> Voltar ao Painel
       </Button>
@@ -189,7 +187,7 @@ export function Pacientes() {
             <Input placeholder="Buscar por nome ou CPF..." className="bg-white border-none shadow-sm h-12 pl-10 text-base" value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
           {(isAdmin || isSecretaria) && (
-            <Button onClick={() => { setForm({id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", endereco: "", telefone: "", convenio: "Particular", foto_url: "", responsavel_nome: "", responsavel_cpf: ""}); setIsModalOpen(true); }} className="bg-blue-600 font-bold uppercase text-sm h-12 px-8 rounded-full shadow-lg">
+            <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 font-bold uppercase text-sm h-12 px-8 rounded-full shadow-lg">
               <Plus size={20} className="mr-2"/> Novo
             </Button>
           )}
@@ -206,7 +204,7 @@ export function Pacientes() {
               <CardContent className="p-8">
                 <div className="flex gap-5 items-start mb-6">
                   <div className="w-20 h-20 bg-blue-100 rounded-3xl flex items-center justify-center text-blue-600 text-2xl font-black uppercase shrink-0 overflow-hidden border-2 border-white shadow-sm">
-                    {p.foto_url ? <img src={p.foto_url} className="w-full h-full object-cover" /> : p.nome.charAt(0)}
+                    {p.foto_url ? <img src={p.foto_url} className="w-full h-full object-cover" alt={p.nome} /> : p.nome.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-gray-800 uppercase text-lg leading-tight truncate mb-1">{p.nome}</h3>
@@ -216,10 +214,7 @@ export function Pacientes() {
                     </div>
                     
                     {p.telefone && (
-                      <button 
-                        onClick={() => abrirWhatsApp(p.telefone, p.nome)}
-                        className="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full text-xs font-bold border border-green-100 hover:bg-green-600 hover:text-white transition-all shadow-sm"
-                      >
+                      <button onClick={() => abrirWhatsApp(p.telefone, p.nome)} className="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full text-xs font-bold border border-green-100 hover:bg-green-600 hover:text-white transition-all shadow-sm">
                         <MessageCircle size={14} className="fill-current" /> {p.telefone}
                       </button>
                     )}
@@ -241,7 +236,15 @@ export function Pacientes() {
                     <FileText size={18} className="mr-2"/> Prontuário
                   </Button>
                   {(isAdmin || isSecretaria) && (
-                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl text-gray-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => { setForm(p); setPreviewUrl(p.foto_url); setIsModalOpen(true); }}>
+                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl text-gray-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => { 
+                      setForm({
+                        ...p,
+                        anamnese: p.anamnese || "",
+                        observacoes: p.observacoes || ""
+                      }); 
+                      setPreviewUrl(p.foto_url); 
+                      setIsModalOpen(true); 
+                    }}>
                       <Edit size={20}/>
                     </Button>
                   )}
@@ -274,11 +277,6 @@ export function Pacientes() {
                 <div className="bg-gray-50 px-8 py-6 flex justify-between items-center border-b">
                   <div className="flex items-center gap-4">
                     <h3 className="font-black text-gray-800 uppercase text-base tracking-widest">{form.id ? "Editar Registro" : "Novo Cadastro"}</h3>
-                    {form.telefone && (
-                      <button onClick={() => abrirWhatsApp(form.telefone, form.nome)} className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors shadow-sm">
-                        <MessageCircle size={16} />
-                      </button>
-                    )}
                   </div>
                   <X className="text-gray-400 cursor-pointer hover:text-red-500" size={28} onClick={limparModal} />
                 </div>
@@ -286,13 +284,12 @@ export function Pacientes() {
                   <form onSubmit={handleSalvar} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2 flex flex-col items-center mb-6">
                       <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                        {previewUrl ? <img src={previewUrl} className="w-32 h-32 rounded-3xl object-cover border-4 border-blue-50 shadow-xl" /> : (
+                        {previewUrl ? <img src={previewUrl} className="w-32 h-32 rounded-3xl object-cover border-4 border-blue-50 shadow-xl" alt="Preview" /> : (
                           <div className="w-32 h-32 rounded-3xl bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300 group-hover:border-blue-400"><Camera className="text-gray-300" size={40}/></div>
                         )}
                         <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-3 rounded-2xl shadow-lg"><ImageIcon size={18}/></div>
                       </div>
                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={onFileChange} />
-                      <span className="text-xs font-bold text-gray-400 uppercase mt-4">Alterar Foto</span>
                     </div>
 
                     <div className="md:col-span-2 space-y-1">
@@ -329,7 +326,7 @@ export function Pacientes() {
                     </div>
 
                     <div className="md:col-span-2 pt-4 mt-2 border-t border-dashed">
-                       <p className="text-[11px] font-black text-blue-600 uppercase mb-4 flex items-center gap-2"><ShieldAlert size={14}/> Responsável Legal</p>
+                       <p className="text-[11px] font-black text-blue-600 uppercase mb-4 flex items-center gap-2"><ShieldAlert size={14}/> Responsável Legal (Opcional)</p>
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <label className="text-[10px] font-black text-gray-400 uppercase">Nome do Responsável</label>
@@ -342,9 +339,37 @@ export function Pacientes() {
                        </div>
                     </div>
 
-                    <div className="md:col-span-2 pt-6 border-t flex gap-4 mt-4">
+                    {/* SEÇÃO DE ANAMNESE E OBSERVAÇÕES RESTAURADA */}
+                    <div className="md:col-span-2 space-y-4 pt-4 mt-2 border-t border-dashed">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                          <ClipboardList size={12}/> Anamnese / Histórico Clínico
+                        </label>
+                        <textarea 
+                          rows={4}
+                          value={form.anamnese} 
+                          onChange={e => setForm({...form, anamnese: e.target.value})} 
+                          className={`${inputClass} min-h-[100px] resize-none py-2`} 
+                          placeholder="Alergias, medicações de uso contínuo, cirurgias anteriores..."
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Observações Internas</label>
+                        <input 
+                          value={form.observacoes} 
+                          onChange={e => setForm({...form, observacoes: e.target.value})} 
+                          className={inputClass} 
+                          placeholder="Notas administrativas ou lembretes..." 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2 pt-6 border-t flex gap-4 mt-4 mb-8">
                       <Button type="button" variant="ghost" onClick={limparModal} className="flex-1 font-bold h-14 rounded-2xl uppercase">CANCELAR</Button>
-                      <Button type="submit" className="flex-[2] bg-blue-600 text-white font-black uppercase tracking-widest h-14 rounded-2xl shadow-xl">SALVAR DADOS</Button>
+                      <Button type="submit" disabled={loading} className="flex-[2] bg-blue-600 text-white font-black uppercase tracking-widest h-14 rounded-2xl shadow-xl">
+                        {loading ? "SALVANDO..." : "SALVAR DADOS"}
+                      </Button>
                     </div>
                   </form>
                 </div>
