@@ -266,6 +266,19 @@ export function Dashboard() {
           </div>
         </div>
 
+        {/* FILTRO DE PROFISSIONAL */}
+        <div className="flex-1 max-w-xs">
+          <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
+            <SelectTrigger className="bg-gray-50 border-none h-9 text-[10px] font-bold uppercase tracking-widest text-left" title="Filtrar por profissional">
+              <Filter size={14} className="mr-2 text-blue-600"/><SelectValue placeholder="Filtrar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="geral">Agenda Geral</SelectItem>
+              {equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="flex gap-1.5 items-center">
           {(souEuOAdmin || isSecretaria) && (
             <>
@@ -273,17 +286,17 @@ export function Dashboard() {
                 <Send size={14} /> Confirmar Amanhã
               </Button>
               <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600" title="Financeiro e Planos"><Wallet size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500" title="Despesas"><Receipt size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600" title="Repasses"><Calculator size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600" title="Caixa"><Scale size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500" title="Gestão de Despesas"><Receipt size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600" title="Repasses Profissionais"><Calculator size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600" title="Fechamento de Caixa"><Scale size={20}/></Button>
             </>
           )}
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500" title="Relatórios"><BarChart3 size={20}/></Button>
           {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600" title="Horários"><Clock size={20}/></Button>}
-          {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Controle de Acesso"><Shield size={20}/></Button>}
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2" title="Pacientes"><Users size={20}/></Button>
+          {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Acessos e Equipe"><Shield size={20}/></Button>}
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2" title="Lista de Pacientes"><Users size={20}/></Button>
           <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg" title="Novo Agendamento"><Plus size={16} className="mr-1" /> AGENDAR</Button>
-          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} title="Sair"><LogOut size={18} /></Button>
+          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} title="Sair do Sistema"><LogOut size={18} /></Button>
         </div>
       </header>
 
@@ -310,7 +323,7 @@ export function Dashboard() {
         </Card>
       </main>
 
-      {/* MODAL DE CONFIRMAÇÃO DO PRÓXIMO DIA (AMPLIADO) */}
+      {/* MODAL DE CONFIRMAÇÃO DO PRÓXIMO DIA */}
       {isConfirmacaoAmanhaOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[700px] animate-in zoom-in duration-200 border border-gray-100 overflow-hidden">
@@ -346,7 +359,7 @@ export function Dashboard() {
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-[440px] my-4 overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100">
             <div className="p-5 border-b flex justify-between items-center bg-white text-left">
               <h3 className="font-black uppercase text-[15px] tracking-widest text-[#1e3a8a]">{eventoSelecionadoId ? 'Editar' : 'Novo'} Agendamento</h3>
-              <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors"><X size={20}/></button>
+              <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500"><X size={20}/></button>
             </div>
             <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4 text-left">
               <div className="grid grid-cols-2 gap-4">
@@ -421,7 +434,7 @@ export function Dashboard() {
                   {form.assinatura_url ? (
                     <div className="group relative w-full h-full flex flex-col items-center justify-center bg-gray-50 p-2">
                       <img src={form.assinatura_url} alt="Assinatura" className="max-h-[60px] object-contain" />
-                      <Button type="button" onClick={() => setForm({ ...form, assinatura_url: null })} className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity font-bold text-[9px] uppercase">Refazer</Button>
+                      <button type="button" onClick={() => setForm({ ...form, assinatura_url: null })} className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity font-bold text-[9px] uppercase">Refazer</button>
                     </div>
                   ) : (<SignatureCanvas ref={sigCanvas} penColor='black' canvasProps={{width: 400, height: 80, className: 'sigCanvas w-full h-full'}} />)}
                 </div>
