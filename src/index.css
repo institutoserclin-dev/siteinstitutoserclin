@@ -81,9 +81,9 @@
     --muted-foreground: oklch(0.50 0.05 260);
     
     --accent: oklch(0.95 0.04 85); /* Dourado muito pálido para fundos */
-    --accent-foreground: oklch(0.30 0.10 260);
+    --accent-foreground: oklch(33.802% 0.13745 336.434);
     
-    --destructive: oklch(0.6 0.2 20);
+    --destructive: oklch(0.15 0.05 260);
     --destructive-foreground: oklch(1 0 0);
     
     --border: oklch(0.90 0.02 260);
@@ -113,7 +113,7 @@
     --accent: oklch(0.25 0.05 260);
     --accent-foreground: oklch(0.95 0.02 85);
     
-    --destructive: oklch(0.6 0.2 20);
+    --destructive: oklch(0.25 0.05 260);
     --destructive-foreground: oklch(1 0 0);
     
     --border: oklch(0.30 0.05 260);

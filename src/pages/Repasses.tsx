@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // ADICIONADO
 import { supabase } from "@/lib/supabase";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, Percent, TrendingUp, Building2, UserCircle, Calculator } from "lucide-react";
-import { formatCurrency } from "@/lib/utils"; // Ou use a lógica manual R$ abaixo
+import { Button } from "@/components/ui/button"; // ADICIONADO
+import { 
+  DollarSign, Percent, TrendingUp, Building2, 
+  UserCircle, Calculator, ArrowLeft // ADICIONADO ArrowLeft
+} from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 export function Repasses() {
+  const navigate = useNavigate(); // ADICIONADO
   const [equipe, setEquipe] = useState<any[]>([]);
   const [atendimentos, setAtendimentos] = useState<any[]>([]);
   const [filtroMes, setFiltroMes] = useState(new Date().getMonth().toString());
@@ -20,7 +26,7 @@ export function Repasses() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Lógica de Cálculo por Profissional
+  // Lógica de Cálculo por Profissional (MANTIDA)
   const calcularRelatorio = () => {
     return equipe.map(prof => {
       const atendimentosProf = atendimentos.filter(at => {
@@ -45,7 +51,7 @@ export function Repasses() {
         parteEmpresa,
         qtd: atendimentosProf.length
       };
-    }).filter(p => p.qtd > 0); // Só mostra quem teve atendimento no mês
+    }).filter(p => p.qtd > 0);
   };
 
   const relatorio = calcularRelatorio();
@@ -54,12 +60,24 @@ export function Repasses() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto font-sans space-y-8 animate-in fade-in duration-700 text-left">
+      
+      {/* CABEÇALHO ATUALIZADO COM BOTÃO VOLTAR */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-[#1e3a8a] uppercase flex items-center gap-3">
-            <Calculator className="text-blue-600" size={28} /> Divisão de Lucros e Repasses
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">Cálculo automatizado de comissões e impostos da SerClin.</p>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate('/sistema')} 
+            className="rounded-full border-gray-200 hover:bg-gray-100 transition-colors"
+          >
+            <ArrowLeft size={16} className="mr-1" /> Voltar
+          </Button>
+          <div>
+            <h1 className="text-2xl font-black text-[#1e3a8a] uppercase flex items-center gap-3">
+              <Calculator className="text-blue-600" size={28} /> Divisão de Lucros e Repasses
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">Cálculo automatizado de comissões e impostos da SerClin.</p>
+          </div>
         </div>
 
         <div className="flex gap-2">

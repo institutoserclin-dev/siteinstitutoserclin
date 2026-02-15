@@ -8,8 +8,7 @@ import { ptBR } from 'date-fns/locale';
 import { 
   LogOut, Calendar as CalendarIcon, Plus, X, Trash2, 
   FileText, BarChart3, Shield, Clock, Users, Filter, 
-  MessageCircle, CheckCircle, ExternalLink, MessageSquare, RefreshCw,
-  Wallet, Receipt, Calculator // Ícones financeiros adicionados
+  CheckCircle, RefreshCw, Wallet, Receipt, Calculator, Scale, MessageCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -61,7 +60,7 @@ const mapearStatusParaBanco = (statusVisual: string) => {
 
 const EventoCustomizado = ({ event }: any) => (
   <div className="h-full w-full flex flex-col items-center justify-center text-center p-1 overflow-hidden">
-    <span className="text-white font-bold text-[10px] uppercase leading-tight truncate w-full">
+    <span className="text-white font-bold text-[13px] uppercase leading-tight truncate w-full px-1">
       {event.title}
     </span>
     {(event.original?.status === 'Presenca' || event.original?.status === 'Presença') && <CheckCircle size={10} className="text-white mt-0.5" />}
@@ -73,14 +72,6 @@ export function Dashboard() {
   const { isAdmin, isSecretaria } = usePerfil();
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) setUserEmail(data.user.email ?? null);
-    });
-  }, []);
-
-  const souEuOAdmin = isAdmin || userEmail === 'romulochaves77@gmail.com';
-
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(new Date());
@@ -97,13 +88,22 @@ export function Dashboard() {
     profissional: '', paciente_nome: '', paciente_id: null as number | null,
     telefone: '', sala: '1', inicio: '', duracao: '40', status: 'Agendado',
     assinatura_url: null as string | null,
-    valor_atendimento: "0.00" // Adicionado para controle financeiro
+    valor_atendimento: "0.00",
+    forma_pagamento: "Pix"
   });
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) setUserEmail(data.user.email ?? null);
+    });
+    fetchData();
+  }, []);
+
+  const souEuOAdmin = isAdmin || userEmail === 'romulochaves77@gmail.com';
 
   const fetchData = async () => {
     try {
       const { data: todosPerfis } = await supabase.from('perfis').select('*').order('nome');
-      
       if (todosPerfis) {
         const listaNegra = ['renata', 'instituto', 'recepcao', 'secretaria', 'admin', 'recepção'];
         const filtrados = todosPerfis.filter(p => {
@@ -119,7 +119,6 @@ export function Dashboard() {
             const perfilEncontrado = todosPerfis.find(p => 
               p.nome?.trim().toLowerCase() === evt.profissional_nome?.trim().toLowerCase()
             );
-            
             return {
               id: evt.id,
               title: `${evt.paciente_nome} (S${evt.sala_id})`,
@@ -134,8 +133,6 @@ export function Dashboard() {
       }
     } catch (err) { toast.error("Erro ao carregar dados."); }
   };
-
-  useEffect(() => { fetchData(); }, []);
 
   useEffect(() => {
     const pesquisar = async () => {
@@ -157,6 +154,15 @@ export function Dashboard() {
       setIsAgendamentoOpen(false);
       fetchData();
     } catch (err) { toast.error("Erro ao excluir."); } finally { setLoading(false); }
+  };
+
+  const enviarWhatsApp = () => {
+    if (!form.telefone) return toast.error("Paciente sem telefone cadastrado.");
+    const foneLimpo = form.telefone.replace(/\D/g, '');
+    const dataFormatada = format(new Date(form.inicio), "dd/MM/yyyy");
+    const horaFormatada = format(new Date(form.inicio), "HH:mm");
+    const mensagem = `Olá, ${form.paciente_nome}! Confirmamos sua consulta no *Instituto SerClin* com o(a) profissional ${form.profissional} no dia *${dataFormatada}* às *${horaFormatada}*. Podemos confirmar sua presença?`;
+    window.open(`https://wa.me/55${foneLimpo}?text=${encodeURIComponent(mensagem)}`, '_blank');
   };
 
   const gerarComprovante = async () => {
@@ -191,8 +197,7 @@ export function Dashboard() {
         doc.setDrawColor(0, 0, 0); doc.line(20, 160, 70, 160);
       }
 
-      doc.setFontSize(7);
-      doc.setTextColor(150, 150, 150);
+      doc.setFontSize(7); doc.setTextColor(150, 150, 150);
       doc.text("Para validar a autenticidade deste documento, escaneie o código abaixo:", 105, 190, { align: "center" });
       doc.addImage(qrCodeDataUrl, 'PNG', 87, 195, 30, 30);
       doc.text(urlValidacao, 105, 230, { align: "center" });
@@ -204,11 +209,7 @@ export function Dashboard() {
       
       doc.save(`Atestado_${form.paciente_nome.replace(/\s+/g, '_')}.pdf`);
       toast.success("Atestado com QR Code gerado!");
-    } catch (err) {
-      toast.error("Erro ao gerar validador digital.");
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { toast.error("Erro ao gerar validador digital."); } finally { setLoading(false); }
   };
 
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
@@ -236,7 +237,8 @@ export function Dashboard() {
         paciente_id: idDoPaciente, paciente_telefone: form.telefone,
         data_inicio: dInicio.toISOString(), data_fim: dFim.toISOString(),
         status: mapearStatusParaBanco(form.status), assinatura_url: assinaturaBase64,
-        valor_atendimento: parseFloat(form.valor_atendimento) // Salvando o valor
+        valor_atendimento: parseFloat(form.valor_atendimento),
+        forma_pagamento: form.forma_pagamento
       };
 
       const { error } = eventoSelecionadoId 
@@ -251,9 +253,17 @@ export function Dashboard() {
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
       <style>{`
-        .rbc-agenda-view table.rbc-agenda-table tbody > tr > td { color: white !important; font-weight: bold; }
-        .rbc-agenda-view { background-color: #1e3a8a; border-radius: 1rem; overflow: hidden; }
-        .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: #fbbf24 !important; }
+        /* AJUSTE FONTE E FUNDO BRANCO AGENDA */
+        .rbc-agenda-view table.rbc-agenda-table tbody > tr > td { 
+          color: #1f2937 !important; 
+          font-weight: 800 !important; 
+          font-size: 14px !important; 
+        }
+        .rbc-agenda-view { background-color: #ffffff; border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
+        .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: #1e3a8a !important; font-weight: 800 !important; }
+        .rbc-toolbar button { color: #1e3a8a !important; font-weight: bold; }
+        .rbc-toolbar button.rbc-active { background-color: #1e3a8a !important; color: white !important; }
+        .rbc-event-content { font-size: 13px !important; }
       `}</style>
 
       <header className="bg-white border-b px-6 py-3 flex justify-between items-center h-20 shadow-sm z-20 gap-4">
@@ -278,30 +288,20 @@ export function Dashboard() {
         </div>
 
         <div className="flex gap-1.5 items-center">
-          
-          {/* BLOCO FINANCEIRO INTEGRADO NO HEADER */}
           {(souEuOAdmin || isSecretaria) && (
             <>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600" title="Receitas e Planos">
-                <Wallet size={20}/>
-              </Button>
-
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500" title="Gestão de Despesas">
-                <Receipt size={20}/>
-              </Button>
-
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600" title="Repasses e Lucros">
-                <Calculator size={20}/>
-              </Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600" title="Receitas e Planos"><Wallet size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500" title="Gestão de Despesas"><Receipt size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600" title="Repasses e Lucros"><Calculator size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600" title="Fechamento de Caixa"><Scale size={20}/></Button>
             </>
           )}
-
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500" title="Relatórios"><BarChart3 size={20}/></Button>
-          {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600"><Clock size={20}/></Button>}
+          {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600" title="Horários"><Clock size={20}/></Button>}
           {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Gestão de Equipe"><Shield size={20}/></Button>}
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2"><Users size={20}/></Button>
-          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), valor_atendimento: "0.00"}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg"><Plus size={16} className="mr-1" /> AGENDAR</Button>
-          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }}><LogOut size={18} /></Button>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2" title="Pacientes"><Users size={20}/></Button>
+          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), valor_atendimento: "0.00", forma_pagamento: "Pix"}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg"><Plus size={16} className="mr-1" /> AGENDAR</Button>
+          <Button variant="ghost" size="icon" onClick={() => { supabase.signOut(); navigate('/login'); }}><LogOut size={18} /></Button>
         </div>
       </header>
 
@@ -309,9 +309,7 @@ export function Dashboard() {
         <Card className="h-full border-none shadow-sm bg-white overflow-hidden rounded-[2rem] text-left">
           <CardContent className="p-0 h-full">
             <Calendar 
-              localizer={localizer} 
-              culture='pt-BR' 
-              messages={mensagensPortugues}
+              localizer={localizer} culture='pt-BR' messages={mensagensPortugues}
               events={filtroProfissional === "geral" ? events : events.filter(e => e.original?.profissional_nome === filtroProfissional)} 
               view={view} onView={setView} date={date} onNavigate={setDate} 
               views={['day', 'week', 'month', 'agenda']} 
@@ -321,12 +319,12 @@ export function Dashboard() {
               })} 
               onSelectEvent={(e) => { 
                 const evt = e.original; 
-                setEventoSelecionadoId(evt.id); 
-                setBuscaPaciente(evt.paciente_nome); 
+                setEventoSelecionadoId(evt.id); setBuscaPaciente(evt.paciente_nome); 
                 setForm({ 
                   ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: evt.paciente_telefone || '', 
                   inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), duracao: '40', status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), assinatura_url: evt.assinatura_url || null,
-                  valor_atendimento: evt.valor_atendimento?.toString() || "0.00" // Carrega o valor salvo
+                  valor_atendimento: evt.valor_atendimento?.toString() || "0.00",
+                  forma_pagamento: evt.forma_pagamento || "Pix"
                 }); 
                 setIsAgendamentoOpen(true); 
               }} 
@@ -338,45 +336,87 @@ export function Dashboard() {
 
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-md my-8 overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b flex justify-between items-center bg-[#1e3a8a]">
-              <h3 className="font-black text-white uppercase text-xs tracking-widest">{eventoSelecionadoId ? 'Editar Agendamento' : 'Agendar Paciente'}</h3>
-              <button onClick={() => setIsAgendamentoOpen(false)}><X size={20} className="text-white"/></button>
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[420px] my-8 overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100">
+            
+            <div className="p-6 border-b flex justify-between items-center bg-white">
+              <h3 className="font-black uppercase text-xs tracking-widest text-[#1e3a8a]">
+                {eventoSelecionadoId ? 'Editar Agendamento' : 'Agendar Paciente'}
+              </h3>
+              <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors">
+                <X size={20}/>
+              </button>
             </div>
+
             <form onSubmit={handleSalvarAgendamento} className="p-8 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Status</label>
-                  <Select value={form.status} onValueChange={(v) => setForm({...form, status: v})}><SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10 uppercase text-[10px]"><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem><SelectItem value="Falta">Falta</SelectItem></SelectContent></Select></div>
-                
-                {/* CAMPO NOVO: VALOR DA SESSÃO */}
-                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Valor da Sessão (R$)</label>
-                  <Input type="number" step="0.01" value={form.valor_atendimento} onChange={e => setForm({...form, valor_atendimento: e.target.value})} className="bg-gray-50 border-none h-10 font-bold" /></div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Status</label>
+                  <Select value={form.status} onValueChange={(v) => setForm({...form, status: v})}>
+                    <SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10 uppercase text-[10px]"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem><SelectItem value="Falta">Falta</SelectItem></SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Pagamento</label>
+                  <Select value={form.forma_pagamento} onValueChange={(v) => setForm({...form, forma_pagamento: v})}>
+                    <SelectTrigger className="bg-emerald-50 border-none font-bold text-emerald-700 h-10 text-[10px] uppercase"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pix">Pix</SelectItem>
+                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="Cartão de Crédito">Cartão Crédito</SelectItem>
+                      <SelectItem value="Cartão de Débito">Cartão Débito</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Paciente</label>
-                <div className="relative"><Input placeholder="Buscar..." className="bg-gray-50 border-none font-bold uppercase text-xs h-11" value={buscaPaciente} onChange={(e) => setBuscaPaciente(e.target.value)} required />
-                  {pacientesSugeridos.length > 0 && (<div className="absolute z-[110] w-full bg-white border shadow-2xl rounded-xl mt-1 overflow-hidden">{pacientesSugeridos.map(p => (<button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: p.telefone || '' }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}><span className="font-bold text-sm uppercase">{p.nome}</span></button>))}</div>)}</div></div>
-              
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Profissional Clínico</label>
-                  <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required><SelectTrigger className="bg-gray-50 border-none h-11"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
-                    <SelectContent className="z-[110]">{equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Duração</label>
-                  <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}><SelectTrigger className="bg-gray-50 border-none h-10 font-bold"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="30">30 Min</SelectItem>
-                      <SelectItem value="40">40 Min</SelectItem>
-                      <SelectItem value="50">50 Min</SelectItem>
-                      <SelectItem value="60">60 Min</SelectItem>
-                    </SelectContent></Select></div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Valor (R$)</label>
+                  <Input type="number" step="0.01" value={form.valor_atendimento} onChange={e => setForm({...form, valor_atendimento: e.target.value})} className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Duração</label>
+                  <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}>
+                    <SelectTrigger className="bg-gray-50 border-none h-10 font-bold text-sm text-gray-700"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="30">30 Min</SelectItem><SelectItem value="40">40 Min</SelectItem><SelectItem value="50">50 Min</SelectItem><SelectItem value="60">60 Min</SelectItem></SelectContent>
+                  </Select>
+                </div>
               </div>
 
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Paciente</label>
+                <div className="relative">
+                  <Input placeholder="Buscar..." className="bg-gray-50 border-none font-bold uppercase text-xs h-11 text-gray-700" value={buscaPaciente} onChange={(e) => setBuscaPaciente(e.target.value)} required />
+                  {pacientesSugeridos.length > 0 && (
+                    <div className="absolute z-[110] w-full bg-white border shadow-2xl rounded-xl mt-1 overflow-hidden">
+                      {pacientesSugeridos.map(p => (
+                        <button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: p.telefone || '' }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}>
+                          <span className="font-bold text-sm uppercase text-gray-700">{p.nome}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">WhatsApp</label>
-                  <Input value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} className="bg-gray-50 border-none h-11" /></div>
-                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Horário</label>
-                  <input type="datetime-local" required className="w-full bg-gray-50 rounded-md p-2.5 text-xs font-bold h-11 outline-none border-none" value={form.inicio} onChange={e => setForm({...form, inicio: e.target.value})} /></div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">WhatsApp</label>
+                  <Input value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} className="bg-gray-50 border-none h-11 text-gray-700" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Horário</label>
+                  <input type="datetime-local" required className="w-full bg-gray-50 rounded-md p-2.5 text-xs font-bold h-11 border-none outline-none text-gray-700" value={form.inicio} onChange={e => setForm({...form, inicio: e.target.value})} />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Profissional Clínico</label>
+                <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required>
+                  <SelectTrigger className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                  <SelectContent className="z-[110]">{equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-1 pt-2">
@@ -387,15 +427,18 @@ export function Dashboard() {
                       <img src={form.assinatura_url} alt="Assinatura" className="max-h-[80px] object-contain" />
                       <Button type="button" onClick={() => setForm({ ...form, assinatura_url: null })} className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity font-bold text-[10px] uppercase">Refazer</Button>
                     </div>
-                  ) : (
-                    <SignatureCanvas ref={sigCanvas} penColor='black' canvasProps={{width: 380, height: 100, className: 'sigCanvas w-full h-full'}} />
-                  )}
+                  ) : (<SignatureCanvas ref={sigCanvas} penColor='black' canvasProps={{width: 380, height: 100, className: 'sigCanvas w-full h-full'}} />)}
                 </div>
               </div>
 
               <div className="pt-6 flex flex-col gap-3">
+                {form.telefone && (
+                  <Button type="button" onClick={enviarWhatsApp} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all">
+                    <MessageCircle size={16} /> Confirmar via WhatsApp
+                  </Button>
+                )}
                 {eventoSelecionadoId && form.status === 'Presença' && (
-                  <Button type="button" onClick={gerarComprovante} className="w-full bg-[#1e3a8a] text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all">
+                  <Button type="button" onClick={gerarComprovante} className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all">
                     <FileText size={16} /> Gerar Atestado
                   </Button>
                 )}

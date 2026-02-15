@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // ADICIONADO
 import { supabase } from "@/lib/supabase";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Wallet, Link as LinkIcon, Users } from "lucide-react";
-import { formatCurrency } from "@/lib/utils"; // Certifique-se de ter essa função ou use uma formatação simples
+import { Plus, Wallet, Link as LinkIcon, Users, ArrowLeft } from "lucide-react"; // ADICIONADO ArrowLeft
+import { formatCurrency } from "@/lib/utils";
 
 export function Planos() {
+  const navigate = useNavigate(); // ADICIONADO
   const [planos, setPlanos] = useState<any[]>([]);
   const [pacientes, setPacientes] = useState<any[]>([]);
   const [novoPlano, setNovoPlano] = useState({ nome: "", valor: "", frequencia: "Mensal" });
@@ -47,7 +49,6 @@ export function Planos() {
     else { toast.success("Paciente vinculado com sucesso!"); setVinculo({ pacienteId: "", planoId: "" }); fetchData(); }
   };
 
-  // Cálculo da Receita Mensal Estimada
   const receitaMensal = pacientes.reduce((total, paciente) => {
     const planoDoPaciente = planos.find(p => p.id === paciente.plano_id);
     if (planoDoPaciente && planoDoPaciente.frequencia === 'Mensal') {
@@ -57,16 +58,26 @@ export function Planos() {
   }, 0);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto font-sans space-y-8">
-      <header>
-        <h1 className="text-2xl font-black text-[#1e3a8a] uppercase flex items-center gap-3">
-          <Wallet className="text-emerald-600" size={28} /> Gestão de Planos e Receitas
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">Cadastre seus planos e vincule aos pacientes para projetar sua receita.</p>
+    <div className="p-6 max-w-6xl mx-auto font-sans space-y-8 text-left">
+      {/* CABEÇALHO ATUALIZADO COM BOTÃO VOLTAR */}
+      <header className="flex items-center gap-4">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => navigate('/sistema')} 
+          className="rounded-full border-gray-200 hover:bg-gray-100 transition-colors"
+        >
+          <ArrowLeft size={16} className="mr-1" /> Voltar
+        </Button>
+        <div>
+          <h1 className="text-2xl font-black text-[#1e3a8a] uppercase flex items-center gap-3">
+            <Wallet className="text-emerald-600" size={28} /> Gestão de Planos e Receitas
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">Cadastre seus planos e vincule aos pacientes para projetar sua receita.</p>
+        </div>
       </header>
 
       <div className="grid md:grid-cols-3 gap-6">
-        {/* CARD DE RECEITA ESTIMADA */}
         <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-100 shadow-sm">
           <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-emerald-700 uppercase">Receita Mensal Recorrente (Estimada)</CardTitle></CardHeader>
           <CardContent>
@@ -75,7 +86,6 @@ export function Planos() {
           </CardContent>
         </Card>
 
-        {/* FORMULÁRIO DE NOVO PLANO */}
         <Card className="md:col-span-2 shadow-sm border-gray-100">
           <CardHeader><CardTitle className="text-sm font-bold text-gray-700 uppercase flex items-center gap-2"><Plus size={16} className="text-blue-600" /> Criar Novo Plano</CardTitle></CardHeader>
           <CardContent>
@@ -95,9 +105,7 @@ export function Planos() {
         </Card>
       </div>
 
-      {/* ÁREA DE VÍNCULO E LISTAGEM */}
       <div className="grid md:grid-cols-3 gap-6">
-        {/* VINCULAR PACIENTE */}
         <Card className="shadow-sm border-gray-100">
           <CardHeader><CardTitle className="text-sm font-bold text-gray-700 uppercase flex items-center gap-2"><LinkIcon size={16} className="text-purple-600" /> Vincular Paciente a Plano</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -115,7 +123,6 @@ export function Planos() {
           </CardContent>
         </Card>
 
-        {/* LISTA DE PLANOS ATIVOS */}
         <Card className="md:col-span-2 shadow-sm border-gray-100 overflow-hidden">
           <CardHeader className="bg-gray-50"><CardTitle className="text-sm font-bold text-gray-700 uppercase flex items-center gap-2"><Users size={16} className="text-blue-600" /> Visão Geral dos Planos</CardTitle></CardHeader>
           <CardContent className="p-0">

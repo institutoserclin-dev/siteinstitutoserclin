@@ -3,9 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { 
-  ArrowLeft, User, Save, History, FilePlus, Edit, AlertCircle, 
-  Paperclip, FileText, Shield, CheckCircle, XCircle, Trash2, 
-  Calendar as CalendarIcon, X, Plus, RefreshCw, Clock 
+  ArrowLeft, User, Save, Edit, AlertCircle, 
+  Paperclip, FileText, Trash2, 
+  Calendar as CalendarIcon, X, RefreshCw, Clock 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,8 +36,16 @@ export function Prontuario() {
   const [isAgendamentoOpen, setIsAgendamentoOpen] = useState(false);
   const [equipeClinica, setEquipeClinica] = useState<any[]>([]); 
   const [loadingAgendamento, setLoadingAgendamento] = useState(false);
+
+  // ESTADO DO FORMULÁRIO ATUALIZADO COM FINANCEIRO
   const [formAgendamento, setFormAgendamento] = useState({ 
-    profissional: '', sala: '1', inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), duracao: '40', status: 'Agendado'
+    profissional: '', 
+    sala: '1', 
+    inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), 
+    duracao: '40', 
+    status: 'Agendado',
+    valor_atendimento: "0.00",
+    forma_pagamento: "Pix"
   });
 
   const [novoRegistro, setNovoRegistro] = useState({ 
@@ -69,7 +77,6 @@ export function Prontuario() {
       const { data: r } = await supabase.from("prontuarios").select("*").eq("paciente_id", id).order("created_at", { ascending: false });
       setRegistros(r || []);
 
-      // --- FILTRO AUTOMÁTICO DE PROFISSIONAIS ---
       const { data: todosPerfis } = await supabase.from('perfis').select('*').order('nome');
       if (todosPerfis) {
         const filtrados = todosPerfis.filter(perfil => {
@@ -149,6 +156,7 @@ export function Prontuario() {
     } catch (error) { toast.error("Erro ao salvar."); } finally { setLoading(false); }
   };
 
+  // FUNÇÃO DE AGENDAMENTO ATUALIZADA
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formAgendamento.profissional) return toast.error("Selecione o profissional.");
@@ -164,7 +172,9 @@ export function Prontuario() {
         paciente_telefone: paciente.telefone,
         data_inicio: dInicio.toISOString(),
         data_fim: dFim.toISOString(),
-        status: 'Agendado'
+        status: formAgendamento.status === 'Presença' ? 'Presenca' : formAgendamento.status,
+        valor_atendimento: parseFloat(formAgendamento.valor_atendimento),
+        forma_pagamento: formAgendamento.forma_pagamento
       }]);
       if (error) throw error;
       setIsAgendamentoOpen(false);
@@ -177,12 +187,6 @@ export function Prontuario() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-10 font-sans text-left">
-      {/* CSS PARA FORÇAR LETRA BRANCA NA AGENDA */}
-      <style>{`
-        .rbc-agenda-view table.rbc-agenda-table tbody > tr > td { color: white !important; }
-        .rbc-agenda-view { background-color: #1e3a8a; border-radius: 1rem; }
-      `}</style>
-
       <div className="max-w-6xl mx-auto space-y-8">
         
         {/* HEADER */}
@@ -205,11 +209,7 @@ export function Prontuario() {
         {/* INFO PACIENTE */}
         <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8 items-center">
           <div className="w-24 h-24 bg-blue-50 rounded-3xl flex items-center justify-center text-[#1e3a8a] shadow-inner overflow-hidden border-2 border-white">
-            {paciente?.foto_url ? (
-              <img src={paciente.foto_url} alt={paciente.nome} className="w-full h-full object-cover" />
-            ) : (
-              <User size={40} />
-            )}
+            {paciente?.foto_url ? <img src={paciente.foto_url} className="w-full h-full object-cover" /> : <User size={40} />}
           </div>
           <div className="flex-1 text-center md:text-left">
             <h1 className="text-2xl font-black text-gray-800 uppercase leading-none">{paciente?.nome}</h1>
@@ -227,6 +227,7 @@ export function Prontuario() {
           </div>
         </div>
 
+        {/* ÁREA DE PRONTUÁRIO E REGISTROS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-left">
           <div className="lg:col-span-1">
             <Card className={`border-none shadow-lg rounded-[2rem] overflow-hidden ${modoEdicao ? 'ring-4 ring-amber-400' : ''}`}>
@@ -234,7 +235,7 @@ export function Prontuario() {
                 {modoEdicao ? 'Editando Registro' : 'Novo Registro'}
               </div>
               <CardContent className="p-6 space-y-4">
-                <select className="w-full rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-xs font-bold uppercase" value={novoRegistro.tipo} onChange={e => setNovoRegistro({...novoRegistro, tipo: e.target.value})}>
+                <select className="w-full rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-xs font-bold uppercase outline-none" value={novoRegistro.tipo} onChange={e => setNovoRegistro({...novoRegistro, tipo: e.target.value})}>
                   <option value="Sessão">Sessão</option>
                   <option value="Laudo">Laudo / PDF</option>
                   <option value="Avaliação">Avaliação</option>
@@ -269,71 +270,94 @@ export function Prontuario() {
                   </a>
                 )}
                 {reg.historico && reg.historico.length > 0 && (
-                    <details className="mt-3">
-                        <summary className="text-[9px] font-black text-amber-600 uppercase cursor-pointer flex items-center gap-1">
-                            <AlertCircle size={12}/> Auditoria de edições ({reg.historico.length})
-                        </summary>
-                        <div className="mt-2 space-y-2 border-l-2 border-amber-100 pl-3">
-                            {reg.historico.map((h:any, i:number) => (
-                                <div key={i} className="text-[10px] text-gray-400 italic">
-                                    <strong>{h.autor}</strong> em {formatarDataSegura(h.data)}
-                                </div>
-                            ))}
-                        </div>
-                    </details>
+                  <details className="mt-3">
+                    <summary className="text-[9px] font-black text-amber-600 uppercase cursor-pointer flex items-center gap-1"><AlertCircle size={12}/> Auditoria ({reg.historico.length})</summary>
+                    <div className="mt-2 space-y-2 border-l-2 border-amber-100 pl-3">
+                      {reg.historico.map((h:any, i:number) => (
+                        <div key={i} className="text-[10px] text-gray-400 italic"><strong>{h.autor}</strong> em {formatarDataSegura(h.data)}</div>
+                      ))}
+                    </div>
+                  </details>
                 )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* MODAL AGENDAMENTO - LETRA BRANCA E FILTRO CLINICO */}
+        {/* MODAL DE AGENDAMENTO (CORRIGIDO) */}
         {isAgendamentoOpen && (
-          <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
-            <Card className="w-full max-w-md rounded-[2.5rem] bg-white overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
-              <div className="bg-[#1e3a8a] p-6 flex justify-between items-center">
-                {/* CORREÇÃO: ADICIONADA CLASSE text-white AQUI */}
-                <h3 className="font-black uppercase text-xs tracking-widest text-white">Agendar para {paciente?.nome}</h3>
-                <button onClick={() => setIsAgendamentoOpen(false)} className="text-white"><X size={24}/></button>
+          <div className="fixed inset-0 bg-black/60 z-[999] flex items-center justify-center p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
+            <Card className="w-full max-w-[420px] rounded-[2.5rem] bg-white overflow-visible shadow-2xl animate-in fade-in zoom-in duration-200">
+              <div className="bg-[#1e3a8a] p-5 flex justify-between items-center rounded-t-[2.5rem]">
+                <h3 className="font-black uppercase text-[11px] tracking-widest text-white !important">Agendar: {paciente?.nome}</h3>
+                <button onClick={() => setIsAgendamentoOpen(false)} className="text-white hover:opacity-70 transition-opacity"><X size={22}/></button>
               </div>
-              <form onSubmit={handleSalvarAgendamento} className="p-8 space-y-4 text-left">
+              <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4 text-left">
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Profissional Clínico</label>
-                    <Select value={formAgendamento.profissional} onValueChange={(v) => setFormAgendamento({...formAgendamento, profissional: v})}>
-                      <SelectTrigger className="h-11 text-xs font-bold uppercase border-gray-100 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a]"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent className="z-[110]">
-                        {/* MECANISMO AUTOMÁTICO DE FILTRAGEM CLINICA */}
-                        {equipeClinica.map(p => (
-                          <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>
-                        ))}
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Status</label>
+                    <Select value={formAgendamento.status} onValueChange={(v) => setFormAgendamento({...formAgendamento, status: v})}>
+                      <SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10 uppercase text-[10px]"><SelectValue /></SelectTrigger>
+                      <SelectContent className="z-[1000]"><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem><SelectItem value="Falta">Falta</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Pagamento</label>
+                    <Select value={formAgendamento.forma_pagamento} onValueChange={(v) => setFormAgendamento({...formAgendamento, forma_pagamento: v})}>
+                      <SelectTrigger className="bg-emerald-50 border-none font-bold text-emerald-700 h-10 text-[10px] uppercase"><SelectValue /></SelectTrigger>
+                      <SelectContent className="z-[1000]">
+                        <SelectItem value="Pix">Pix</SelectItem>
+                        <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                        <SelectItem value="Cartão de Crédito">Cartão Crédito</SelectItem>
+                        <SelectItem value="Cartão de Débito">Cartão Débito</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Valor da Sessão</label>
+                    <Input type="number" step="0.01" value={formAgendamento.valor_atendimento} onChange={e => setFormAgendamento({...formAgendamento, valor_atendimento: e.target.value})} className="bg-gray-50 border-none h-10 font-bold text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Duração</label>
+                    <Select value={formAgendamento.duracao} onValueChange={(v) => setFormAgendamento({...formAgendamento, duracao: v})}>
+                      <SelectTrigger className="bg-gray-50 border-none h-10 font-bold text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent className="z-[1000]">
+                        <SelectItem value="30">30 Min</SelectItem><SelectItem value="40">40 Min</SelectItem>
+                        <SelectItem value="50">50 Min</SelectItem><SelectItem value="60">60 Min</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Profissional</label>
+                    <Select value={formAgendamento.profissional} onValueChange={(v) => setFormAgendamento({...formAgendamento, profissional: v})} required>
+                      <SelectTrigger className="bg-gray-50 border-none h-10 font-bold text-sm uppercase"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent className="z-[1000]">
+                        {equipeClinica.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Sala</label>
                     <Select value={formAgendamento.sala} onValueChange={(v) => setFormAgendamento({...formAgendamento, sala: v})}>
-                      <SelectTrigger className="h-11 text-xs font-bold uppercase border-gray-100 bg-gray-50"><SelectValue /></SelectTrigger>
-                      <SelectContent className="z-[110]"><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem></SelectContent>
+                      <SelectTrigger className="h-10 text-xs font-bold uppercase border-none bg-gray-50"><SelectValue /></SelectTrigger>
+                      <SelectContent className="z-[1000]"><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem></SelectContent>
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Horário</label>
-                    <input type="datetime-local" className="w-full h-11 bg-gray-50 border border-gray-100 rounded-xl px-4 text-xs font-bold uppercase outline-none" value={formAgendamento.inicio} onChange={e => setFormAgendamento({...formAgendamento, inicio: e.target.value})} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Duração</label>
-                    <Select value={formAgendamento.duracao} onValueChange={(v) => setFormAgendamento({...formAgendamento, duracao: v})}>
-                      <SelectTrigger className="h-11 text-xs font-bold uppercase border-gray-100 bg-gray-50"><SelectValue /></SelectTrigger>
-                      <SelectContent className="z-[110]">
-                        <SelectItem value="30">30 Min</SelectItem><SelectItem value="40">40 Min</SelectItem><SelectItem value="50">50 Min</SelectItem><SelectItem value="60">60 Min</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Data e Horário</label>
+                  <input type="datetime-local" className="w-full h-10 bg-gray-50 border-none rounded-xl px-4 text-xs font-bold outline-none" value={formAgendamento.inicio} onChange={e => setFormAgendamento({...formAgendamento, inicio: e.target.value})} />
                 </div>
-                <Button type="submit" disabled={loadingAgendamento} className="w-full bg-[#1e3a8a] text-white font-black uppercase text-xs h-14 rounded-2xl shadow-xl transition-all">
+
+                <Button type="submit" disabled={loadingAgendamento} className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black uppercase text-xs h-14 rounded-2xl shadow-xl transition-all">
                   {loadingAgendamento ? <RefreshCw className="animate-spin" /> : "Confirmar Agendamento"}
                 </Button>
               </form>
