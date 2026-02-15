@@ -153,7 +153,6 @@ export function Dashboard() {
     window.open(`https://wa.me/55${foneLimpo}?text=${encodeURIComponent(mensagem)}`, '_blank');
   };
 
-  // --- FUNÇÃO DE PDF COMPLETA COM QR CODE E RODAPÉ ---
   const gerarComprovante = async () => {
     setLoading(true);
     try {
@@ -270,19 +269,21 @@ export function Dashboard() {
         <div className="flex gap-1.5 items-center">
           {(souEuOAdmin || isSecretaria) && (
             <>
-              <Button onClick={() => setIsConfirmacaoAmanhaOpen(true)} variant="ghost" className="text-emerald-600 font-black text-[10px] uppercase gap-2 bg-emerald-50 hover:bg-emerald-100 rounded-full px-4 h-9 mr-1 transition-all">
+              <Button onClick={() => setIsConfirmacaoAmanhaOpen(true)} variant="ghost" className="text-emerald-600 font-black text-[10px] uppercase gap-2 bg-emerald-50 hover:bg-emerald-100 rounded-full px-4 h-9 mr-1 transition-all" title="Confirmar Amanhã">
                 <Send size={14} /> Confirmar Amanhã
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600"><Wallet size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500"><Receipt size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600"><Calculator size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600"><Scale size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600" title="Financeiro e Planos"><Wallet size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500" title="Despesas"><Receipt size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600" title="Repasses"><Calculator size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600" title="Caixa"><Scale size={20}/></Button>
             </>
           )}
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500"><BarChart3 size={20}/></Button>
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2"><Users size={20}/></Button>
-          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg"><Plus size={16} className="mr-1" /> AGENDAR</Button>
-          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }}><LogOut size={18} /></Button>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500" title="Relatórios"><BarChart3 size={20}/></Button>
+          {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600" title="Horários"><Clock size={20}/></Button>}
+          {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Controle de Acesso"><Shield size={20}/></Button>}
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2" title="Pacientes"><Users size={20}/></Button>
+          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg" title="Novo Agendamento"><Plus size={16} className="mr-1" /> AGENDAR</Button>
+          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} title="Sair"><LogOut size={18} /></Button>
         </div>
       </header>
 
@@ -339,13 +340,13 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* MODAL DE AGENDAMENTO (OTIMIZADO - LARGURA 440px) */}
+      {/* MODAL DE AGENDAMENTO (PRESERVADO) */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 backdrop-blur-sm overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-[440px] my-4 overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100">
             <div className="p-5 border-b flex justify-between items-center bg-white text-left">
               <h3 className="font-black uppercase text-[15px] tracking-widest text-[#1e3a8a]">{eventoSelecionadoId ? 'Editar' : 'Novo'} Agendamento</h3>
-              <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500"><X size={20}/></button>
+              <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors"><X size={20}/></button>
             </div>
             <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4 text-left">
               <div className="grid grid-cols-2 gap-4">
