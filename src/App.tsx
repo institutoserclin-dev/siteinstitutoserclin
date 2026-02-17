@@ -10,6 +10,7 @@ import Home from "@/pages/Home";
 import { Login } from "@/pages/Login";
 import { RedefinirSenha } from "@/pages/RedefinirSenha";
 import { Validar } from "@/pages/Validar";
+import Obrigado from "@/pages/Obrigado"; // 1. IMPORTAÇÃO INCORPORADA AQUI
 
 // Páginas do Sistema (Privadas)
 import { Dashboard } from "@/pages/Dashboard";
@@ -36,6 +37,9 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/redefinir-senha" element={<RedefinirSenha />} />
           <Route path="/validar/:id" element={<Validar />} />
+          
+          {/* 2. ROTA INCORPORADA DENTRO DO BLOCO ROUTES */}
+          <Route path="/obrigado" element={<Obrigado />} />
 
           {/* Rotas Privadas (Sistema SerClin) */}
           <Route path="/sistema" element={<PrivateRoute><Dashboard /></PrivateRoute>} />

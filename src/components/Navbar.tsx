@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "wouter";
 import logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
 import { Menu, X, Phone } from "lucide-react";
@@ -8,7 +7,6 @@ import { Button } from "@/components/ui/button";
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [location] = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,12 +17,12 @@ export function Navbar() {
   }, []);
 
   const navLinks = [
-    { name: "Início", href: "/" },
+    { name: "Início", href: "#" },
     { name: "Sobre", href: "#sobre" },
     { name: "Serviços", href: "#servicos" },
-    { name: "Planos", href: "/planos" },
-    { name: "Convênios", href: "/convenios" },
-    { name: "Contato", href: "#contato" }, // AJUSTE: Agora aponta para o ID do formulário
+    { name: "Planos", href: "#planos" },
+    { name: "Convênios", href: "#convenios" },
+    { name: "Contato", href: "#contato" },
   ];
 
   return (
@@ -37,28 +35,26 @@ export function Navbar() {
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link href="/">
-          <a className="flex items-center gap-2 group">
-            <img src={logo} alt="Instituto SerClin" className="h-12 w-auto transition-transform group-hover:scale-105" />
-            <span className={cn("font-serif font-bold text-xl tracking-wide", isScrolled ? "text-primary" : "text-white drop-shadow-md")}>
-              Instituto SerClin
-            </span>
-          </a>
-        </Link>
+        <a href="/" className="flex items-center gap-2 group">
+          <img src={logo} alt="Instituto SerClin" className="h-12 w-auto transition-transform group-hover:scale-105" />
+          <span className={cn("font-serif font-bold text-xl tracking-wide", isScrolled ? "text-primary" : "text-white drop-shadow-md")}>
+            Instituto SerClin
+          </span>
+        </a>
 
         {/* Desktop Menu */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            <Link key={link.name} href={link.href}>
-              <a
-                className={cn(
-                  "text-sm font-medium transition-colors hover:text-secondary uppercase tracking-wider",
-                  isScrolled ? "text-foreground" : "text-white drop-shadow-sm"
-                )}
-              >
-                {link.name}
-              </a>
-            </Link>
+            <a
+              key={link.name}
+              href={link.href}
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-secondary uppercase tracking-wider",
+                isScrolled ? "text-foreground" : "text-white drop-shadow-sm"
+              )}
+            >
+              {link.name}
+            </a>
           ))}
           <Button 
             className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-bold rounded-full"
@@ -72,28 +68,34 @@ export function Navbar() {
 
         {/* Mobile Toggle */}
         <button
-          className="md:hidden text-primary"
+          className="md:hidden"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
-          {isMobileMenuOpen ? <X className={isScrolled ? "text-primary" : "text-white"} /> : <Menu className={isScrolled ? "text-primary" : "text-white"} />}
+          {isMobileMenuOpen ? (
+            <X className={isScrolled ? "text-primary" : "text-white"} />
+          ) : (
+            <Menu className={isScrolled ? "text-primary" : "text-white"} />
+          )}
         </button>
       </div>
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-border shadow-lg p-4 flex flex-col gap-4 animate-in slide-in-from-top-5">
+        <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-border shadow-lg p-4 flex flex-col gap-4">
           {navLinks.map((link) => (
-            <Link key={link.name} href={link.href}>
-              <a
-                className="text-foreground hover:text-primary font-medium py-2 border-b border-border/50 last:border-0"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {link.name}
-              </a>
-            </Link>
+            <a
+              key={link.name}
+              href={link.href}
+              className="text-foreground hover:text-primary font-medium py-2 border-b border-border/50 last:border-0"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              {link.name}
+            </a>
           ))}
           <Button className="w-full bg-primary text-white" asChild>
-            <a href="https://wa.me/5568992161717" target="_blank" rel="noopener noreferrer">Agendar via WhatsApp</a>
+            <a href="https://wa.me/5568992161717" target="_blank" rel="noopener noreferrer">
+              Agendar via WhatsApp
+            </a>
           </Button>
         </div>
       )}
