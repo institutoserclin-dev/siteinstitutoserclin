@@ -20,11 +20,11 @@ export function Navbar() {
 
   const navLinks = [
     { name: "Início", href: "/" },
-    { name: "Sobre", href: "/sobre" },
-    { name: "Serviços", href: "/servicos" },
+    { name: "Sobre", href: "#sobre" },
+    { name: "Serviços", href: "#servicos" },
     { name: "Planos", href: "/planos" },
     { name: "Convênios", href: "/convenios" },
-    { name: "Contato", href: "/contato" },
+    { name: "Contato", href: "#contato" }, // AJUSTE: Agora aponta para o ID do formulário
   ];
 
   return (
