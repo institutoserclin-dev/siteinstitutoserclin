@@ -36,7 +36,7 @@ export default function Home() {
         <Covenants />
         <Plans />
 
-        {/* --- FORMULÁRIO OFICIAL SERCLIN - CONFIGURAÇÃO FINAL --- */}
+        {/* --- FORMULÁRIO OFICIAL SERCLIN - INTEGRADO SALESFORCE --- */}
         <section id="contato" className="py-24 bg-muted/30 border-t">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden grid md:grid-cols-2">
@@ -53,9 +53,6 @@ export default function Home() {
               </div>
 
               <div className="p-12">
-                {/* IMPORTANTE: Removido o modo Debug para permitir o redirecionamento automático 
-                   para a página de Obrigado.
-                */}
                 <form action="https://webto.salesforce.com/servlet/servlet.WebToLead?encoding=UTF-8" method="POST">
                   
                   {/* Identificação da Org SerClin */}
@@ -64,9 +61,12 @@ export default function Home() {
                   {/* Redirecionamento automático para a página de sucesso */}
                   <input type="hidden" name="retURL" value="https://institutoserclin.vercel.app/obrigado" />
                   
-                  {/* Campos Sistêmicos para garantir a entrada no CRM */}
+                  {/* Campos Sistêmicos Obrigatórios */}
                   <input type="hidden" name="company" value="Instituto SerClin - Site" />
                   <input type="hidden" name="lead_source" value="Web" />
+                  
+                  {/* INTEGRAÇÃO: Status obrigatório para evitar rejeição do Lead */}
+                  <input type="hidden" name="lead_status" value="Aberto - Não contatado" />
 
                   <div className="space-y-4">
                     <div>
