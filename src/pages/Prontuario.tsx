@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { 
   ArrowLeft, User, Save, Edit, AlertCircle, 
   Paperclip, FileText, Trash2, 
-  Calendar as CalendarIcon, X, RefreshCw, Clock 
+  Calendar as CalendarIcon, X, RefreshCw, Clock,
+  FileEdit, ClipboardList
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,7 +38,10 @@ export function Prontuario() {
   const [equipeClinica, setEquipeClinica] = useState<any[]>([]); 
   const [loadingAgendamento, setLoadingAgendamento] = useState(false);
 
-  // ESTADO DO FORMULÁRIO ATUALIZADO COM FINANCEIRO
+  // ESTADOS PARA ANAMNESE E OBSERVAÇÕES (O que estava faltando)
+  const [isEditPacienteOpen, setIsEditPacienteOpen] = useState(false);
+  const [tempDados, setTempDados] = useState({ anamnese: "", observacoes: "" });
+
   const [formAgendamento, setFormAgendamento] = useState({ 
     profissional: '', 
     sala: '1', 
@@ -61,11 +65,22 @@ export function Prontuario() {
   const carregarDados = async () => {
     try {
       setLoading(true);
-      const { data: p } = await supabase.from("pacientes").select("*").eq("id", id).single();
-      setPaciente(p);
+      if (!id) return;
+
+      // 1. BUSCA PACIENTE (Tratamento para evitar erro 400)
+      const { data: p, error: errPac } = await supabase
+        .from("pacientes")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
       
+      if (errPac) throw errPac;
+      setPaciente(p);
+      if (p) setTempDados({ anamnese: p.anamnese || "", observacoes: p.observacoes || "" });
+      
+      // 2. RESUMO DE PRESENÇA (Busca por ID é mais segura)
       if (p) {
-        const { data: ag } = await supabase.from("agendamentos").select("status").eq("paciente_nome", p.nome);
+        const { data: ag } = await supabase.from("agendamentos").select("status").eq("paciente_id", id);
         if (ag) {
           setResumoPresenca({
             presencas: ag.filter(a => a.status === 'Presenca' || a.status === 'Presença').length,
@@ -74,28 +89,48 @@ export function Prontuario() {
         }
       }
 
+      // 3. REGISTROS CLÍNICOS
       const { data: r } = await supabase.from("prontuarios").select("*").eq("paciente_id", id).order("created_at", { ascending: false });
       setRegistros(r || []);
 
+      // 4. EQUIPE
       const { data: todosPerfis } = await supabase.from('perfis').select('*').order('nome');
       if (todosPerfis) {
         const filtrados = todosPerfis.filter(perfil => {
-          const nome = (perfil.nome || "").toLowerCase();
-          const cargo = (perfil.cargo || "").toLowerCase();
+          const n = (perfil.nome || "").toLowerCase();
+          const c = (perfil.cargo || "").toLowerCase();
           const listaNegra = ['renata', 'instituto', 'secretaria', 'recepcao', 'admin', 'recepção'];
-          return !listaNegra.some(termo => nome.includes(termo) || cargo.includes(termo));
+          return !listaNegra.some(termo => n.includes(termo) || c.includes(termo));
         });
         setEquipeClinica(filtrados);
       }
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e) { 
+      console.error("Erro ao carregar:", e);
+      toast.error("Erro ao carregar dados do paciente.");
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { carregarDados(); }, [id]);
 
-  const iniciarEdicao = (reg: any) => {
-    setModoEdicao(reg.id);
-    setNovoRegistro({ tipo: reg.tipo_registro, descricao: reg.descricao });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  // FUNÇÃO PARA SALVAR ANAMNESE/OBSERVAÇÕES (Resolve o Erro 400 PATCH)
+  const handleSalvarDadosPaciente = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("pacientes")
+        .update({ 
+          anamnese: tempDados.anamnese, 
+          observacoes: tempDados.observacoes 
+        })
+        .eq("id", id);
+      
+      if (error) throw error;
+      toast.success("Dados clínicos atualizados!");
+      setIsEditPacienteOpen(false);
+      carregarDados();
+    } catch (err) {
+      toast.error("Erro ao atualizar dados. Verifique se as colunas existem no Supabase.");
+    } finally { setLoading(false); }
   };
 
   const handleSalvarRegistro = async () => {
@@ -156,7 +191,6 @@ export function Prontuario() {
     } catch (error) { toast.error("Erro ao salvar."); } finally { setLoading(false); }
   };
 
-  // FUNÇÃO DE AGENDAMENTO ATUALIZADA
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formAgendamento.profissional) return toast.error("Selecione o profissional.");
@@ -212,7 +246,10 @@ export function Prontuario() {
             {paciente?.foto_url ? <img src={paciente.foto_url} className="w-full h-full object-cover" /> : <User size={40} />}
           </div>
           <div className="flex-1 text-center md:text-left">
-            <h1 className="text-2xl font-black text-gray-800 uppercase leading-none">{paciente?.nome}</h1>
+            <div className="flex items-center justify-center md:justify-start gap-3">
+              <h1 className="text-2xl font-black text-gray-800 uppercase leading-none">{paciente?.nome}</h1>
+              <button onClick={() => setIsEditPacienteOpen(true)} className="text-gray-300 hover:text-blue-600"><Edit size={18}/></button>
+            </div>
             <p className="text-sm font-bold text-gray-400 mt-2">{paciente?.telefone} | {paciente?.convenio}</p>
           </div>
           <div className="flex gap-3 text-center">
@@ -229,7 +266,27 @@ export function Prontuario() {
 
         {/* ÁREA DE PRONTUÁRIO E REGISTROS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-left">
-          <div className="lg:col-span-1">
+          
+          <div className="lg:col-span-1 space-y-6">
+            {/* CARD DE INFORMAÇÕES CLÍNICAS GERAIS */}
+            <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
+              <div className="bg-blue-50 px-6 py-4 flex justify-between items-center border-b border-blue-100">
+                <h3 className="font-black text-[#1e3a8a] uppercase text-[10px] flex items-center gap-2"><ClipboardList size={28}/> Dados Clínicos</h3>
+                <button onClick={() => setIsEditPacienteOpen(true)} className="text-blue-600 hover:scale-110 transition-transform"><FileEdit size={20}/></button>
+              </div>
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase">Anamnese / Histórico</label>
+                  <p className="text-xs text-gray-800 mt-1 italic">{paciente?.anamnese || "Não informada."}</p>
+                </div>
+                <div className="pt-2 border-t border-gray-50">
+                  <label className="text-[10px] font-black text-gray-400 uppercase">Observações Gerais</label>
+                  <p className="text-xs text-gray-800 mt-1">{paciente?.observacoes || "Nenhuma observação."}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* CARD DE NOVO REGISTRO */}
             <Card className={`border-none shadow-lg rounded-[2rem] overflow-hidden ${modoEdicao ? 'ring-4 ring-amber-400' : ''}`}>
               <div className={`${modoEdicao ? 'bg-amber-500' : 'bg-[#1e3a8a]'} px-6 py-4 text-white font-black uppercase text-[10px]`}>
                 {modoEdicao ? 'Editando Registro' : 'Novo Registro'}
@@ -253,6 +310,11 @@ export function Prontuario() {
           </div>
 
           <div className="lg:col-span-2 space-y-4">
+            {registros.length === 0 && (
+              <div className="bg-white p-12 rounded-[2rem] border border-dashed border-gray-200 text-center">
+                <p className="text-gray-400 font-bold uppercase text-xs">Nenhum registro encontrado para este paciente.</p>
+              </div>
+            )}
             {registros.map((reg) => (
               <div key={reg.id} className="bg-white p-6 pl-8 rounded-[1.5rem] shadow-sm border border-gray-100 relative overflow-hidden group">
                 <div className="absolute left-0 top-0 bottom-0 w-2.5" style={{ backgroundColor: getCorProfissional(reg.profissional_nome) }} />
@@ -261,7 +323,10 @@ export function Prontuario() {
                     <span className="text-[9px] font-black uppercase px-2 py-1 bg-blue-50 text-[#1e3a8a] rounded-md">{reg.tipo_registro}</span>
                     <span className="text-[11px] font-black text-gray-800 uppercase">{reg.profissional_nome}</span>
                   </div>
-                  <button onClick={() => iniciarEdicao(reg)} className="text-gray-300 hover:text-amber-500"><Edit size={16}/></button>
+                  <div className="flex gap-2">
+                    <button onClick={() => { if(confirm("Apagar registro?")) supabase.from("prontuarios").delete().eq("id", reg.id).then(carregarDados) }} className="text-gray-200 hover:text-red-400 transition-colors"><Trash2 size={14}/></button>
+                    <button onClick={() => iniciarEdicao(reg)} className="text-gray-300 hover:text-amber-500 transition-colors"><Edit size={16}/></button>
+                  </div>
                 </div>
                 <p className="text-sm text-gray-600 whitespace-pre-wrap mt-2">{reg.descricao}</p>
                 {reg.arquivo_url && (
@@ -284,12 +349,37 @@ export function Prontuario() {
           </div>
         </div>
 
-        {/* MODAL DE AGENDAMENTO (CORRIGIDO) */}
+        {/* MODAL DE ANAMNESE (CORRIGE O ERRO 400 PATCH) */}
+        {isEditPacienteOpen && (
+          <div className="fixed inset-0 bg-black/60 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">
+            <Card className="w-full max-w-[500px] rounded-[2.5rem] bg-white p-8 shadow-2xl animate-in zoom-in duration-200">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-black text-[#1e3a8a] uppercase text-xs tracking-widest">Informações Clínicas</h3>
+                <button onClick={() => setIsEditPacienteOpen(false)}><X size={22}/></button>
+              </div>
+              <div className="space-y-4 text-left">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase">Anamnese / Histórico</label>
+                  <textarea value={tempDados.anamnese} onChange={e => setTempDados({...tempDados, anamnese: e.target.value})} className="w-full bg-gray-50 border-none rounded-xl p-4 text-sm h-32 outline-none" placeholder="Descreva o histórico..." />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase">Observações Gerais</label>
+                  <textarea value={tempDados.observacoes} onChange={e => setTempDados({...tempDados, observacoes: e.target.value})} className="w-full bg-gray-50 border-none rounded-xl p-4 text-sm h-24 outline-none" placeholder="Ex: Alergias, medicamentos..." />
+                </div>
+                <Button onClick={handleSalvarDadosPaciente} disabled={loading} className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black h-14 rounded-2xl shadow-xl uppercase text-xs transition-all">
+                  {loading ? <RefreshCw className="animate-spin" /> : "Salvar Dados Clínicos"}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* MODAL DE AGENDAMENTO */}
         {isAgendamentoOpen && (
           <div className="fixed inset-0 bg-black/60 z-[999] flex items-center justify-center p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
             <Card className="w-full max-w-[420px] rounded-[2.5rem] bg-white overflow-visible shadow-2xl animate-in fade-in zoom-in duration-200">
               <div className="bg-[#1e3a8a] p-5 flex justify-between items-center rounded-t-[2.5rem]">
-                <h3 className="font-black uppercase text-[11px] tracking-widest text-white !important">Agendar: {paciente?.nome}</h3>
+                <h3 className="font-black uppercase text-[11px] tracking-widest text-white">Agendar: {paciente?.nome}</h3>
                 <button onClick={() => setIsAgendamentoOpen(false)} className="text-white hover:opacity-70 transition-opacity"><X size={22}/></button>
               </div>
               <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4 text-left">
