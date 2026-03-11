@@ -287,13 +287,19 @@ export function Dashboard() {
         </div>
 
         <div className="flex gap-1.5 items-center">
-          {/* BOTÃO PRIORITÁRIO PARA SECRETÁRIA / ADMIN */}
+          {/* BOTÃO PRIORITÁRIO COM QUANTITATIVO (REINCORPORADO) */}
           {(souEuOAdmin || isSecretaria) && (
             <Button 
               onClick={() => setIsConfirmacaoAmanhaOpen(true)} 
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-5 h-9 mr-2 shadow-lg animate-priority transition-all"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-5 h-9 mr-2 shadow-lg animate-priority transition-all relative"
             >
-              <Send size={14} /> Confirmar Amanhã
+              <Send size={14} /> 
+              Confirmar Amanhã
+              {agendamentosAmanha.length > 0 && (
+                <span className="ml-1 bg-white text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black shadow-sm">
+                  {agendamentosAmanha.length}
+                </span>
+              )}
             </Button>
           )}
 
@@ -337,7 +343,7 @@ export function Dashboard() {
         </Card>
       </main>
 
-      {/* MODAL DE CONFIRMAÇÃO DO PRÓXIMO DIA (LISTA DE TRABALHO) */}
+      {/* MODAL DE CONFIRMAÇÃO DO PRÓXIMO DIA (MELHORADO COM QUANTITATIVO) */}
       {isConfirmacaoAmanhaOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[650px] animate-in slide-in-from-bottom duration-300 border border-gray-100 overflow-hidden">
@@ -350,7 +356,7 @@ export function Dashboard() {
               </div>
               <div className="flex items-center gap-4">
                  <div className="text-right hidden sm:block">
-                    <p className="text-[10px] font-black text-gray-400 uppercase">Pacientes</p>
+                    <p className="text-[10px] font-black text-gray-400 uppercase leading-none">Pendentes</p>
                     <p className="text-2xl font-black text-[#1e3a8a]">{agendamentosAmanha.length}</p>
                  </div>
                  <button onClick={() => setIsConfirmacaoAmanhaOpen(false)} className="bg-gray-100 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors"><X size={24}/></button>
@@ -360,17 +366,15 @@ export function Dashboard() {
             <div className="p-4 max-h-[60vh] overflow-y-auto bg-gray-50/50 space-y-3">
               {agendamentosAmanha.length === 0 ? (
                 <div className="text-center py-20">
-                  <p className="text-gray-400 font-bold uppercase text-xs">Nenhum agendamento para amanhã.</p>
+                  <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">Tudo certo para amanhã!</p>
                 </div>
               ) : (
                 agendamentosAmanha.map((ag, idx) => (
                   <div key={idx} className="flex items-center justify-between p-5 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
                     <div className="flex items-center gap-5">
-                      {/* Horário em destaque */}
                       <div className="h-14 w-20 bg-blue-50 rounded-2xl flex flex-col items-center justify-center border border-blue-100 shrink-0">
                         <span className="text-[16px] font-black text-[#1e3a8a]">{format(new Date(ag.data_inicio), "HH:mm")}</span>
                       </div>
-                      
                       <div className="flex flex-col text-left">
                         <span className="font-black text-[15px] uppercase text-gray-800 leading-tight">{ag.paciente_nome}</span>
                         <div className="flex items-center gap-2 mt-1">
@@ -379,30 +383,22 @@ export function Dashboard() {
                         </div>
                       </div>
                     </div>
-                    
-                    {/* Botão de ação direto */}
                     <Button 
                       onClick={() => enviarWhatsApp(ag.paciente_nome, ag.paciente_telefone, ag.profissional_nome, ag.data_inicio)} 
                       className="bg-emerald-500 hover:bg-black text-white rounded-2xl h-14 px-6 flex items-center gap-3 shadow-lg transition-all group-hover:scale-105"
                     >
                       <MessageCircle size={20} />
-                      <span className="font-black uppercase text-[11px] hidden sm:block">Enviar Mensagem</span>
+                      <span className="font-black uppercase text-[11px] hidden sm:block">Confirmar</span>
                     </Button>
                   </div>
                 ))
               )}
             </div>
-            
-            <div className="p-6 bg-white border-t text-center">
-               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center justify-center gap-2">
-                 O botão "Enviar Mensagem" abrirá automaticamente o WhatsApp com o texto pronto.
-               </p>
-            </div>
           </div>
         </div>
       )}
 
-      {/* MODAL DE AGENDAMENTO (440px) */}
+      {/* MODAL DE AGENDAMENTO (PRESERVADO COM TODOS OS RECURSOS) */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 backdrop-blur-sm overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] my-4 overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100">
