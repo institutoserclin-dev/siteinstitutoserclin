@@ -18,18 +18,17 @@ export function usePerfil() {
             .single();
 
           if (!error && data) {
-            // Convertemos para minúsculo para evitar erro de digitação (Ex: Secretaria vs secretaria)
             setPerfil({
-              role: data.role?.toLowerCase() || 'profissional',
+              // Removemos espaços e acentos para a comparação ficar segura
+              role: data.role?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || 'profissional',
               email: data.email?.toLowerCase() || user.email?.toLowerCase() || ''
             });
           } else {
-            // Fallback caso o perfil não exista na tabela 'perfis' ainda
             setPerfil({ role: 'profissional', email: user.email?.toLowerCase() || '' });
           }
         }
       } catch (err) {
-        console.error("Erro ao carregar perfil:", err);
+        console.error("Erro SerClin Perfil:", err);
       } finally {
         setLoading(false);
       }
@@ -37,15 +36,15 @@ export function usePerfil() {
     getPerfil();
   }, []);
 
-  // Definição das permissões
   const role = perfil?.role || 'profissional';
   const email = perfil?.email || '';
 
   return { 
     role, 
     loading, 
-    // Admin se tiver o cargo OU se for o seu e-mail pessoal
-    isAdmin: role === 'admin' || email === 'romulochaves77@gmail.com',
+    // AGORA ACEITA QUALQUER VARIAÇÃO DE ADMIN OU O SEU EMAIL
+    isAdmin: role.includes('admin') || email === 'romulochaves77@gmail.com',
+    // AGORA ACEITA "secretaria" OU "secretária" POIS LIMPAMOS O ACENTO ACIMA
     isSecretaria: role === 'secretaria',
     isProfissional: role === 'profissional'
   };

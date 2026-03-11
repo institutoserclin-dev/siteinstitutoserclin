@@ -244,7 +244,8 @@ export function Dashboard() {
 
   const agendamentosAmanha = events
     .filter(e => isSameDay(new Date(e.start), addDays(new Date(), 1)))
-    .map(e => e.original);
+    .map(e => e.original)
+    .sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime());
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
@@ -255,6 +256,12 @@ export function Dashboard() {
         .rbc-toolbar button { color: #1e3a8a !important; font-weight: bold; }
         .rbc-toolbar button.rbc-active { background-color: #1e3a8a !important; color: white !important; }
         .rbc-event-content { font-size: 13px !important; }
+        @keyframes pulse-emerald {
+          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .animate-priority { animation: pulse-emerald 2s infinite; }
       `}</style>
 
       <header className="bg-white border-b px-6 py-3 flex justify-between items-center h-20 shadow-sm z-20 gap-4">
@@ -280,11 +287,18 @@ export function Dashboard() {
         </div>
 
         <div className="flex gap-1.5 items-center">
+          {/* BOTÃO PRIORITÁRIO PARA SECRETÁRIA */}
+          {(souEuOAdmin || isSecretaria) && (
+            <Button 
+              onClick={() => setIsConfirmacaoAmanhaOpen(true)} 
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-5 h-9 mr-2 shadow-lg animate-priority transition-all"
+            >
+              <Send size={14} /> Confirmar Amanhã
+            </Button>
+          )}
+
           {(souEuOAdmin || isSecretaria) && (
             <>
-              <Button onClick={() => setIsConfirmacaoAmanhaOpen(true)} variant="ghost" className="text-emerald-600 font-black text-[10px] uppercase gap-2 bg-emerald-50 hover:bg-emerald-100 rounded-full px-4 h-9 mr-1 transition-all" title="Confirmar Amanhã">
-                <Send size={14} /> Confirmar Amanhã
-              </Button>
               <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600" title="Financeiro e Planos"><Wallet size={20}/></Button>
               <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500" title="Gestão de Despesas"><Receipt size={20}/></Button>
               <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600" title="Repasses Profissionais"><Calculator size={20}/></Button>
@@ -295,7 +309,7 @@ export function Dashboard() {
           {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600" title="Horários"><Clock size={20}/></Button>}
           {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Acessos e Equipe"><Shield size={20}/></Button>}
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2" title="Lista de Pacientes"><Users size={20}/></Button>
-          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg" title="Novo Agendamento"><Plus size={16} className="mr-1" /> AGENDAR</Button>
+          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: ""}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg" title="Novo Agendamento"><Plus size={16} className="mr-1" /> AGENDAR</Button>
           <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} title="Sair do Sistema"><LogOut size={18} /></Button>
         </div>
       </header>
@@ -323,40 +337,69 @@ export function Dashboard() {
         </Card>
       </main>
 
-      {/* MODAL DE CONFIRMAÇÃO DO PRÓXIMO DIA */}
+      {/* MODAL DE CONFIRMAÇÃO DO PRÓXIMO DIA (LISTA MELHORADA) */}
       {isConfirmacaoAmanhaOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[700px] animate-in zoom-in duration-200 border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b flex justify-between items-center bg-white text-left">
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[650px] animate-in slide-in-from-bottom duration-300 border border-gray-100 overflow-hidden">
+            <div className="p-8 border-b flex justify-between items-center bg-white text-left">
               <div>
-                <h3 className="font-black uppercase text-sm tracking-widest text-[#1e3a8a]">Confirmar Amanhã</h3>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">{format(addDays(new Date(), 1), "dd/MM/yyyy")}</p>
+                <h3 className="font-black uppercase text-lg tracking-tighter text-[#1e3a8a]">Confirmação de Agenda</h3>
+                <p className="text-[12px] font-bold text-emerald-600 uppercase flex items-center gap-2">
+                  <CalendarIcon size={14}/> {format(addDays(new Date(), 1), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                </p>
               </div>
-              <button onClick={() => setIsConfirmacaoAmanhaOpen(false)} className="text-gray-400 hover:text-red-500"><X size={24}/></button>
+              <div className="flex items-center gap-4">
+                 <div className="text-right hidden sm:block">
+                    <p className="text-[10px] font-black text-gray-400 uppercase">Pendentes</p>
+                    <p className="text-xl font-black text-[#1e3a8a]">{agendamentosAmanha.length}</p>
+                 </div>
+                 <button onClick={() => setIsConfirmacaoAmanhaOpen(false)} className="bg-gray-100 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors"><X size={24}/></button>
+              </div>
             </div>
-            <div className="p-6 max-h-[500px] overflow-y-auto space-y-3 text-left">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {agendamentosAmanha.map((ag, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                    <div className="flex flex-col text-left">
-                      <span className="font-black text-[12px] uppercase text-gray-700">{ag.paciente_nome}</span>
-                      <span className="text-[10px] font-bold text-blue-600 uppercase">{format(new Date(ag.data_inicio), "HH:mm")} - {ag.profissional_nome}</span>
+
+            <div className="p-4 max-h-[60vh] overflow-y-auto bg-gray-50/50 space-y-2">
+              {agendamentosAmanha.length === 0 ? (
+                <div className="text-center py-20">
+                  <p className="text-gray-400 font-bold uppercase text-xs">Nenhum agendamento para amanhã.</p>
+                </div>
+              ) : (
+                agendamentosAmanha.map((ag, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-5 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                    <div className="flex items-center gap-5">
+                      <div className="h-12 w-16 bg-blue-50 rounded-2xl flex flex-col items-center justify-center border border-blue-100">
+                        <span className="text-[14px] font-black text-[#1e3a8a]">{format(new Date(ag.data_inicio), "HH:mm")}</span>
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className="font-black text-[14px] uppercase text-gray-800 leading-tight">{ag.paciente_nome}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase bg-gray-100 px-2 py-0.5 rounded-md">Prof: {ag.profissional_nome}</span>
+                          <span className="text-[10px] font-bold text-blue-500 uppercase bg-blue-50 px-2 py-0.5 rounded-md">Sala {ag.sala_id}</span>
+                        </div>
+                      </div>
                     </div>
-                    <Button onClick={() => enviarWhatsApp(ag.paciente_nome, ag.paciente_telefone, ag.profissional_nome, ag.data_inicio)} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-11 w-11 p-0 shadow-md">
+                    
+                    <Button 
+                      onClick={() => enviarWhatsApp(ag.paciente_nome, ag.paciente_telefone, ag.profissional_nome, ag.data_inicio)} 
+                      className="bg-emerald-500 hover:bg-black text-white rounded-2xl h-14 px-6 flex items-center gap-3 shadow-lg transition-all group-hover:scale-105"
+                    >
                       <MessageCircle size={20} />
+                      <span className="font-black uppercase text-[11px] hidden sm:block">Confirmar</span>
                     </Button>
                   </div>
-                ))}
-              </div>
+                ))
+              )}
+            </div>
+            <div className="p-6 bg-white border-t text-center">
+               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Utilize o botão acima para enviar mensagens automáticas via WhatsApp</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL DE AGENDAMENTO (PRESERVADO) */}
+      {/* MODAL DE AGENDAMENTO (440px) */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 backdrop-blur-sm overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-[440px] my-4 overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] my-4 overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100">
             <div className="p-5 border-b flex justify-between items-center bg-white text-left">
               <h3 className="font-black uppercase text-[15px] tracking-widest text-[#1e3a8a]">{eventoSelecionadoId ? 'Editar' : 'Novo'} Agendamento</h3>
               <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500"><X size={20}/></button>
@@ -420,7 +463,7 @@ export function Dashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">WhatsApp</label>
-                  <Input value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} className="bg-gray-50 border-none h-11 text-gray-700" />
+                  <Input value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} className="bg-gray-50 border-none h-11 text-gray-700" placeholder="(00) 00000-0000" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Horário/Data</label>
