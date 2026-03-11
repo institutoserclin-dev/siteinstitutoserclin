@@ -315,7 +315,7 @@ export function Dashboard() {
           {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600" title="Horários"><Clock size={20}/></Button>}
           {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Acessos"><Shield size={20}/></Button>}
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2" title="Pacientes"><Users size={20}/></Button>
-          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg"><Plus size={16} className="mr-1" /> AGENDAR</Button>
+          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg" title="Novo Agendamento"><Plus size={16} className="mr-1" /> AGENDAR</Button>
           <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} title="Sair"><LogOut size={18} /></Button>
         </div>
       </header>
@@ -335,7 +335,7 @@ export function Dashboard() {
               onSelectEvent={(e) => { 
                 const evt = e.original; 
                 setEventoSelecionadoId(evt.id); setBuscaPaciente(evt.paciente_nome); 
-                setForm({ ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: evt.paciente_telefone || '', sala: evt.sala_id?.toString() || '1', inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), duracao: evt.original?.duracao || '40', status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), assinatura_url: evt.assinatura_url || null, valor_atendimento: evt.valor_atendimento?.toString() || "0.00", forma_pagamento: evt.forma_pagamento || "Pix"}); 
+                setForm({ ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: evt.paciente_telefone || '', sala: evt.sala_id?.toString() || '1', inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), duracao: evt.original?.duracao || '40', assinatura_url: evt.assinatura_url || null, valor_atendimento: evt.valor_atendimento?.toString() || "0.00", forma_pagamento: evt.forma_pagamento || "Pix"}); 
                 setIsAgendamentoOpen(true); 
               }} 
             />
@@ -343,7 +343,7 @@ export function Dashboard() {
         </Card>
       </main>
 
-      {/* MODAL DE CONFIRMAÇÃO DO PRÓXIMO DIA (LISTA DE TRABALHO) */}
+      {/* MODAL DE CONFIRMAÇÃO DO PRÓXIMO DIA */}
       {isConfirmacaoAmanhaOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[650px] animate-in slide-in-from-bottom duration-300 border border-gray-100 overflow-hidden">
@@ -398,7 +398,7 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* MODAL DE AGENDAMENTO (PRESERVADO COM TODOS OS RECURSOS + TEMPO DE SESSÃO) */}
+      {/* MODAL DE AGENDAMENTO */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 backdrop-blur-sm overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] my-4 overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100">
@@ -429,12 +429,12 @@ export function Dashboard() {
                   <label className="text-[12px] font-black text-gray-400 uppercase">Valor (R$)</label>
                   <Input type="number" step="0.01" value={form.valor_atendimento} onChange={e => setForm({...form, valor_atendimento: e.target.value})} className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700" />
                 </div>
-                {/* RECUPERADO: TEMPO DE SESSÃO */}
+                {/* CAMPO RE-ADICIONADO: DURAÇÃO DA SESSÃO */}
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Duração</label>
                   <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}>
                     <SelectTrigger className="bg-gray-50 border-none h-11 text-sm font-bold text-gray-700"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[110]">
                       <SelectItem value="30">30 Min</SelectItem>
                       <SelectItem value="40">40 Min</SelectItem>
                       <SelectItem value="50">50 Min</SelectItem>
@@ -462,11 +462,11 @@ export function Dashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                    <label className="text-[12px] font-black text-gray-400 uppercase">Sala</label>
-                    <Select value={form.sala} onValueChange={(v) => setForm({...form, sala: v})}>
-                        <SelectTrigger className="bg-gray-50 border-none h-11 text-sm font-bold text-gray-700"><SelectValue /></SelectTrigger>
-                        <SelectContent><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem><SelectItem value="3">Sala 03</SelectItem><SelectItem value="4">Sala 04</SelectItem></SelectContent>
-                    </Select>
+                  <label className="text-[12px] font-black text-gray-400 uppercase">Sala</label>
+                  <Select value={form.sala} onValueChange={(v) => setForm({...form, sala: v})}>
+                    <SelectTrigger className="bg-gray-50 border-none h-11 text-sm font-bold text-gray-700"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem><SelectItem value="3">Sala 03</SelectItem><SelectItem value="4">Sala 04</SelectItem></SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">WhatsApp</label>
