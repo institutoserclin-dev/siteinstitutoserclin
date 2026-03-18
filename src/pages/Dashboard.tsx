@@ -58,17 +58,28 @@ const mapearStatusParaBanco = (statusVisual: string) => {
   return 'Agendado';
 };
 
-// --- MELHORIA: FIX PARA NOME NÃO CORTAR (Posicionamento Absoluto) ---
-const EventoCustomizado = ({ event }: any) => (
-  <div className="h-full w-full flex items-center justify-center p-1 relative overflow-hidden">
-    <span className="text-white font-black text-[11px] uppercase leading-none truncate w-full text-center">
-      {event.title}
-    </span>
-    {(event.original?.status === 'Presenca' || event.original?.status === 'Presença') && (
-      <CheckCircle size={10} className="text-white absolute bottom-0.5 right-0.5 opacity-90" />
-    )}
-  </div>
-);
+// --- MELHORIA VISUAL: EVENTO DE PRESENÇA COM DESTAQUE ---
+const EventoCustomizado = ({ event }: any) => {
+  const isPresenca = event.original?.status === 'Presenca' || event.original?.status === 'Presença';
+  
+  return (
+    <div className="h-full w-full flex items-center justify-center p-1 relative overflow-hidden text-center">
+      <span className={`text-white font-black text-[11px] uppercase leading-none truncate w-full text-center px-1 z-10 ${isPresenca ? 'drop-shadow-md' : ''}`}>
+        {event.title}
+      </span>
+      {isPresenca && (
+        <>
+          {/* Marca d'água sutil de fundo */}
+          <CheckCircle size={30} className="text-white absolute opacity-10 -rotate-12 pointer-events-none" />
+          {/* Ícone fixo no canto */}
+          <div className="absolute bottom-0.5 right-0.5 bg-emerald-500 rounded-full p-0.5 shadow-lg border border-white/40 z-20">
+            <CheckCircle size={10} className="text-white" />
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -330,9 +341,25 @@ export function Dashboard() {
               view={view} onView={setView} date={date} onNavigate={setDate} 
               views={['day', 'week', 'month', 'agenda']} 
               components={{ event: EventoCustomizado }} 
-              eventPropGetter={(event: any) => ({ 
-                style: { backgroundColor: event.color, color: 'white', border: 'none', borderRadius: '6px', opacity: (event.original?.status === 'Falta') ? 0.5 : 1 } 
-              })} 
+              eventPropGetter={(event: any) => {
+                const status = event.original?.status;
+                const isPresenca = status === 'Presenca' || status === 'Presença';
+                const isFalta = status === 'Falta';
+
+                return {
+                  style: { 
+                    backgroundColor: event.color, 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '8px', 
+                    opacity: isFalta ? 0.5 : 1,
+                    // DESTAQUE DE PRESENÇA: Borda esmeralda e Brilho
+                    boxShadow: isPresenca ? `inset 0 0 0 3px #10b981, 0 4px 10px rgba(0,0,0,0.2)` : 'none',
+                    filter: isPresenca ? 'brightness(1.1) saturate(1.1)' : 'none',
+                    transition: 'all 0.3s ease'
+                  }
+                }
+              }} 
               onSelectEvent={(e) => { 
                 const evt = e.original; 
                 setEventoSelecionadoId(evt.id); setBuscaPaciente(evt.paciente_nome); 
@@ -399,7 +426,7 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* MODAL DE AGENDAMENTO (REFORMULADO COM DURAÇÃO E SEM CORTES) */}
+      {/* MODAL DE AGENDAMENTO (PRESERVADO COM DURAÇÃO E SEM CORTES) */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 backdrop-blur-sm overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] my-4 overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100">
@@ -425,7 +452,6 @@ export function Dashboard() {
                 </div>
               </div>
 
-              {/* LINHA: VALOR E DURAÇÃO */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Valor (R$)</label>
@@ -461,7 +487,6 @@ export function Dashboard() {
                 </div>
               </div>
 
-              {/* LINHA: SALA E WHATSAPP */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Sala</label>
