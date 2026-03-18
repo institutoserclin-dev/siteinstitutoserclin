@@ -58,7 +58,6 @@ const mapearStatusParaBanco = (statusVisual: string) => {
   return 'Agendado';
 };
 
-// --- MELHORIA VISUAL: EVENTO DE PRESENÇA COM DESTAQUE ---
 const EventoCustomizado = ({ event }: any) => {
   const isPresenca = event.original?.status === 'Presenca' || event.original?.status === 'Presença';
   
@@ -69,9 +68,7 @@ const EventoCustomizado = ({ event }: any) => {
       </span>
       {isPresenca && (
         <>
-          {/* Marca d'água sutil de fundo */}
           <CheckCircle size={30} className="text-white absolute opacity-10 -rotate-12 pointer-events-none" />
-          {/* Ícone fixo no canto */}
           <div className="absolute bottom-0.5 right-0.5 bg-emerald-500 rounded-full p-0.5 shadow-lg border border-white/40 z-20">
             <CheckCircle size={10} className="text-white" />
           </div>
@@ -353,7 +350,6 @@ export function Dashboard() {
                     border: 'none', 
                     borderRadius: '8px', 
                     opacity: isFalta ? 0.5 : 1,
-                    // DESTAQUE DE PRESENÇA: Borda esmeralda e Brilho
                     boxShadow: isPresenca ? `inset 0 0 0 3px #10b981, 0 4px 10px rgba(0,0,0,0.2)` : 'none',
                     filter: isPresenca ? 'brightness(1.1) saturate(1.1)' : 'none',
                     transition: 'all 0.3s ease'
@@ -426,28 +422,32 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* MODAL DE AGENDAMENTO (PRESERVADO COM DURAÇÃO E SEM CORTES) */}
+      {/* MODAL DE AGENDAMENTO REESTRUTURADO PARA NÃO CORTAR O X */}
       {isAgendamentoOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 backdrop-blur-sm overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] my-4 overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100">
-            <div className="p-5 border-b flex justify-between items-center bg-white text-left">
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-2 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] max-h-[95vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100 my-auto">
+            
+            {/* Header Fixo */}
+            <div className="p-5 border-b flex justify-between items-center bg-white text-left shrink-0">
               <h3 className="font-black uppercase text-[15px] tracking-widest text-[#1e3a8a]">{eventoSelecionadoId ? 'Editar' : 'Novo'} Agendamento</h3>
-              <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500"><X size={20}/></button>
+              <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors"><X size={24}/></button>
             </div>
-            <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4 text-left">
+
+            {/* Formulário com Scroll Interno */}
+            <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4 text-left overflow-y-auto flex-1 custom-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-500 uppercase">Status</label>
                   <Select value={form.status} onValueChange={(v) => setForm({...form, status: v})}>
                     <SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10 text-[14px]"><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem><SelectItem value="Falta">Falta</SelectItem></SelectContent>
+                    <SelectContent className="z-[110]"><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem><SelectItem value="Falta">Falta</SelectItem></SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Pagamento</label>
                   <Select value={form.forma_pagamento} onValueChange={(v) => setForm({...form, forma_pagamento: v})}>
                     <SelectTrigger className="bg-emerald-50 border-none font-bold text-emerald-700 h-10 text-[14px]"><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="Pix">Pix</SelectItem><SelectItem value="Dinheiro">Dinheiro</SelectItem><SelectItem value="Cartão">Cartão</SelectItem></SelectContent>
+                    <SelectContent className="z-[110]"><SelectItem value="Pix">Pix</SelectItem><SelectItem value="Dinheiro">Dinheiro</SelectItem><SelectItem value="Cartão">Cartão</SelectItem></SelectContent>
                   </Select>
                 </div>
               </div>
@@ -492,7 +492,7 @@ export function Dashboard() {
                   <label className="text-[12px] font-black text-gray-400 uppercase">Sala</label>
                   <Select value={form.sala} onValueChange={(v) => setForm({...form, sala: v})}>
                     <SelectTrigger className="bg-gray-50 border-none h-11 text-sm font-bold text-gray-700"><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem><SelectItem value="3">Sala 03</SelectItem><SelectItem value="4">Sala 04</SelectItem></SelectContent>
+                    <SelectContent className="z-[110]"><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem><SelectItem value="3">Sala 03</SelectItem><SelectItem value="4">Sala 04</SelectItem></SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
@@ -526,7 +526,8 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="pt-4 flex flex-col gap-2">
+              {/* Botões de Ação */}
+              <div className="pt-4 flex flex-col gap-2 shrink-0">
                 {form.telefone && (
                   <Button type="button" onClick={() => enviarWhatsApp(form.paciente_nome, form.telefone, form.profissional, form.inicio)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md">
                     <MessageCircle size={16} /> Confirmar WhatsApp
