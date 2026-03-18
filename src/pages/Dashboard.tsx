@@ -58,12 +58,15 @@ const mapearStatusParaBanco = (statusVisual: string) => {
   return 'Agendado';
 };
 
+// --- MELHORIA: FIX PARA NOME NÃO CORTAR (Posicionamento Absoluto) ---
 const EventoCustomizado = ({ event }: any) => (
-  <div className="h-full w-full flex flex-col items-center justify-center text-center p-1 overflow-hidden">
-    <span className="text-white font-bold text-[13px] uppercase leading-tight truncate w-full px-1">
+  <div className="h-full w-full flex items-center justify-center p-1 relative overflow-hidden">
+    <span className="text-white font-black text-[11px] uppercase leading-none truncate w-full text-center">
       {event.title}
     </span>
-    {(event.original?.status === 'Presenca' || event.original?.status === 'Presença') && <CheckCircle size={10} className="text-white mt-0.5" />}
+    {(event.original?.status === 'Presenca' || event.original?.status === 'Presença') && (
+      <CheckCircle size={10} className="text-white absolute bottom-0.5 right-0.5 opacity-90" />
+    )}
   </div>
 );
 
@@ -273,7 +276,6 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* FILTRO DE PROFISSIONAL */}
         <div className="flex-1 max-w-xs">
           <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
             <SelectTrigger className="bg-gray-50 border-none h-9 text-[10px] font-bold uppercase tracking-widest text-left">
@@ -287,7 +289,6 @@ export function Dashboard() {
         </div>
 
         <div className="flex gap-1.5 items-center">
-          {/* BOTÃO PRIORITÁRIO COM O QUANTITATIVO */}
           {(souEuOAdmin || isSecretaria) && (
             <Button 
               onClick={() => setIsConfirmacaoAmanhaOpen(true)} 
@@ -315,7 +316,7 @@ export function Dashboard() {
           {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600" title="Horários"><Clock size={20}/></Button>}
           {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Acessos"><Shield size={20}/></Button>}
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2" title="Pacientes"><Users size={20}/></Button>
-          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm")}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg" title="Novo Agendamento"><Plus size={16} className="mr-1" /> AGENDAR</Button>
+          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: ""}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg" title="Novo Agendamento"><Plus size={16} className="mr-1" /> AGENDAR</Button>
           <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} title="Sair"><LogOut size={18} /></Button>
         </div>
       </header>
@@ -398,7 +399,7 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* MODAL DE AGENDAMENTO */}
+      {/* MODAL DE AGENDAMENTO (REFORMULADO COM DURAÇÃO E SEM CORTES) */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 backdrop-blur-sm overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] my-4 overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100">
@@ -424,12 +425,12 @@ export function Dashboard() {
                 </div>
               </div>
 
+              {/* LINHA: VALOR E DURAÇÃO */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Valor (R$)</label>
                   <Input type="number" step="0.01" value={form.valor_atendimento} onChange={e => setForm({...form, valor_atendimento: e.target.value})} className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700" />
                 </div>
-                {/* CAMPO RE-ADICIONADO: DURAÇÃO DA SESSÃO */}
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Duração</label>
                   <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}>
@@ -460,6 +461,7 @@ export function Dashboard() {
                 </div>
               </div>
 
+              {/* LINHA: SALA E WHATSAPP */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Sala</label>
