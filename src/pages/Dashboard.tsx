@@ -58,6 +58,7 @@ const mapearStatusParaBanco = (statusVisual: string) => {
   return 'Agendado';
 };
 
+// --- MELHORIA VISUAL: EVENTO DE PRESENÇA COM DESTAQUE ---
 const EventoCustomizado = ({ event }: any) => {
   const isPresenca = event.original?.status === 'Presenca' || event.original?.status === 'Presença';
   
@@ -68,9 +69,9 @@ const EventoCustomizado = ({ event }: any) => {
       </span>
       {isPresenca && (
         <>
-          <CheckCircle size={30} className="text-white absolute opacity-10 -rotate-12 pointer-events-none" />
-          <div className="absolute bottom-0.5 right-0.5 bg-emerald-500 rounded-full p-0.5 shadow-lg border border-white/40 z-20">
-            <CheckCircle size={10} className="text-white" />
+          <CheckCircle size={30} className="text-white absolute opacity-20 -rotate-12 pointer-events-none" />
+          <div className="absolute bottom-1 right-1 bg-white rounded-full p-0.5 shadow-xl z-20">
+            <CheckCircle size={12} className="text-emerald-600 fill-emerald-600/10" />
           </div>
         </>
       )}
@@ -100,9 +101,29 @@ export function Dashboard() {
     profissional: '', paciente_nome: '', paciente_id: null as number | null,
     telefone: '', sala: '1', inicio: '', duracao: '40', status: 'Agendado',
     assinatura_url: null as string | null,
-    valor_atendimento: "0.00",
+    valor_atendimento: "0,00",
     forma_pagamento: "Pix"
   });
+
+  // --- MÁSCARAS ---
+  const aplicarMascaraTelefone = (value: string) => {
+    if (!value) return "";
+    const apenasNumeros = value.replace(/\D/g, "");
+    return apenasNumeros
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{1})(\d{4})(\d{4})$/, "$1 $2-$3")
+      .slice(0, 16);
+  };
+
+  const aplicarMascaraMoeda = (value: string) => {
+    const apenasNumeros = value.replace(/\D/g, "");
+    const valorFloat = parseFloat(apenasNumeros) / 100;
+    if (isNaN(valorFloat)) return "0,00";
+    return valorFloat.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -238,12 +259,15 @@ export function Dashboard() {
       if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
           assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
       }
+
+      const valorLimpo = parseFloat(form.valor_atendimento.replace(/\./g, "").replace(",", "."));
+
       const payload = {
         sala_id: parseInt(form.sala), profissional_nome: form.profissional, paciente_nome: buscaPaciente,
-        paciente_id: idDoPaciente, paciente_telefone: form.telefone,
+        paciente_id: idDoPaciente, paciente_telefone: form.telefone.replace(/\D/g, ''),
         data_inicio: dInicio.toISOString(), data_fim: dFim.toISOString(),
         status: mapearStatusParaBanco(form.status), assinatura_url: assinaturaBase64,
-        valor_atendimento: parseFloat(form.valor_atendimento), forma_pagamento: form.forma_pagamento
+        valor_atendimento: valorLimpo, forma_pagamento: form.forma_pagamento
       };
       const { error } = eventoSelecionadoId ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId) : await supabase.from('agendamentos').insert([payload]);
       if (error) throw error;
@@ -345,13 +369,12 @@ export function Dashboard() {
 
                 return {
                   style: { 
-                    backgroundColor: event.color, 
+                    backgroundColor: isPresenca ? '#10b981' : event.color, 
                     color: 'white', 
-                    border: 'none', 
-                    borderRadius: '8px', 
+                    border: isPresenca ? '2px solid white' : 'none', 
+                    borderRadius: '12px', 
                     opacity: isFalta ? 0.5 : 1,
-                    boxShadow: isPresenca ? `inset 0 0 0 3px #10b981, 0 4px 10px rgba(0,0,0,0.2)` : 'none',
-                    filter: isPresenca ? 'brightness(1.1) saturate(1.1)' : 'none',
+                    boxShadow: isPresenca ? `0 4px 15px rgba(16, 185, 129, 0.4)` : 'none',
                     transition: 'all 0.3s ease'
                   }
                 }
@@ -359,7 +382,7 @@ export function Dashboard() {
               onSelectEvent={(e) => { 
                 const evt = e.original; 
                 setEventoSelecionadoId(evt.id); setBuscaPaciente(evt.paciente_nome); 
-                setForm({ ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: evt.paciente_telefone || '', sala: evt.sala_id?.toString() || '1', inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), duracao: evt.original?.duracao || '40', assinatura_url: evt.assinatura_url || null, valor_atendimento: evt.valor_atendimento?.toString() || "0.00", forma_pagamento: evt.forma_pagamento || "Pix"}); 
+                setForm({ ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), sala: evt.sala_id?.toString() || '1', inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), duracao: evt.original?.duracao || '40', assinatura_url: evt.assinatura_url || null, valor_atendimento: evt.valor_atendimento?.toLocaleString("pt-BR", {minimumFractionDigits: 2}) || "0,00", forma_pagamento: evt.forma_pagamento || "Pix"}); 
                 setIsAgendamentoOpen(true); 
               }} 
             />
@@ -455,7 +478,12 @@ export function Dashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Valor (R$)</label>
-                  <Input type="number" step="0.01" value={form.valor_atendimento} onChange={e => setForm({...form, valor_atendimento: e.target.value})} className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700" />
+                  <Input 
+                    type="text" 
+                    value={form.valor_atendimento} 
+                    onChange={e => setForm({...form, valor_atendimento: aplicarMascaraMoeda(e.target.value)})} 
+                    className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700" 
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Duração</label>
@@ -478,7 +506,7 @@ export function Dashboard() {
                   {pacientesSugeridos.length > 0 && (
                     <div className="absolute z-[110] w-full bg-white border shadow-xl rounded-xl mt-1 overflow-hidden">
                       {pacientesSugeridos.map(p => (
-                        <button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: p.telefone || '' }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}>
+                        <button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: aplicarMascaraTelefone(p.telefone || '') }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}>
                           <span className="font-bold text-sm uppercase text-gray-700">{p.nome}</span>
                         </button>
                       ))}
@@ -497,7 +525,12 @@ export function Dashboard() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">WhatsApp</label>
-                  <Input value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} className="bg-gray-50 border-none h-11 text-gray-700" placeholder="(00) 00000-0000" />
+                  <Input 
+                    value={form.telefone} 
+                    onChange={e => setForm({...form, telefone: aplicarMascaraTelefone(e.target.value)})} 
+                    className="bg-gray-50 border-none h-11 text-gray-700 font-bold" 
+                    placeholder="(00) 9 0000-0000" 
+                  />
                 </div>
               </div>
 
@@ -526,7 +559,6 @@ export function Dashboard() {
                 </div>
               </div>
 
-              {/* Botões de Ação */}
               <div className="pt-4 flex flex-col gap-2 shrink-0">
                 {form.telefone && (
                   <Button type="button" onClick={() => enviarWhatsApp(form.paciente_nome, form.telefone, form.profissional, form.inicio)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md">
