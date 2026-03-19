@@ -105,7 +105,7 @@ export function Dashboard() {
     forma_pagamento: "Pix"
   });
 
-  // --- FUNÇÕES DE MÁSCARA ---
+  // --- MÁSCARAS ---
   const aplicarMascaraTelefone = (value: string) => {
     if (!value) return "";
     const apenasNumeros = value.replace(/\D/g, "");
@@ -260,7 +260,6 @@ export function Dashboard() {
           assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
       }
 
-      // LIMPEZA DA MÁSCARA ANTES DE ENVIAR AO SUPABASE
       const valorLimpo = parseFloat(form.valor_atendimento.replace(/\./g, "").replace(",", "."));
 
       const payload = {
@@ -361,15 +360,16 @@ export function Dashboard() {
 
                 return {
                   style: { 
-                    backgroundColor: event.color, // MANTÉM A COR DO PROFISSIONAL
+                    backgroundColor: event.color, 
                     color: 'white', 
                     border: isPresenca ? '3px solid white' : 'none', 
                     borderRadius: '12px', 
                     opacity: isFalta ? 0.4 : 1,
-                    // AURA VERDE ESMERALDA E FILTRO DE BRILHO PARA PRESENÇA
-                    boxShadow: isPresenca ? `0 0 15px rgba(16, 185, 129, 0.8), inset 0 0 0 2px rgba(255,255,255,0.3)` : 'none',
-                    filter: isPresenca ? 'brightness(1.1) saturate(1.1)' : 'none',
-                    transition: 'all 0.3s ease'
+                    // GLOW NA COR DO PROFISSIONAL EM CASO DE PRESENÇA
+                    boxShadow: isPresenca ? `0 0 18px ${event.color}` : 'none',
+                    filter: isPresenca ? 'brightness(1.1) saturate(1.2)' : 'none',
+                    transition: 'all 0.3s ease',
+                    zIndex: isPresenca ? 10 : 1
                   }
                 }
               }} 
@@ -402,13 +402,11 @@ export function Dashboard() {
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-2 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] max-h-[95vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100 my-auto">
             
-            {/* Header Fixo: X sempre visível */}
             <div className="p-5 border-b flex justify-between items-center bg-white text-left shrink-0">
               <h3 className="font-black uppercase text-[15px] tracking-widest text-[#1e3a8a]">{eventoSelecionadoId ? 'Editar' : 'Novo'} Agendamento</h3>
               <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors p-1"><X size={24}/></button>
             </div>
 
-            {/* Formulário com Scroll Interno */}
             <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4 text-left overflow-y-auto flex-1 custom-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
@@ -430,7 +428,6 @@ export function Dashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Valor (R$)</label>
-                  {/* MÁSCARA MOEDA */}
                   <Input type="text" value={form.valor_atendimento} onChange={e => setForm({...form, valor_atendimento: aplicarMascaraMoeda(e.target.value)})} className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700" />
                 </div>
                 <div className="space-y-1">
@@ -449,7 +446,7 @@ export function Dashboard() {
                   {pacientesSugeridos.length > 0 && (
                     <div className="absolute z-[110] w-full bg-white border shadow-xl rounded-xl mt-1 overflow-hidden">
                       {pacientesSugeridos.map(p => (
-                        <button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: aplicarMascaraTelefone(p.telefone || '') }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}>
+                        <button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: aplicarMascaraTelefone(p.telefone || '') }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}>
                           <span className="font-bold text-sm uppercase text-gray-700">{p.nome}</span>
                         </button>
                       ))}
@@ -468,7 +465,6 @@ export function Dashboard() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">WhatsApp</label>
-                  {/* MÁSCARA TELEFONE */}
                   <Input value={form.telefone} onChange={e => setForm({...form, telefone: aplicarMascaraTelefone(e.target.value)})} className="bg-gray-50 border-none h-11 text-gray-700 font-bold" placeholder="(00) 9 0000-0000" />
                 </div>
               </div>
