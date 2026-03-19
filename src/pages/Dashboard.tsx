@@ -58,7 +58,7 @@ const mapearStatusParaBanco = (statusVisual: string) => {
   return 'Agendado';
 };
 
-// --- MELHORIA VISUAL: EVENTO DE PRESENÇA COM DESTAQUE ---
+// --- MELHORIA VISUAL: EVENTO DE PRESENÇA ---
 const EventoCustomizado = ({ event }: any) => {
   const isPresenca = event.original?.status === 'Presenca' || event.original?.status === 'Presença';
   
@@ -69,9 +69,9 @@ const EventoCustomizado = ({ event }: any) => {
       </span>
       {isPresenca && (
         <>
-          <CheckCircle size={30} className="text-white absolute opacity-20 -rotate-12 pointer-events-none" />
-          <div className="absolute bottom-1 right-1 bg-white rounded-full p-0.5 shadow-xl z-20">
-            <CheckCircle size={12} className="text-emerald-600 fill-emerald-600/10" />
+          <CheckCircle size={30} className="text-white absolute opacity-10 -rotate-12 pointer-events-none" />
+          <div className="absolute bottom-1 right-1 bg-white rounded-full p-0.5 shadow-xl z-20 border border-emerald-100">
+            <CheckCircle size={10} className="text-emerald-600" />
           </div>
         </>
       )}
@@ -105,7 +105,7 @@ export function Dashboard() {
     forma_pagamento: "Pix"
   });
 
-  // --- MÁSCARAS ---
+  // --- FUNÇÕES DE MÁSCARA ---
   const aplicarMascaraTelefone = (value: string) => {
     if (!value) return "";
     const apenasNumeros = value.replace(/\D/g, "");
@@ -260,6 +260,7 @@ export function Dashboard() {
           assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
       }
 
+      // LIMPEZA DA MÁSCARA ANTES DE ENVIAR AO SUPABASE
       const valorLimpo = parseFloat(form.valor_atendimento.replace(/\./g, "").replace(",", "."));
 
       const payload = {
@@ -322,20 +323,11 @@ export function Dashboard() {
 
         <div className="flex gap-1.5 items-center">
           {(souEuOAdmin || isSecretaria) && (
-            <Button 
-              onClick={() => setIsConfirmacaoAmanhaOpen(true)} 
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-5 h-9 mr-2 shadow-lg animate-priority transition-all relative"
-            >
-              <Send size={14} /> 
-              Confirmar Amanhã
-              {agendamentosAmanha.length > 0 && (
-                <span className="ml-1 bg-white text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black shadow-sm">
-                  {agendamentosAmanha.length}
-                </span>
-              )}
+            <Button onClick={() => setIsConfirmacaoAmanhaOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-5 h-9 mr-2 shadow-lg animate-priority transition-all relative">
+              <Send size={14} /> Confirmar Amanhã
+              {agendamentosAmanha.length > 0 && (<span className="ml-1 bg-white text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black shadow-sm">{agendamentosAmanha.length}</span>)}
             </Button>
           )}
-
           {(souEuOAdmin || isSecretaria) && (
             <>
               <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600" title="Financeiro"><Wallet size={20}/></Button>
@@ -348,7 +340,7 @@ export function Dashboard() {
           {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600" title="Horários"><Clock size={20}/></Button>}
           {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Acessos"><Shield size={20}/></Button>}
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2" title="Pacientes"><Users size={20}/></Button>
-          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: ""}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg" title="Novo Agendamento"><Plus size={16} className="mr-1" /> AGENDAR</Button>
+          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: ""}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg">AGENDAR</Button>
           <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} title="Sair"><LogOut size={18} /></Button>
         </div>
       </header>
@@ -369,12 +361,14 @@ export function Dashboard() {
 
                 return {
                   style: { 
-                    backgroundColor: isPresenca ? '#10b981' : event.color, 
+                    backgroundColor: event.color, // MANTÉM A COR DO PROFISSIONAL
                     color: 'white', 
-                    border: isPresenca ? '2px solid white' : 'none', 
+                    border: isPresenca ? '3px solid white' : 'none', 
                     borderRadius: '12px', 
-                    opacity: isFalta ? 0.5 : 1,
-                    boxShadow: isPresenca ? `0 4px 15px rgba(16, 185, 129, 0.4)` : 'none',
+                    opacity: isFalta ? 0.4 : 1,
+                    // AURA VERDE ESMERALDA E FILTRO DE BRILHO PARA PRESENÇA
+                    boxShadow: isPresenca ? `0 0 15px rgba(16, 185, 129, 0.8), inset 0 0 0 2px rgba(255,255,255,0.3)` : 'none',
+                    filter: isPresenca ? 'brightness(1.1) saturate(1.1)' : 'none',
                     transition: 'all 0.3s ease'
                   }
                 }
@@ -382,7 +376,20 @@ export function Dashboard() {
               onSelectEvent={(e) => { 
                 const evt = e.original; 
                 setEventoSelecionadoId(evt.id); setBuscaPaciente(evt.paciente_nome); 
-                setForm({ ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), sala: evt.sala_id?.toString() || '1', inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), duracao: evt.original?.duracao || '40', assinatura_url: evt.assinatura_url || null, valor_atendimento: evt.valor_atendimento?.toLocaleString("pt-BR", {minimumFractionDigits: 2}) || "0,00", forma_pagamento: evt.forma_pagamento || "Pix"}); 
+                setForm({ 
+                  ...form, 
+                  profissional: evt.profissional_nome, 
+                  paciente_nome: evt.paciente_nome, 
+                  paciente_id: evt.paciente_id, 
+                  telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), 
+                  sala: evt.sala_id?.toString() || '1', 
+                  inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), 
+                  status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), 
+                  duracao: evt.original?.duracao || '40', 
+                  assinatura_url: evt.assinatura_url || null, 
+                  valor_atendimento: evt.valor_atendimento?.toLocaleString("pt-BR", {minimumFractionDigits: 2}) || "0,00", 
+                  forma_pagamento: evt.forma_pagamento || "Pix"
+                }); 
                 setIsAgendamentoOpen(true); 
               }} 
             />
@@ -390,70 +397,15 @@ export function Dashboard() {
         </Card>
       </main>
 
-      {/* MODAL DE CONFIRMAÇÃO DO PRÓXIMO DIA */}
-      {isConfirmacaoAmanhaOpen && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[650px] animate-in slide-in-from-bottom duration-300 border border-gray-100 overflow-hidden">
-            <div className="p-8 border-b flex justify-between items-center bg-white text-left">
-              <div>
-                <h3 className="font-black uppercase text-xl tracking-tighter text-[#1e3a8a]">Lista de Confirmação</h3>
-                <p className="text-[12px] font-bold text-emerald-600 uppercase flex items-center gap-2">
-                  <CalendarIcon size={14}/> {format(addDays(new Date(), 1), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                 <div className="text-right hidden sm:block">
-                    <p className="text-[10px] font-black text-gray-400 uppercase leading-none">Pendentes</p>
-                    <p className="text-2xl font-black text-[#1e3a8a]">{agendamentosAmanha.length}</p>
-                 </div>
-                 <button onClick={() => setIsConfirmacaoAmanhaOpen(false)} className="bg-gray-100 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors"><X size={24}/></button>
-              </div>
-            </div>
-
-            <div className="p-4 max-h-[60vh] overflow-y-auto bg-gray-50/50 space-y-3">
-              {agendamentosAmanha.length === 0 ? (
-                <div className="text-center py-20">
-                  <p className="text-gray-400 font-bold uppercase text-xs">Nenhum agendamento para amanhã.</p>
-                </div>
-              ) : (
-                agendamentosAmanha.map((ag, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-5 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-                    <div className="flex items-center gap-5">
-                      <div className="h-14 w-20 bg-blue-50 rounded-2xl flex flex-col items-center justify-center border border-blue-100 shrink-0">
-                        <span className="text-[16px] font-black text-[#1e3a8a]">{format(new Date(ag.data_inicio), "HH:mm")}</span>
-                      </div>
-                      <div className="flex flex-col text-left">
-                        <span className="font-black text-[15px] uppercase text-gray-800 leading-tight">{ag.paciente_nome}</span>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase bg-gray-100 px-2 py-0.5 rounded-md">Prof: {ag.profissional_nome}</span>
-                          <span className="text-[10px] font-bold text-blue-500 uppercase bg-blue-50 px-2 py-0.5 rounded-md">Sala {ag.sala_id}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={() => enviarWhatsApp(ag.paciente_nome, ag.paciente_telefone, ag.profissional_nome, ag.data_inicio)} 
-                      className="bg-emerald-500 hover:bg-black text-white rounded-2xl h-14 px-6 flex items-center gap-3 shadow-lg transition-all"
-                    >
-                      <MessageCircle size={20} />
-                      <span className="font-black uppercase text-[11px] hidden sm:block">Confirmar</span>
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DE AGENDAMENTO REESTRUTURADO PARA NÃO CORTAR O X */}
+      {/* MODAL DE AGENDAMENTO COM HEADER FIXO E SCROLL INTERNO */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-2 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] max-h-[95vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100 my-auto">
             
-            {/* Header Fixo */}
+            {/* Header Fixo: X sempre visível */}
             <div className="p-5 border-b flex justify-between items-center bg-white text-left shrink-0">
               <h3 className="font-black uppercase text-[15px] tracking-widest text-[#1e3a8a]">{eventoSelecionadoId ? 'Editar' : 'Novo'} Agendamento</h3>
-              <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors"><X size={24}/></button>
+              <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors p-1"><X size={24}/></button>
             </div>
 
             {/* Formulário com Scroll Interno */}
@@ -462,14 +414,14 @@ export function Dashboard() {
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-500 uppercase">Status</label>
                   <Select value={form.status} onValueChange={(v) => setForm({...form, status: v})}>
-                    <SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10 text-[14px]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10"><SelectValue /></SelectTrigger>
                     <SelectContent className="z-[110]"><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem><SelectItem value="Falta">Falta</SelectItem></SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Pagamento</label>
                   <Select value={form.forma_pagamento} onValueChange={(v) => setForm({...form, forma_pagamento: v})}>
-                    <SelectTrigger className="bg-emerald-50 border-none font-bold text-emerald-700 h-10 text-[14px]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-emerald-50 border-none font-bold text-emerald-700 h-10"><SelectValue /></SelectTrigger>
                     <SelectContent className="z-[110]"><SelectItem value="Pix">Pix</SelectItem><SelectItem value="Dinheiro">Dinheiro</SelectItem><SelectItem value="Cartão">Cartão</SelectItem></SelectContent>
                   </Select>
                 </div>
@@ -478,23 +430,14 @@ export function Dashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Valor (R$)</label>
-                  <Input 
-                    type="text" 
-                    value={form.valor_atendimento} 
-                    onChange={e => setForm({...form, valor_atendimento: aplicarMascaraMoeda(e.target.value)})} 
-                    className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700" 
-                  />
+                  {/* MÁSCARA MOEDA */}
+                  <Input type="text" value={form.valor_atendimento} onChange={e => setForm({...form, valor_atendimento: aplicarMascaraMoeda(e.target.value)})} className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">Duração</label>
                   <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}>
                     <SelectTrigger className="bg-gray-50 border-none h-11 text-sm font-bold text-gray-700"><SelectValue /></SelectTrigger>
-                    <SelectContent className="z-[110]">
-                      <SelectItem value="30">30 Min</SelectItem>
-                      <SelectItem value="40">40 Min</SelectItem>
-                      <SelectItem value="50">50 Min</SelectItem>
-                      <SelectItem value="60">60 Min</SelectItem>
-                    </SelectContent>
+                    <SelectContent className="z-[110]"><SelectItem value="30">30 Min</SelectItem><SelectItem value="40">40 Min</SelectItem><SelectItem value="50">50 Min</SelectItem><SelectItem value="60">60 Min</SelectItem></SelectContent>
                   </Select>
                 </div>
               </div>
@@ -525,12 +468,8 @@ export function Dashboard() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase">WhatsApp</label>
-                  <Input 
-                    value={form.telefone} 
-                    onChange={e => setForm({...form, telefone: aplicarMascaraTelefone(e.target.value)})} 
-                    className="bg-gray-50 border-none h-11 text-gray-700 font-bold" 
-                    placeholder="(00) 9 0000-0000" 
-                  />
+                  {/* MÁSCARA TELEFONE */}
+                  <Input value={form.telefone} onChange={e => setForm({...form, telefone: aplicarMascaraTelefone(e.target.value)})} className="bg-gray-50 border-none h-11 text-gray-700 font-bold" placeholder="(00) 9 0000-0000" />
                 </div>
               </div>
 
@@ -565,18 +504,14 @@ export function Dashboard() {
                     <MessageCircle size={16} /> Confirmar WhatsApp
                   </Button>
                 )}
-                
                 {eventoSelecionadoId && (
                   <Button type="button" onClick={gerarComprovante} className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md">
                     <FileText size={16} /> Gerar Atestado
                   </Button>
                 )}
-                
                 <div className="flex gap-2">
                   {eventoSelecionadoId && (
-                    <Button type="button" variant="outline" onClick={handleExcluirAgendamento} className="px-5 border-red-200 text-red-500 hover:bg-red-50 h-12 rounded-2xl">
-                      <Trash2 size={20} />
-                    </Button>
+                    <Button type="button" variant="outline" onClick={handleExcluirAgendamento} className="px-5 border-red-200 text-red-500 hover:bg-red-50 h-12 rounded-2xl"><Trash2 size={20} /></Button>
                   )}
                   <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-black text-white font-black h-12 rounded-2xl shadow-xl uppercase text-xs transition-all">
                     {loading ? <RefreshCw className="animate-spin" /> : 'Confirmar Agenda'}
