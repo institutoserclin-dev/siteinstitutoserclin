@@ -281,12 +281,10 @@ export function Dashboard() {
     .map((e: any) => e.original)
     .sort((a: any, b: any) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime());
 
-  // Define o horário de início e fim do calendário (Dia e Semana)
-  const minTime = new Date();
-  minTime.setHours(7, 0, 0); // Começa às 07:00 da manhã
-
-  const maxTime = new Date();
-  maxTime.setHours(20, 0, 0); // Termina às 20:00 (8 PM)
+  // --- LIMITES DE HORÁRIO PARA O CALENDÁRIO (07:00 às 20:00) ---
+  // IMPORTANTE: Utilizar uma data fixa garante que o grid do React Big Calendar não quebre a visualização diária
+  const minTime = new Date(2024, 0, 1, 7, 0, 0); 
+  const maxTime = new Date(2024, 0, 1, 20, 0, 0); 
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
@@ -300,7 +298,10 @@ export function Dashboard() {
         @keyframes pulse-emerald { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
         .animate-priority { animation: pulse-emerald 2s infinite; }
         .rbc-time-view { border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
-        .rbc-timeslot-group { min-height: 48px !important; border-bottom: 1px solid #f3f4f6 !important; }
+        
+        /* CORREÇÃO CSS: min-height 48px removido pois quebrava os eventos nas abas Dia e Semana */
+        .rbc-timeslot-group { border-bottom: 1px solid #f3f4f6 !important; }
+        
         .rbc-label { color: #9ca3af !important; font-weight: 700 !important; font-size: 11px !important; }
         @media (max-width: 768px) {
           .rbc-toolbar { flex-direction: column; gap: 8px; height: auto !important; padding: 10px !important; }
@@ -326,7 +327,9 @@ export function Dashboard() {
         <div className="flex gap-1.5 items-center menu-icones-mobile">
           
           {userEmail === 'romulochaves77@gmail.com' && (
-            <Button variant="outline" size="icon" onClick={() => navigate('/sistema/permissoes')} className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-full h-9 w-9" title="Chaves"><Shield size={18}/></Button>
+            <Button variant="outline" size="icon" onClick={() => navigate('/sistema/permissoes')} className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-full h-9 w-9" title="Chaves">
+              <Shield size={18}/>
+            </Button>
           )}
 
           {meuPerfil?.permissao_confirmacao_amanha && (
@@ -338,31 +341,54 @@ export function Dashboard() {
 
           {meuPerfil?.permissao_financeiro && (
             <>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600"><Wallet size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500"><Receipt size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600"><Calculator size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600"><Scale size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600"><Clock size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600">
+                <Wallet size={20}/>
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500">
+                <Receipt size={20}/>
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600">
+                <Calculator size={20}/>
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600">
+                <Scale size={20}/>
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600">
+                <Clock size={20}/>
+              </Button>
             </>
           )}
 
           {meuPerfil?.permissao_acessos && (
-            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600"><Users size={20}/></Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600">
+              <Users size={20}/>
+            </Button>
           )}
 
           {meuPerfil?.permissao_relatorios && (
-            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500"><BarChart3 size={20}/></Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500">
+              <BarChart3 size={20}/>
+            </Button>
           )}
 
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2"><Users size={20}/></Button>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2">
+            <Users size={20}/>
+          </Button>
           
           {meuPerfil?.permissao_agendar && (
-            <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-black text-white rounded-full h-9 px-4 text-xs font-black shadow-lg">
+            <Button onClick={() => { 
+              setEventoSelecionadoId(null); 
+              setBuscaPaciente(""); 
+              setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
+              setIsAgendamentoOpen(true); 
+            }} className="bg-blue-600 hover:bg-black text-white rounded-full h-9 px-4 text-xs font-black shadow-lg">
               <Plus size={16} className="mr-1" /> AGENDAR
             </Button>
           )}
 
-          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }}><LogOut size={18} /></Button>
+          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }}>
+            <LogOut size={18} />
+          </Button>
         </div>
       </header>
 
@@ -380,7 +406,8 @@ export function Dashboard() {
               eventPropGetter={(event: any) => ({ style: { backgroundColor: event.color, color: 'white', border: 'none', borderRadius: '6px', opacity: event.original?.status === 'Falta' ? 0.5 : 1 } })}
               onSelectEvent={(e) => { 
                 const evt = e.original; 
-                setEventoSelecionadoId(evt.id); setBuscaPaciente(evt.paciente_nome); 
+                setEventoSelecionadoId(evt.id); 
+                setBuscaPaciente(evt.paciente_nome); 
                 setForm({ ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), sala: evt.sala_id?.toString() || '1', inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), duracao: evt.original?.duracao || '40', assinatura_url: evt.assinatura_url || null, valor_atendimento: aplicarMascaraMoeda(evt.valor_atendimento?.toString() || "0"), forma_pagamento: evt.forma_pagamento || "Pix" }); 
                 setIsAgendamentoOpen(true); 
               }} 
@@ -400,16 +427,22 @@ export function Dashboard() {
                   <CalendarIcon size={14}/> {format(addDays(new Date(), 1), "EEEE, dd 'de' MMMM", { locale: ptBR })}
                 </p>
               </div>
-              <button onClick={() => setIsConfirmacaoAmanhaOpen(false)} className="bg-gray-100 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors"><X size={24}/></button>
+              <button onClick={() => setIsConfirmacaoAmanhaOpen(false)} className="bg-gray-100 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors">
+                <X size={24}/>
+              </button>
             </div>
             <div className="p-4 max-h-[60vh] overflow-y-auto bg-gray-50/50 space-y-3 text-left">
               {agendamentosAmanha.length === 0 ? (
-                <div className="text-center py-20"><p className="text-gray-400 font-bold uppercase text-xs text-left">Nenhum agendamento para amanhã.</p></div>
+                <div className="text-center py-20">
+                  <p className="text-gray-400 font-bold uppercase text-xs text-left">Nenhum agendamento para amanhã.</p>
+                </div>
               ) : (
                 agendamentosAmanha.map((ag: any, idx: number) => (
                   <div key={idx} className="flex items-center justify-between p-5 bg-white rounded-3xl border border-gray-100 shadow-sm group">
                     <div className="flex items-center gap-5 text-left">
-                      <div className="h-14 w-20 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-100"><span className="font-black text-[#1e3a8a]">{format(new Date(ag.data_inicio), "HH:mm")}</span></div>
+                      <div className="h-14 w-20 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-100">
+                        <span className="font-black text-[#1e3a8a]">{format(new Date(ag.data_inicio), "HH:mm")}</span>
+                      </div>
                       <div className="flex flex-col text-left">
                         <span className="font-black text-[15px] uppercase text-gray-800 leading-tight">{ag.paciente_nome}</span>
                         <div className="flex items-center gap-2 mt-1">
@@ -418,7 +451,10 @@ export function Dashboard() {
                         </div>
                       </div>
                     </div>
-                    <Button onClick={() => enviarWhatsApp(ag.paciente_nome, ag.paciente_telefone, ag.profissional_nome, ag.data_inicio)} className="bg-emerald-500 text-white rounded-2xl h-14 px-6 flex items-center gap-3 shadow-lg transition-all"><MessageCircle size={20} /><span className="font-black uppercase text-[11px] hidden sm:block">Confirmar</span></Button>
+                    <Button onClick={() => enviarWhatsApp(ag.paciente_nome, ag.paciente_telefone, ag.profissional_nome, ag.data_inicio)} className="bg-emerald-500 text-white rounded-2xl h-14 px-6 flex items-center gap-3 shadow-lg transition-all">
+                      <MessageCircle size={20} />
+                      <span className="font-black uppercase text-[11px] hidden sm:block">Confirmar</span>
+                    </Button>
                   </div>
                 ))
               )}
@@ -433,79 +469,152 @@ export function Dashboard() {
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] h-full md:h-auto md:max-h-[95vh] flex flex-col overflow-hidden border border-gray-100">
             <div className="p-5 border-b flex justify-between items-center bg-white text-left shrink-0">
               <h3 className="font-black uppercase text-[15px] tracking-widest text-[#1e3a8a]">{eventoSelecionadoId ? 'Editar' : 'Novo'} Agendamento</h3>
-              <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors p-1"><X size={24}/></button>
+              <button onClick={() => setIsAgendamentoOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
+                <X size={24}/>
+              </button>
             </div>
             
             <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4 text-left overflow-y-auto flex-1 custom-scrollbar">
               
               {eventoSelecionadoId && (
-                <Button 
-                  type="button" 
-                  onClick={() => navigate(`/sistema/pacientes/${form.paciente_id}`)}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black h-12 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md mb-2 transition-all"
-                >
+                <Button type="button" onClick={() => navigate(`/sistema/pacientes/${form.paciente_id}`)} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black h-12 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md mb-2 transition-all">
                   <FileText size={18} /> Acessar Prontuário do Paciente
                 </Button>
               )}
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1"><label className="text-[12px] font-black text-gray-500 uppercase">Status</label>
-                  <Select value={form.status} onValueChange={(v) => setForm({...form, status: v})}><SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10"><SelectValue /></SelectTrigger>
-                  <SelectContent className="z-[110]"><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem><SelectItem value="Falta">Falta</SelectItem></SelectContent></Select></div>
-                <div className="space-y-1"><label className="text-[12px] font-black text-gray-400 uppercase text-left">Pagamento</label>
-                  <Select value={form.forma_pagamento} onValueChange={(v) => setForm({...form, forma_pagamento: v})}><SelectTrigger className="bg-emerald-50 border-none font-bold text-emerald-700 h-10 text-left"><SelectValue /></SelectTrigger>
-                  <SelectContent className="z-[110]"><SelectItem value="Pix">Pix</SelectItem><SelectItem value="Dinheiro">Dinheiro</SelectItem><SelectItem value="Cartão">Cartão</SelectItem></SelectContent></Select></div>
+                <div className="space-y-1">
+                  <label className="text-[12px] font-black text-gray-500 uppercase">Status</label>
+                  <Select value={form.status} onValueChange={(v) => setForm({...form, status: v})}>
+                    <SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10"><SelectValue /></SelectTrigger>
+                    <SelectContent className="z-[110]">
+                      <SelectItem value="Agendado">Agendado</SelectItem>
+                      <SelectItem value="Presença">Presença</SelectItem>
+                      <SelectItem value="Falta">Falta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[12px] font-black text-gray-400 uppercase text-left">Pagamento</label>
+                  <Select value={form.forma_pagamento} onValueChange={(v) => setForm({...form, forma_pagamento: v})}>
+                    <SelectTrigger className="bg-emerald-50 border-none font-bold text-emerald-700 h-10 text-left"><SelectValue /></SelectTrigger>
+                    <SelectContent className="z-[110]">
+                      <SelectItem value="Pix">Pix</SelectItem>
+                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="Cartão">Cartão</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1"><label className="text-[12px] font-black text-gray-400 uppercase text-left">Valor (R$)</label>
-                  <Input type="text" value={form.valor_atendimento} onChange={e => setForm({...form, valor_atendimento: aplicarMascaraMoeda(e.target.value)})} className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700" /></div>
-                <div className="space-y-1"><label className="text-[12px] font-black text-gray-400 uppercase text-left">Duração</label>
-                  <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}><SelectTrigger className="bg-gray-50 border-none h-11 text-sm font-bold text-gray-700"><SelectValue /></SelectTrigger>
-                  <SelectContent className="z-[110]"><SelectItem value="30">30 Min</SelectItem><SelectItem value="40">40 Min</SelectItem><SelectItem value="50">50 Min</SelectItem><SelectItem value="60">60 Min</SelectItem></SelectContent></Select></div>
+                <div className="space-y-1">
+                  <label className="text-[12px] font-black text-gray-400 uppercase text-left">Valor (R$)</label>
+                  <Input type="text" value={form.valor_atendimento} onChange={e => setForm({...form, valor_atendimento: aplicarMascaraMoeda(e.target.value)})} className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[12px] font-black text-gray-400 uppercase text-left">Duração</label>
+                  <Select value={form.duracao} onValueChange={(v) => setForm({...form, duracao: v})}>
+                    <SelectTrigger className="bg-gray-50 border-none h-11 text-sm font-bold text-gray-700"><SelectValue /></SelectTrigger>
+                    <SelectContent className="z-[110]">
+                      <SelectItem value="30">30 Min</SelectItem>
+                      <SelectItem value="40">40 Min</SelectItem>
+                      <SelectItem value="50">50 Min</SelectItem>
+                      <SelectItem value="60">60 Min</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className="space-y-1"><label className="text-[12px] font-black text-gray-400 uppercase text-left">Paciente</label>
-                <div className="relative"><Input placeholder="Buscar..." className="bg-gray-50 border-none h-11 text-sm font-bold uppercase text-gray-700" value={buscaPaciente} onChange={(e) => setBuscaPaciente(e.target.value)} required />
-                {pacientesSugeridos.length > 0 && (<div className="absolute z-[110] w-full bg-white border shadow-xl rounded-xl mt-1 overflow-hidden">{pacientesSugeridos.map((p: any) => (<button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: aplicarMascaraTelefone(p.telefone || '') }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}><span className="font-bold text-sm uppercase text-gray-700">{p.nome}</span></button>))}</div>)}</div>
+              <div className="space-y-1">
+                <label className="text-[12px] font-black text-gray-400 uppercase text-left">Paciente</label>
+                <div className="relative">
+                  <Input placeholder="Buscar..." className="bg-gray-50 border-none h-11 text-sm font-bold uppercase text-gray-700" value={buscaPaciente} onChange={(e) => setBuscaPaciente(e.target.value)} required />
+                  {pacientesSugeridos.length > 0 && (
+                    <div className="absolute z-[110] w-full bg-white border shadow-xl rounded-xl mt-1 overflow-hidden">
+                      {pacientesSugeridos.map((p: any) => (
+                        <button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: aplicarMascaraTelefone(p.telefone || '') }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}>
+                          <span className="font-bold text-sm uppercase text-gray-700">{p.nome}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1"><label className="text-[12px] font-black text-gray-400 uppercase text-left">Sala</label>
-                  <Select value={form.sala} onValueChange={(v) => setForm({...form, sala: v})}><SelectTrigger className="bg-gray-50 border-none h-11 text-sm font-bold text-gray-700"><SelectValue /></SelectTrigger>
-                  <SelectContent className="z-[110]"><SelectItem value="1">Sala 01</SelectItem><SelectItem value="2">Sala 02</SelectItem><SelectItem value="3">Sala 03</SelectItem><SelectItem value="4">Sala 04</SelectItem></SelectContent></Select></div>
-                <div className="space-y-1"><label className="text-[12px] font-black text-gray-400 uppercase text-left">WhatsApp</label>
-                  <Input value={form.telefone} onChange={e => setForm({...form, telefone: aplicarMascaraTelefone(e.target.value)})} className="bg-gray-50 border-none h-11 text-gray-700 font-bold" placeholder="(00) 9 0000-0000" /></div>
+                <div className="space-y-1">
+                  <label className="text-[12px] font-black text-gray-400 uppercase text-left">Sala</label>
+                  <Select value={form.sala} onValueChange={(v) => setForm({...form, sala: v})}>
+                    <SelectTrigger className="bg-gray-50 border-none h-11 text-sm font-bold text-gray-700"><SelectValue /></SelectTrigger>
+                    <SelectContent className="z-[110]">
+                      <SelectItem value="1">Sala 01</SelectItem>
+                      <SelectItem value="2">Sala 02</SelectItem>
+                      <SelectItem value="3">Sala 03</SelectItem>
+                      <SelectItem value="4">Sala 04</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[12px] font-black text-gray-400 uppercase text-left">WhatsApp</label>
+                  <Input value={form.telefone} onChange={e => setForm({...form, telefone: aplicarMascaraTelefone(e.target.value)})} className="bg-gray-50 border-none h-11 text-gray-700 font-bold" placeholder="(00) 9 0000-0000" />
+                </div>
               </div>
 
-              <div className="space-y-1"><label className="text-[12px] font-black text-gray-400 uppercase text-left">Profissional Clínico</label>
-                <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required disabled={!isGestorSeguro}><SelectTrigger className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
-                <SelectContent className="z-[110] text-left">{isGestorSeguro ? equipe.map((p: any) => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>) : <SelectItem value={nomeLogado}>{nomeLogado}</SelectItem>}</SelectContent></Select>
+              <div className="space-y-1">
+                <label className="text-[12px] font-black text-gray-400 uppercase text-left">Profissional Clínico</label>
+                <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required disabled={!isGestorSeguro}>
+                  <SelectTrigger className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                  <SelectContent className="z-[110] text-left">
+                    {isGestorSeguro ? equipe.map((p: any) => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>) : <SelectItem value={nomeLogado}>{nomeLogado}</SelectItem>}
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="space-y-1"><label className="text-[12px] font-black text-gray-400 uppercase text-left">Horário/Data</label>
+              <div className="space-y-1">
+                <label className="text-[12px] font-black text-gray-400 uppercase text-left">Horário/Data</label>
                 <input type="datetime-local" required className="w-full bg-gray-50 rounded-md p-2.5 text-xs font-bold h-11 border-none outline-none text-gray-700" value={form.inicio} onChange={e => setForm({...form, inicio: e.target.value})} />
               </div>
 
               <div className="space-y-1 pt-1 text-left">
                 <label className="text-[12px] font-black text-gray-400 uppercase flex justify-between">Assinatura Digital {form.assinatura_url && <span className="text-emerald-500 font-black">OK</span>}</label>
                 <div className="border border-dashed border-gray-200 rounded-xl overflow-hidden bg-white min-h-[80px] flex items-center justify-center relative">
-                  {form.assinatura_url ? (<div className="group relative w-full h-full flex flex-col items-center justify-center bg-gray-50 p-2"><img src={form.assinatura_url} alt="Assinatura" className="max-h-[60px] object-contain" /><button type="button" onClick={() => setForm({ ...form, assinatura_url: null })} className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 font-bold text-[9px] uppercase">Refazer</button></div>) : (<SignatureCanvas ref={sigCanvas} penColor='black' canvasProps={{width: 400, height: 80, className: 'sigCanvas w-full h-full'}} />)}
+                  {form.assinatura_url ? (
+                    <div className="group relative w-full h-full flex flex-col items-center justify-center bg-gray-50 p-2">
+                      <img src={form.assinatura_url} alt="Assinatura" className="max-h-[60px] object-contain" />
+                      <button type="button" onClick={() => setForm({ ...form, assinatura_url: null })} className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 font-bold text-[9px] uppercase">Refazer</button>
+                    </div>
+                  ) : (
+                    <SignatureCanvas ref={sigCanvas} penColor='black' canvasProps={{width: 400, height: 80, className: 'sigCanvas w-full h-full'}} />
+                  )}
                 </div>
               </div>
 
               <div className="pt-4 flex flex-col gap-2 shrink-0">
-                {form.telefone && (<Button type="button" onClick={() => enviarWhatsApp(form.paciente_nome, form.telefone, form.profissional, form.inicio)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all"><MessageCircle size={16} /> Confirmar WhatsApp</Button>)}
-                {eventoSelecionadoId && (<Button type="button" onClick={gerarComprovante} className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all"><FileText size={16} /> Gerar Atestado</Button>)}
+                {form.telefone && (
+                  <Button type="button" onClick={() => enviarWhatsApp(form.paciente_nome, form.telefone, form.profissional, form.inicio)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all">
+                    <MessageCircle size={16} /> Confirmar WhatsApp
+                  </Button>
+                )}
+                {eventoSelecionadoId && (
+                  <Button type="button" onClick={gerarComprovante} className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all">
+                    <FileText size={16} /> Gerar Atestado
+                  </Button>
+                )}
                 <div className="flex gap-2">
-                  {eventoSelecionadoId && (<Button type="button" variant="outline" onClick={handleExcluirAgendamento} className="px-5 border-red-200 text-red-500 hover:bg-red-50 h-12 rounded-2xl transition-all"><Trash2 size={20} /></Button>)}
-                  
-                  {/* TRAVA DE BOTÃO SALVAR (OBEDECE CHAVE) */}
+                  {eventoSelecionadoId && (
+                    <Button type="button" variant="outline" onClick={handleExcluirAgendamento} className="px-5 border-red-200 text-red-500 hover:bg-red-50 h-12 rounded-2xl transition-all">
+                      <Trash2 size={20} />
+                    </Button>
+                  )}
                   {meuPerfil?.permissao_agendar && (
-                    <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-black text-white font-black h-12 rounded-2xl shadow-xl uppercase text-xs transition-all">{loading ? <RefreshCw className="animate-spin" /> : 'Confirmar Agenda'}</Button>
+                    <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-black text-white font-black h-12 rounded-2xl shadow-xl uppercase text-xs transition-all">
+                      {loading ? <RefreshCw className="animate-spin" /> : 'Confirmar Agenda'}
+                    </Button>
                   )}
                 </div>
               </div>
+
             </form>
           </div>
         </div>
