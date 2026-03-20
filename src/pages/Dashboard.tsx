@@ -58,30 +58,24 @@ const mapearStatusParaBanco = (statusVisual: string) => {
   return 'Agendado';
 };
 
-const EventoCustomizado = ({ event }: any) => {
-  const isPresenca = event.original?.status === 'Presenca' || event.original?.status === 'Presença';
-  return (
-    <div className="h-full w-full flex items-center justify-center p-1 relative overflow-hidden text-center">
-      <span className={`text-white font-black text-[11px] uppercase leading-none truncate w-full text-center px-1 z-10 ${isPresenca ? 'drop-shadow-md' : ''}`}>
-        {event.title}
-      </span>
-      {isPresenca && (
-        <>
-          <CheckCircle size={30} className="text-white absolute opacity-10 -rotate-12 pointer-events-none" />
-          <div className="absolute bottom-1 right-1 bg-white rounded-full p-0.5 shadow-xl z-20 border border-emerald-100">
-            <CheckCircle size={10} className="text-emerald-600" />
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
+// --- VISUAL DE PRESENÇA ORIGINAL ---
+const EventoCustomizado = ({ event }: any) => (
+  <div className="h-full w-full flex flex-col items-center justify-center text-center p-1 overflow-hidden">
+    <span className="text-white font-bold text-[13px] uppercase leading-tight truncate w-full px-1">
+      {event.title}
+    </span>
+    {(event.original?.status === 'Presenca' || event.original?.status === 'Presença') && <CheckCircle size={10} className="text-white mt-0.5" />}
+  </div>
+);
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { isAdmin, isSecretaria } = usePerfil();
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [nomeLogado, setNomeLogado] = useState<string>(""); 
+  const [isGestorSeguro, setIsGestorSeguro] = useState(false); // INJEÇÃO: Trava Absoluta
+  
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(new Date());
@@ -104,9 +98,6 @@ export function Dashboard() {
   });
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) setUserEmail(data.user.email ?? null);
-    });
     fetchData();
   }, []);
 
@@ -114,7 +105,32 @@ export function Dashboard() {
 
   const fetchData = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { data: todosPerfis } = await supabase.from('perfis').select('*').order('nome');
+      
+      let meuNomeReal = "";
+      let ehGestorDeFato = false;
+
+      if (user && todosPerfis) {
+        setUserEmail(user.email ?? null);
+        if (user.email === 'romulochaves77@gmail.com') ehGestorDeFato = true;
+
+        // TRAVA DE IDENTIDADE: Busca o usuário real pelo ID ou Email diretamente no banco
+        const meuPerfil = todosPerfis.find(p => p.id === user.id || p.email === user.email);
+        if (meuPerfil) {
+          meuNomeReal = meuPerfil.nome || "";
+          setNomeLogado(meuNomeReal);
+          
+          // Verifica o CARGO no banco (ignora hooks com bug)
+          const cargo = (meuPerfil.cargo || "").toLowerCase();
+          if (cargo.includes('admin') || cargo.includes('secretar') || cargo.includes('recep') || cargo.includes('gestor')) {
+            ehGestorDeFato = true;
+          }
+        }
+      }
+
+      setIsGestorSeguro(ehGestorDeFato);
+
       if (todosPerfis) {
         const listaNegra = ['renata', 'instituto', 'recepcao', 'secretaria', 'admin', 'recepção'];
         const filtrados = todosPerfis.filter(p => {
@@ -126,7 +142,19 @@ export function Dashboard() {
 
         const { data: agendamentos, error } = await supabase.from('agendamentos').select('*');
         if (!error && agendamentos) {
-          const eventosFormatados = agendamentos.map(evt => {
+          
+          // --- TRAVA DE SEGURANÇA BLINDADA DA AGENDA ---
+          let agendamentosPermitidos = agendamentos;
+          
+          if (!ehGestorDeFato) {
+            // Se NÃO for gestor provado pelo banco, CORTA A AGENDA DOS OUTROS!
+            agendamentosPermitidos = agendamentos.filter(ag => {
+              if (!meuNomeReal || !ag.profissional_nome) return false;
+              return ag.profissional_nome.trim().toLowerCase() === meuNomeReal.trim().toLowerCase();
+            });
+          }
+
+          const eventosFormatados = agendamentosPermitidos.map(evt => {
             const perfilEncontrado = todosPerfis.find(p => 
               p.nome?.trim().toLowerCase() === evt.profissional_nome?.trim().toLowerCase()
             );
@@ -258,7 +286,7 @@ export function Dashboard() {
           assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
       }
 
-      // Converte o valor de volta para o banco (ex: "150,00" -> 150.00)
+      // Converte o valor limpo pro banco
       const valorString = form.valor_atendimento.toString();
       const valorLimpo = parseFloat(valorString.replace(/\./g, "").replace(",", "."));
 
@@ -308,21 +336,25 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="flex-1 max-w-xs">
-          <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
-            <SelectTrigger className="bg-gray-50 border-none h-9 text-[10px] font-bold uppercase tracking-widest text-left">
-              <Filter size={14} className="mr-2 text-blue-600"/><SelectValue placeholder="Filtrar" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="geral">Agenda Geral</SelectItem>
-              {equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* INJEÇÃO: Filtro só aparece se for gestor */}
+        {isGestorSeguro && (
+          <div className="flex-1 max-w-xs">
+            <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
+              <SelectTrigger className="bg-gray-50 border-none h-9 text-[10px] font-bold uppercase tracking-widest text-left">
+                <Filter size={14} className="mr-2 text-blue-600"/><SelectValue placeholder="Filtrar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="geral">Agenda Geral</SelectItem>
+                {equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="flex gap-1.5 items-center">
-          {/* BOTÃO ADICIONADO: CONFIRMAR AMANHÃ */}
-          {(souEuOAdmin || isSecretaria) && (
+          
+          {/* INJEÇÃO: Botão Confirmar Amanhã só para Gestão */}
+          {isGestorSeguro && (
             <Button 
               onClick={() => setIsConfirmacaoAmanhaOpen(true)} 
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-5 h-9 mr-2 shadow-lg animate-priority transition-all relative"
@@ -337,7 +369,7 @@ export function Dashboard() {
             </Button>
           )}
 
-          {/* SEUS BOTÕES ORIGINAIS INTACTOS */}
+          {/* SEUS BOTÕES DE NAVEGAÇÃO ORIGINAIS */}
           {(souEuOAdmin || isSecretaria) && (
             <>
               <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600" title="Financeiro"><Wallet size={20}/></Button>
@@ -350,7 +382,20 @@ export function Dashboard() {
           {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600" title="Horários"><Clock size={20}/></Button>}
           {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Acessos"><Shield size={20}/></Button>}
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2" title="Pacientes"><Users size={20}/></Button>
-          <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({...form, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix"}); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg" title="Novo Agendamento"><Plus size={16} className="mr-1" /> AGENDAR</Button>
+          
+          <Button onClick={() => { 
+            setEventoSelecionadoId(null); 
+            setBuscaPaciente(""); 
+            setForm({
+              ...form, 
+              profissional: isGestorSeguro ? '' : nomeLogado, // Preenche automático para profissional comum
+              paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix"
+            }); 
+            setIsAgendamentoOpen(true); 
+          }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-9 px-4 text-xs font-black shadow-lg" title="Novo Agendamento">
+            <Plus size={16} className="mr-1" /> AGENDAR
+          </Button>
+          
           <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} title="Sair"><LogOut size={18} /></Button>
         </div>
       </header>
@@ -364,25 +409,9 @@ export function Dashboard() {
               view={view} onView={setView} date={date} onNavigate={setDate} 
               views={['day', 'week', 'month', 'agenda']} 
               components={{ event: EventoCustomizado }} 
-              eventPropGetter={(event: any) => {
-                const status = event.original?.status;
-                const isPresenca = status === 'Presenca' || status === 'Presença';
-                const isFalta = status === 'Falta';
-
-                return {
-                  style: { 
-                    backgroundColor: event.color, 
-                    color: 'white', 
-                    border: isPresenca ? '3px solid white' : 'none', 
-                    borderRadius: '12px', 
-                    opacity: isFalta ? 0.4 : 1,
-                    boxShadow: isPresenca ? `0 0 18px ${event.color}` : 'none',
-                    filter: isPresenca ? 'brightness(1.1) saturate(1.2)' : 'none',
-                    transition: 'all 0.3s ease',
-                    zIndex: isPresenca ? 10 : 1
-                  }
-                }
-              }} 
+              eventPropGetter={(event: any) => ({ 
+                style: { backgroundColor: event.color, color: 'white', border: 'none', borderRadius: '6px', opacity: (event.original?.status === 'Falta') ? 0.5 : 1 } 
+              })} 
               onSelectEvent={(e) => { 
                 const evt = e.original; 
                 setEventoSelecionadoId(evt.id); setBuscaPaciente(evt.paciente_nome); 
@@ -407,7 +436,7 @@ export function Dashboard() {
         </Card>
       </main>
 
-      {/* MODAL ADICIONADO: CONFIRMAÇÃO DO PRÓXIMO DIA */}
+      {/* MODAL DE CONFIRMAÇÃO DO PRÓXIMO DIA */}
       {isConfirmacaoAmanhaOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[650px] animate-in slide-in-from-bottom duration-300 border border-gray-100 overflow-hidden">
@@ -462,7 +491,7 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* MODAL DE AGENDAMENTO COM MÁSCARAS E SEM CORTAR O X */}
+      {/* MODAL DE AGENDAMENTO (CABEÇALHO FIXO PARA NÃO CORTAR) */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-2 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] max-h-[95vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100 my-auto">
@@ -564,10 +593,15 @@ export function Dashboard() {
 
               <div className="space-y-1">
                 <label className="text-[12px] font-black text-gray-400 uppercase">Profissional Clínico</label>
-                <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required>
+                {/* INJEÇÃO: Trava o Select se não for Gestor */}
+                <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required disabled={!isGestorSeguro}>
                   <SelectTrigger className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                   <SelectContent className="z-[110]">
-                    {equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}
+                    {isGestorSeguro ? (
+                      equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)
+                    ) : (
+                      nomeLogado ? <SelectItem value={nomeLogado}>{nomeLogado}</SelectItem> : null
+                    )}
                   </SelectContent>
                 </Select>
               </div>
