@@ -18,9 +18,10 @@ export function usePerfil() {
             .single();
 
           if (!error && data) {
+            // Limpeza rigorosa: remove acentos e espaços
+            const roleLimpa = data.role?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() || 'profissional';
             setPerfil({
-              // Removemos espaços e acentos para a comparação ficar segura
-              role: data.role?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || 'profissional',
+              role: roleLimpa,
               email: data.email?.toLowerCase() || user.email?.toLowerCase() || ''
             });
           } else {
@@ -39,13 +40,17 @@ export function usePerfil() {
   const role = perfil?.role || 'profissional';
   const email = perfil?.email || '';
 
+  // Definições claras de poder
+  const isAdmin = role.includes('admin') || email === 'romulochaves77@gmail.com';
+  const isSecretaria = role.includes('secretaria') || role.includes('recep');
+  
   return { 
     role, 
     loading, 
-    // AGORA ACEITA QUALQUER VARIAÇÃO DE ADMIN OU O SEU EMAIL
-    isAdmin: role.includes('admin') || email === 'romulochaves77@gmail.com',
-    // AGORA ACEITA "secretaria" OU "secretária" POIS LIMPAMOS O ACENTO ACIMA
-    isSecretaria: role === 'secretaria',
-    isProfissional: role === 'profissional'
+    isAdmin,
+    isSecretaria,
+    isProfissional: !isAdmin && !isSecretaria,
+    // Ver tudo: Se for admin OU secretaria
+    podeVerTudo: isAdmin || isSecretaria 
   };
 }

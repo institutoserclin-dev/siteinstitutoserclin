@@ -127,8 +127,9 @@ export function Dashboard() {
           meuNomeReal = meuPerfil.nome || "";
           setNomeLogado(meuNomeReal);
           
-          const cargo = (meuPerfil.cargo || "").toLowerCase();
-          if (cargo.includes('admin') || cargo.includes('secretar') || cargo.includes('recep') || cargo.includes('gestor')) {
+          // INJEÇÃO: Normalização para garantir que Renata/Instituto entrem como Gestores
+          const cargoLimpo = (meuPerfil.role || meuPerfil.cargo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          if (cargoLimpo.includes('admin') || cargoLimpo.includes('secretaria') || cargoLimpo.includes('gestor')) {
             ehGestorDeFato = true;
           }
         }
@@ -137,10 +138,11 @@ export function Dashboard() {
       setIsGestorSeguro(ehGestorDeFato);
 
       if (todosPerfis) {
-        const listaNegra = ['renata', 'instituto', 'recepcao', 'secretaria', 'admin', 'recepção'];
+        // INJEÇÃO: Permitir que perfis de gestão apareçam para agendar se necessário (removido Renata/Instituto da trava)
+        const listaNegra = ['recepcao', 'admin', 'recepção'];
         const filtrados = todosPerfis.filter(p => {
           const n = (p.nome || "").toLowerCase();
-          const c = (p.cargo || "").toLowerCase();
+          const c = (p.cargo || p.role || "").toLowerCase();
           return !listaNegra.some(termo => n.includes(termo) || c.includes(termo));
         });
         setEquipe(filtrados);
@@ -293,7 +295,7 @@ export function Dashboard() {
 
       const payload = {
         sala_id: parseInt(form.sala), profissional_nome: form.profissional, paciente_nome: buscaPaciente,
-        paciente_id: idDoPaciente, paciente_telefone: form.telefone.replace(/\D/g, ''),
+        paciente_id: idDoPaciente, paciente_telefone: form.telefone,
         data_inicio: dInicio.toISOString(), data_fim: dFim.toISOString(),
         status: mapearStatusParaBanco(form.status), assinatura_url: assinaturaBase64,
         valor_atendimento: valorLimpo, forma_pagamento: form.forma_pagamento
@@ -415,7 +417,7 @@ export function Dashboard() {
                     color: 'white', 
                     border: 'none', 
                     borderRadius: '6px', 
-                    opacity: isFalta ? 0.5 : 1 // DEIXA OPACIDADE CAIR APENAS NA FALTA
+                    opacity: isFalta ? 0.5 : 1
                   } 
                 } 
               }} 
