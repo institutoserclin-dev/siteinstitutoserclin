@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Users, Trash2, ArrowLeft, RefreshCw, Search, Crown, 
-  Stethoscope, FileText, Eye, EyeOff, Shuffle, KeyRound, Pencil, X, Save
+  Users, Trash2, ArrowLeft, RefreshCw, Crown, 
+  Stethoscope, FileText, Eye, EyeOff, KeyRound, Pencil, X, Save
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { supabase } from '@/lib/supabase';
+import { createClient } from "@supabase/supabase-js"; // INJEÇÃO: Import necessário para não deslogar o admin
 import logoSerClin from "@/assets/ser2.png";
 
 export function Acessos() {
@@ -17,7 +18,6 @@ export function Acessos() {
   const [loading, setLoading] = useState(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
   
-  // Estados para Edição de Nome
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [usuarioParaEditar, setUsuarioParaEditar] = useState<any>(null);
   const [novoNome, setNovoNome] = useState("");
@@ -60,7 +60,6 @@ export function Acessos() {
         .eq("id", usuarioParaEditar.id);
 
       if (error) throw error;
-
       toast.success("Nome atualizado!");
       setIsEditModalOpen(false);
       fetchEquipe();
@@ -85,7 +84,14 @@ export function Acessos() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // INJEÇÃO: Cliente temporário para criar usuário sem derrubar a sua sessão
+      const supabaseAdmin = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false } }
+      );
+
+      const { data: authData, error: authError } = await supabaseAdmin.auth.signUp({
         email: novoColaborador.email,
         password: novoColaborador.senha,
         options: { data: { full_name: novoColaborador.nome, role: novoColaborador.role } }
@@ -94,16 +100,18 @@ export function Acessos() {
       if (authError) throw authError;
 
       if (authData.user) {
+        // INJEÇÃO: Salva em 'role' e 'cargo' para garantir que o Dashboard e o usePerfil funcionem
         await supabase.from("perfis").upsert({ 
           id: authData.user.id,
           nome: novoColaborador.nome, 
           email: novoColaborador.email,
           cor: novoColaborador.cor,
-          role: novoColaborador.role 
+          role: novoColaborador.role,
+          cargo: novoColaborador.role 
         });
       }
 
-      toast.success("Acesso criado!");
+      toast.success("Acesso criado com sucesso!");
       setNovoColaborador({ nome: "", email: "", senha: "", role: "profissional", cor: "#1e3a8a" });
       fetchEquipe();
     } catch (err: any) {
@@ -120,9 +128,15 @@ export function Acessos() {
   };
 
   const handleAlterarRole = async (userId: string, newRole: string) => {
-    await supabase.from("perfis").update({ role: newRole }).eq("id", userId);
-    setListaUsuarios(current => current.map(u => u.id === userId ? { ...u, role: newRole } : u));
-    toast.success("Cargo alterado!");
+    // INJEÇÃO: Atualiza tanto role quanto cargo para sincronia total
+    await supabase.from("perfis").update({ 
+      role: newRole,
+      cargo: newRole 
+    }).eq("id", userId);
+
+    setListaUsuarios(current => current.map(u => u.id === userId ? { ...u, role: newRole, cargo: newRole } : u));
+    toast.success(`Cargo alterado para ${newRole}!`);
+    fetchEquipe();
   };
 
   const handleRedefinirSenha = async (email: string) => {
@@ -134,9 +148,9 @@ export function Acessos() {
   };
 
   const handleRemover = async (id: string, nome: string) => {
-    if (!confirm(`Remover acesso de ${nome}?`)) return;
+    if (!confirm(`Remover acesso de ${nome}? Esta ação é irreversível no banco de dados.`)) return;
     await supabase.from("perfis").delete().eq("id", id);
-    toast.success("Removido.");
+    toast.success("Acesso removido.");
     fetchEquipe();
   };
 
@@ -162,7 +176,6 @@ export function Acessos() {
       </header>
 
       <main className="flex-1 p-6 max-w-6xl mx-auto w-full space-y-8">
-        {/* CADASTRO RÁPIDO */}
         <div className="bg-[#1e3a8a] rounded-[2rem] p-8 shadow-xl relative overflow-hidden">
           <form onSubmit={handleCadastrarColaborador} className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
             <div className="md:col-span-3 space-y-1">
@@ -185,16 +198,15 @@ export function Acessos() {
               <Input type="color" value={novoColaborador.cor} onChange={e => setNovoColaborador({...novoColaborador, cor: e.target.value})} className="bg-white/10 border-none h-11 cursor-pointer" />
             </div>
             <div className="md:col-span-2">
-              <Button type="submit" disabled={loading} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black h-11 rounded-xl uppercase text-[10px]">CRIAR</Button>
+              <Button type="submit" disabled={loading} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black h-11 rounded-xl uppercase text-[10px]">CRIAR ACESSO</Button>
             </div>
           </form>
         </div>
 
-        {/* LISTAGEM COM EDIÇÃO DE NOME */}
         <div className="space-y-4">
           <div className="flex items-center justify-between px-2">
-            <h3 className="font-bold text-[#1e3a8a] uppercase text-xs flex items-center gap-2"><Users size={16}/> Membros ({listaUsuarios.length})</h3>
-            <Input placeholder="Buscar..." value={filtro} onChange={e => setFiltro(e.target.value)} className="h-9 w-64 bg-white text-xs rounded-full" />
+            <h3 className="font-bold text-[#1e3a8a] uppercase text-xs flex items-center gap-2"><Users size={16}/> Membros da Clínica ({listaUsuarios.length})</h3>
+            <Input placeholder="Buscar por nome ou e-mail..." value={filtro} onChange={e => setFiltro(e.target.value)} className="h-9 w-64 bg-white text-xs rounded-full border-gray-200 shadow-sm" />
           </div>
 
           <div className="grid grid-cols-1 gap-3">
@@ -214,12 +226,12 @@ export function Acessos() {
                 </div>
 
                 <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl">
-                  <button onClick={() => handleAlterarRole(u.id, 'profissional')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase ${u.role === 'profissional' ? 'bg-[#1e3a8a] text-white' : 'text-gray-400'}`}>Profissional</button>
-                  <button onClick={() => handleAlterarRole(u.id, 'secretaria')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase ${u.role === 'secretaria' ? 'bg-slate-600 text-white' : 'text-gray-400'}`}>Secretária</button>
-                  <button onClick={() => handleAlterarRole(u.id, 'admin')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase ${u.role === 'admin' ? 'bg-amber-500 text-white' : 'text-gray-400'}`}>Admin</button>
+                  <button onClick={() => handleAlterarRole(u.id, 'profissional')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${u.role === 'profissional' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}>Profissional</button>
+                  <button onClick={() => handleAlterarRole(u.id, 'secretaria')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${u.role === 'secretaria' ? 'bg-slate-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}>Secretária</button>
+                  <button onClick={() => handleAlterarRole(u.id, 'admin')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${u.role === 'admin' ? 'bg-amber-500 text-white shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}>Admin</button>
                   <div className="w-px h-6 bg-gray-200 mx-1"></div>
-                  <button onClick={() => handleRedefinirSenha(u.email)} className="text-gray-400 hover:text-blue-600 p-1.5"><KeyRound size={18} /></button>
-                  <button onClick={() => handleRemover(u.id, u.nome)} className="text-gray-400 hover:text-red-500 p-1.5"><Trash2 size={18} /></button>
+                  <button onClick={() => handleRedefinirSenha(u.email)} className="text-gray-400 hover:text-blue-600 p-1.5" title="Redefinir Senha"><KeyRound size={18} /></button>
+                  <button onClick={() => handleRemover(u.id, u.nome)} className="text-gray-400 hover:text-red-500 p-1.5" title="Excluir"><Trash2 size={18} /></button>
                 </div>
               </div>
             ))}
@@ -227,7 +239,6 @@ export function Acessos() {
         </div>
       </main>
 
-      {/* MODAL DE EDIÇÃO DE NOME - ACESSIBILIDADE RÁPIDA */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <Card className="w-full max-w-[400px] rounded-[2rem] bg-white p-6 shadow-2xl animate-in zoom-in duration-200">
