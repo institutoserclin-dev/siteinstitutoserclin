@@ -85,7 +85,6 @@ export function Dashboard() {
   
   const sigCanvas = useRef<SignatureCanvas>(null);
   
-  // INÍCIO DINÂMICO MOBILE (Melhoria mantida, funcionalidade preservada)
   const [view, setView] = useState<View>(window.innerWidth < 768 ? Views.AGENDA : Views.WEEK);
   const [date, setDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
@@ -298,7 +297,6 @@ export function Dashboard() {
         }
         .animate-priority { animation: pulse-emerald 2s infinite; }
 
-        /* NOVA TÁTICA DE ALINHAMENTO */
         .rbc-time-view { border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; box-sizing: border-box !important; }
         .rbc-time-content { border-top: none !important; }
         .rbc-timeslot-group { 
@@ -319,13 +317,14 @@ export function Dashboard() {
           .fixed.inset-0 .bg-white.rounded-\[2\.5rem\] { 
             max-width: 100% !important; width: 100% !important; height: 100% !important; 
             max-height: 100% !important; border-radius: 0 !important; margin: 0 !important; 
+            padding-top: env(safe-area-inset-top, 20px) !important;
           }
           .sigCanvas { width: 100% !important; height: 120px !important; }
         }
       `}</style>
 
-      {/* HEADER COMPLETO */}
-      <header className="bg-white border-b px-6 py-3 flex justify-between items-center h-20 shadow-sm z-20 gap-4">
+      {/* HEADER CORRIGIDO COM SAFE AREA IPHONE */}
+      <header className="bg-white border-b px-6 pb-3 flex justify-between items-center shadow-sm z-20 gap-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] min-h-[calc(80px+env(safe-area-inset-top,0px))]">
         <div className="flex items-center gap-3 shrink-0">
           <img src={logoSer2} className="w-12 h-12 object-contain" alt="SerClin" />
           <div className="hidden lg:block text-left">
@@ -413,7 +412,7 @@ export function Dashboard() {
         </Card>
       </main>
 
-      {/* MODAL DE CONFIRMAÇÃO DE AMANHÃ (Fiel ao original) */}
+      {/* MODAL DE CONFIRMAÇÃO DE AMANHÃ */}
       {isConfirmacaoAmanhaOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[650px] border border-gray-100 overflow-hidden">
@@ -451,7 +450,7 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* MODAL DE AGENDAMENTO COMPLETO COM NOVO BOTÃO DE PRONTUÁRIO */}
+      {/* MODAL DE AGENDAMENTO COMPLETO */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-0 md:p-2 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] h-full md:h-auto md:max-h-[95vh] flex flex-col overflow-hidden border border-gray-100">
@@ -462,7 +461,6 @@ export function Dashboard() {
             
             <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4 text-left overflow-y-auto flex-1 custom-scrollbar">
               
-              {/* ATALHO DE PRONTUÁRIO ADICIONADO (Mantendo a lógica intacta) */}
               {eventoSelecionadoId && (
                 <Button 
                   type="button" 
