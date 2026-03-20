@@ -279,19 +279,47 @@ export function Dashboard() {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
-      <style>{`
+    <style>{`
+        /* --- ESTILOS ORIGINAIS MANTIDOS --- */
         .rbc-agenda-view table.rbc-agenda-table tbody > tr > td { color: #1f2937 !important; font-weight: 800 !important; font-size: 14px !important; }
         .rbc-agenda-view { background-color: #ffffff; border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
         .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: #1e3a8a !important; font-weight: 800 !important; }
         .rbc-toolbar button { color: #1e3a8a !important; font-weight: bold; }
         .rbc-toolbar button.rbc-active { background-color: #1e3a8a !important; color: white !important; }
         .rbc-event-content { font-size: 13px !important; }
+        
         @keyframes pulse-emerald {
           0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
           70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
           100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
         .animate-priority { animation: pulse-emerald 2s infinite; }
+
+        /* --- FIX DE ALINHAMENTO DAS LINHAS (O QUE RESOLVE A FOTO) --- */
+        .rbc-time-content { border-top: none !important; }
+        .rbc-time-view { border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
+        
+        /* Força a mesma altura em ambos os lados para alinhar a régua */
+        .rbc-timeslot-group {
+          min-height: 60px !important; 
+          display: flex;
+          align-items: center;
+        }
+        
+        .rbc-time-gutter .rbc-timeslot-group {
+          border-bottom: 1px solid #f3f4f6 !important;
+        }
+
+        .rbc-day-slot .rbc-timeslot-group {
+          border-bottom: 1px solid #f3f4f6 !important;
+        }
+
+        .rbc-label {
+          padding: 0 10px !important;
+          font-weight: 700 !important;
+          color: #9ca3af !important;
+          font-size: 11px !important;
+        }
       `}</style>
 
       <header className="bg-white border-b px-6 py-3 flex justify-between items-center h-20 shadow-sm z-20 gap-4">
