@@ -11,12 +11,13 @@ export function usePerfil() {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
-          // REMOVIDO 'cargo' do select para eliminar o erro 400
+          // --- A MÁGICA ESTÁ AQUI ---
+          // Trocamos 'id' por 'email' e single() por maybeSingle() para matar o Erro 406
           const { data, error } = await supabase
             .from('perfis')
             .select('role, email') 
-            .eq('id', user.id)
-            .single();
+            .eq('email', user.email) 
+            .maybeSingle();
 
           if (!error && data) {
             // Normaliza o conteúdo da coluna 'role'
@@ -31,6 +32,8 @@ export function usePerfil() {
             // Caso não encontre o perfil, define como profissional por segurança
             setPerfil({ role: 'profissional', email: user.email?.toLowerCase() || '' });
           }
+        } else {
+          setPerfil(null);
         }
       } catch (err) {
         console.error("Erro SerClin Perfil:", err);
