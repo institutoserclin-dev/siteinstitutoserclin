@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserPlus, CheckCircle2, AlertCircle, ShieldCheck, Palette } from "lucide-react";
+import { ArrowLeft, UserPlus, CheckCircle2, AlertCircle, ShieldCheck, Palette, Lock, Mail, User, RefreshCw } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export function CadastroUsuario() {
   const navigate = useNavigate();
@@ -10,7 +10,7 @@ export function CadastroUsuario() {
   const [password, setPassword] = useState("");
   const [nome, setNome] = useState("");
   const [role, setRole] = useState("profissional");
-  const [cor, setCor] = useState("#3b82f6"); // Cor padrão: Azul SerClin
+  const [cor, setCor] = useState("#3b82f6"); // Azul SerClin padrão
   const [loading, setLoading] = useState(false);
 
   const handleCadastro = async (e: React.FormEvent) => {
@@ -18,53 +18,40 @@ export function CadastroUsuario() {
     setLoading(true);
 
     try {
-      const supabaseTemp = createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_ANON_KEY,
-        {
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-            detectSessionInUrl: false,
-          },
-        }
-      );
-
-      // 1. Criar o usuário no Auth
-      const { data, error } = await supabaseTemp.auth.signUp({
+      // 1. Criar o usuário na Autenticação (Auth)
+      // Usamos o 'supabase' oficial do projeto para evitar conflito de instâncias
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            full_name: nome,
-            role: role,
-          },
+          data: { full_name: nome },
         },
       });
 
       if (error) throw error;
 
-      // 2. Inserir na tabela 'perfis' com ROLE e COR
+      // 2. Inserir ou Atualizar o Perfil na tabela 'perfis'
+      // Usamos .upsert para evitar o erro 409 (Conflict) caso o registro já exista parcial
       if (data.user) {
-        const { error: perfilError } = await supabaseTemp
+        const { error: perfilError } = await supabase
           .from('perfis')
-          .insert([
+          .upsert([
             { 
               id: data.user.id, 
               nome: nome, 
-              email: email, 
+              email: email.toLowerCase().trim(), 
               role: role,
-              cor: cor // Injeta a cor escolhida para o calendário
+              cor: cor 
             }
-          ]);
+          ], { onConflict: 'id' });
 
         if (perfilError) throw perfilError;
 
-        toast.success(`Usuário ${nome} criado como ${role.toUpperCase()}!`, {
+        toast.success(`Profissional ${nome} criado com sucesso!`, {
           icon: <CheckCircle2 className="text-green-500" />,
         });
         
-        // Limpar formulário
+        // Limpar campos após o sucesso
         setEmail("");
         setPassword("");
         setNome("");
@@ -72,9 +59,15 @@ export function CadastroUsuario() {
         setCor("#3b82f6");
       }
     } catch (error: any) {
-      console.error(error);
-      toast.error("Erro ao cadastrar usuário", {
-        description: error.message || "Verifique os dados e tente novamente.",
+      console.error("Erro no cadastro SerClin:", error);
+      
+      let mensagemErro = "Ocorreu um erro ao processar o cadastro.";
+      if (error.message === "User already registered") {
+        mensagemErro = "Este e-mail já está em uso no sistema.";
+      }
+
+      toast.error("Falha no Cadastro", {
+        description: mensagemErro,
         icon: <AlertCircle className="text-red-500" />,
       });
     } finally {
@@ -83,69 +76,70 @@ export function CadastroUsuario() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-left">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-left font-sans">
       <div className="max-w-2xl mx-auto">
+        
         <button
           onClick={() => navigate("/sistema/acessos")}
-          className="flex items-center text-sm text-gray-500 hover:text-gray-900 mb-6 transition-colors font-bold uppercase tracking-widest"
+          className="flex items-center text-sm text-gray-500 hover:text-blue-600 mb-6 transition-colors font-black uppercase tracking-widest"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar para Acessos
         </button>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                <UserPlus className="w-6 h-6" />
+        <div className="bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden">
+          <div className="p-8 border-b border-gray-100 bg-gray-50/50">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg">
+                <UserPlus size={28} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 uppercase tracking-tighter">Configurar Novo Perfil</h1>
-                <p className="text-sm text-gray-500">Defina o acesso e a identidade visual do profissional.</p>
+                <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter leading-none">Novo Profissional</h1>
+                <p className="text-[11px] text-gray-400 font-bold uppercase mt-1 tracking-wider font-mono">SerClin ID Management</p>
               </div>
             </div>
           </div>
 
-          <div className="p-6">
-            <form onSubmit={handleCadastro} className="space-y-5">
+          <div className="p-8">
+            <form onSubmit={handleCadastro} className="space-y-6">
               
-              <div className="space-y-2">
-                <label htmlFor="nome" className="text-xs font-black text-gray-400 uppercase tracking-widest">Nome Completo</label>
+              <div className="space-y-1">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <User size={14} className="text-blue-600" /> Nome Completo
+                </label>
                 <input
-                  id="nome"
                   type="text"
                   placeholder="Ex: Dra. Helenara Chaves"
-                  className="flex h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-bold uppercase focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  className="flex h-12 w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-2 text-sm font-bold uppercase focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   required
                 />
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-xs font-black text-gray-400 uppercase tracking-widest">E-mail de Acesso</label>
+              <div className="space-y-1">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <Mail size={14} className="text-blue-600" /> E-mail de Acesso
+                </label>
                 <input
-                  id="email"
                   type="email"
                   placeholder="nome@institutoserclin.com"
-                  className="flex h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  className="flex h-12 w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-2 text-sm font-bold focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="role" className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-blue-600" /> Nível de Permissão
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <ShieldCheck size={14} className="text-blue-600" /> Nível de Acesso
                   </label>
                   <select
-                    id="role"
-                    className="flex h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer appearance-none transition-all"
+                    className="flex h-12 w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-2 text-sm font-bold text-gray-700 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    required
                   >
                     <option value="profissional">PROFISSIONAL</option>
                     <option value="secretaria">SECRETÁRIA</option>
@@ -153,31 +147,30 @@ export function CadastroUsuario() {
                   </select>
                 </div>
 
-                {/* --- SELETOR DE COR REPLICADO AQUI --- */}
-                <div className="space-y-2">
-                  <label htmlFor="cor" className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                    <Palette className="w-4 h-4 text-blue-600" /> Cor na Agenda
+                <div className="space-y-1">
+                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <Palette size={14} className="text-blue-600" /> Cor na Agenda
                   </label>
-                  <div className="flex items-center gap-3 h-11 px-3 border border-gray-300 rounded-md">
+                  <div className="flex gap-3 items-center h-12 px-4 border border-gray-200 rounded-xl bg-gray-50/50">
                     <input
-                      id="cor"
                       type="color"
-                      className="w-8 h-8 rounded cursor-pointer border-none bg-transparent"
+                      className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent"
                       value={cor}
                       onChange={(e) => setCor(e.target.value)}
                     />
-                    <span className="text-xs font-mono font-bold text-gray-500 uppercase">{cor}</span>
+                    <span className="text-xs font-black text-gray-500 uppercase font-mono">{cor}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-xs font-black text-gray-400 uppercase tracking-widest">Senha Provisória</label>
+              <div className="space-y-1">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <Lock size={14} className="text-blue-600" /> Senha Provisória
+                </label>
                 <input
-                  id="password"
                   type="password"
                   placeholder="Mínimo 6 caracteres"
-                  className="flex h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  className="flex h-12 w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-2 text-sm font-bold focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -185,13 +178,15 @@ export function CadastroUsuario() {
                 />
               </div>
 
-              <div className="pt-4">
+              <div className="pt-6">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-4 text-xs font-black text-white hover:bg-black transition-all shadow-xl uppercase tracking-widest disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center rounded-2xl bg-blue-600 px-6 py-4 text-xs font-black text-white hover:bg-black transition-all shadow-xl uppercase tracking-widest disabled:opacity-50"
                 >
-                  {loading ? "Processando..." : (
+                  {loading ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
                     <>
                       <CheckCircle2 className="w-4 h-4 mr-2" />
                       Finalizar Cadastro
