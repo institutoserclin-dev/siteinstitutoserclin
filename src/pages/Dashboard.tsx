@@ -280,7 +280,7 @@ export function Dashboard() {
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
     <style>{`
-        /* --- ESTILOS ORIGINAIS MANTIDOS --- */
+        /* --- ESTILOS ORIGINAIS (MANTIDOS E REORGANIZADOS) --- */
         .rbc-agenda-view table.rbc-agenda-table tbody > tr > td { color: #1f2937 !important; font-weight: 800 !important; font-size: 14px !important; }
         .rbc-agenda-view { background-color: #ffffff; border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
         .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: #1e3a8a !important; font-weight: 800 !important; }
@@ -295,30 +295,56 @@ export function Dashboard() {
         }
         .animate-priority { animation: pulse-emerald 2s infinite; }
 
-        /* --- FIX DE ALINHAMENTO DAS LINHAS (O QUE RESOLVE A FOTO) --- */
-        .rbc-time-content { border-top: none !important; }
-        .rbc-time-view { border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
-        
-        /* Força a mesma altura em ambos os lados para alinhar a régua */
+        /* --- NOVA TÁTICA DE ALINHAMENTO --- */
+        .rbc-time-view {
+          border-radius: 1.5rem;
+          overflow: hidden;
+          border: 1px solid #e5e7eb;
+          box-sizing: border-box !important;
+        }
+
+        .rbc-time-content {
+          border-top: none !important;
+        }
+
+        /* Força todas as células a serem Flexbox e terem a mesma altura exata */
         .rbc-timeslot-group {
-          min-height: 60px !important; 
-          display: flex;
-          align-items: center;
-        }
-        
-        .rbc-time-gutter .rbc-timeslot-group {
+          min-height: 48px !important; /* Defini uma altura padrão fixa */
+          display: flex !important;
+          flex-direction: column !important;
+          justify-content: center !important; /* Centraliza o texto verticalmente */
+          margin: 0 !important;
+          padding: 0 !important;
           border-bottom: 1px solid #f3f4f6 !important;
+          box-sizing: border-box !important;
         }
 
-        .rbc-day-slot .rbc-timeslot-group {
-          border-bottom: 1px solid #f3f4f6 !important;
-        }
-
+        /* Zera o alinhamento da hora para ficar no topo exato da linha */
         .rbc-label {
-          padding: 0 10px !important;
-          font-weight: 700 !important;
+          display: block !important;
+          height: 100% !important;
+          padding: 0 8px !important;
+          margin: 0 !important;
+          line-height: 48px !important; /* Deve ser igual ao min-height */
           color: #9ca3af !important;
+          font-weight: 700 !important;
           font-size: 11px !important;
+          text-align: right !important;
+          box-sizing: border-box !important;
+        }
+
+        /* Remove bordas duplas */
+        .rbc-day-slot .rbc-timeslot-group:last-child,
+        .rbc-time-gutter .rbc-timeslot-group:last-child {
+          border-bottom: none !important;
+        }
+
+        /* Garante que o grid dos dias também use Flex e alinhe */
+        .rbc-day-slot .rbc-time-slot {
+          flex: 1 !important;
+          height: 100% !important;
+          display: flex !important;
+          align-items: center !important;
         }
       `}</style>
 
