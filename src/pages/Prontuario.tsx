@@ -265,24 +265,26 @@ export function Prontuario() {
               </CardContent>
             </Card>
 
-            {/* --- NOVO CARD: AUDITORIA DE SISTEMA --- */}
-            <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
-              <div className="bg-gray-50 px-6 py-4 border-b flex items-center gap-2">
-                <History size={18} className="text-gray-400" />
-                <h3 className="font-black text-gray-500 uppercase text-[10px]">Audit Log do Sistema</h3>
-              </div>
-              <CardContent className="p-6 space-y-4 max-h-[300px] overflow-y-auto">
-                {loadingLogs ? <p className="text-[10px] text-center font-bold text-gray-300">SINCRONIZANDO...</p> : 
-                 logs.length === 0 ? <p className="text-[10px] text-center font-bold text-gray-300">SEM ATIVIDADE.</p> :
-                 logs.map(log => (
-                   <div key={log.id} className="border-l-2 border-blue-100 pl-3 py-1">
-                     <p className="text-[10px] font-black text-gray-700 uppercase leading-tight">{log.acao}</p>
-                     <p className="text-[9px] font-bold text-gray-400 mt-0.5">{log.profissional_nome} • {format(new Date(log.criado_em), "dd/MM HH:mm")}</p>
-                   </div>
-                 ))
-                }
-              </CardContent>
-            </Card>
+            {/* --- NOVO CARD: AUDITORIA DE SISTEMA (AGORA APENAS PARA ADMIN) --- */}
+            {isAdmin && (
+              <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
+                <div className="bg-gray-50 px-6 py-4 border-b flex items-center gap-2">
+                  <History size={18} className="text-gray-400" />
+                  <h3 className="font-black text-gray-500 uppercase text-[10px]">Audit Log do Sistema</h3>
+                </div>
+                <CardContent className="p-6 space-y-4 max-h-[300px] overflow-y-auto">
+                  {loadingLogs ? <p className="text-[10px] text-center font-bold text-gray-300">SINCRONIZANDO...</p> : 
+                   logs.length === 0 ? <p className="text-[10px] text-center font-bold text-gray-300">SEM ATIVIDADE.</p> :
+                   logs.map(log => (
+                     <div key={log.id} className="border-l-2 border-blue-100 pl-3 py-1">
+                       <p className="text-[10px] font-black text-gray-700 uppercase leading-tight">{log.acao}</p>
+                       <p className="text-[9px] font-bold text-gray-400 mt-0.5">{log.profissional_nome} • {format(new Date(log.criado_em), "dd/MM HH:mm")}</p>
+                     </div>
+                   ))
+                  }
+                </CardContent>
+              </Card>
+            )}
 
             <Card className={`border-none shadow-lg rounded-[2rem] overflow-hidden ${modoEdicao ? 'ring-4 ring-amber-400' : ''}`}>
               <div className={`${modoEdicao ? 'bg-amber-500' : 'bg-[#1e3a8a]'} px-6 py-4 text-white font-black uppercase text-[10px]`}>{modoEdicao ? 'Editando Registro' : 'Novo Registro'}</div>
