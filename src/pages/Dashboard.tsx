@@ -282,7 +282,6 @@ export function Dashboard() {
     .sort((a: any, b: any) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime());
 
   // --- LIMITES DE HORÁRIO PARA O CALENDÁRIO (07:00 às 20:00) ---
-  // IMPORTANTE: Utilizar uma data fixa garante que o grid do React Big Calendar não quebre a visualização diária
   const minTime = new Date(2024, 0, 1, 7, 0, 0); 
   const maxTime = new Date(2024, 0, 1, 20, 0, 0); 
 
@@ -298,10 +297,7 @@ export function Dashboard() {
         @keyframes pulse-emerald { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
         .animate-priority { animation: pulse-emerald 2s infinite; }
         .rbc-time-view { border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
-        
-        /* CORREÇÃO CSS: min-height 48px removido pois quebrava os eventos nas abas Dia e Semana */
         .rbc-timeslot-group { border-bottom: 1px solid #f3f4f6 !important; }
-        
         .rbc-label { color: #9ca3af !important; font-weight: 700 !important; font-size: 11px !important; }
         @media (max-width: 768px) {
           .rbc-toolbar { flex-direction: column; gap: 8px; height: auto !important; padding: 10px !important; }
@@ -416,7 +412,6 @@ export function Dashboard() {
         </Card>
       </main>
 
-      {/* MODAL DE CONFIRMAÇÃO DE AMANHÃ */}
       {isConfirmacaoAmanhaOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[650px] border border-gray-100 overflow-hidden">
@@ -463,7 +458,6 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* MODAL DE AGENDAMENTO COMPLETO */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-0 md:p-2 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] h-full md:h-auto md:max-h-[95vh] flex flex-col overflow-hidden border border-gray-100">
