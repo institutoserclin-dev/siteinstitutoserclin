@@ -299,6 +299,11 @@ export function Dashboard() {
         .rbc-time-view { border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
         .rbc-timeslot-group { border-bottom: 1px solid #f3f4f6 !important; }
         .rbc-label { color: #9ca3af !important; font-weight: 700 !important; font-size: 11px !important; }
+        
+        /* Oculta a barra de rolagem no menu mobile */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
         @media (max-width: 768px) {
           .rbc-toolbar { flex-direction: column; gap: 8px; height: auto !important; padding: 10px !important; }
           .fixed.inset-0 .bg-white.rounded-\[2\.5rem\] { max-width: 100% !important; width: 100% !important; height: 100% !important; border-radius: 0 !important; margin: 0 !important; padding-top: env(safe-area-inset-top, 20px) !important; }
@@ -306,9 +311,9 @@ export function Dashboard() {
         }
       `}</style>
 
-      <header className="bg-white border-b px-6 pb-3 flex justify-between items-center shadow-sm z-20 gap-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] min-h-[calc(80px+env(safe-area-inset-top,0px))]">
-        <div className="flex items-center gap-3 shrink-0">
-          <img src={logoSer2} className="w-12 h-12 object-contain" alt="SerClin" />
+      <header className="bg-white border-b px-4 md:px-6 pb-2 md:pb-3 flex justify-between items-center shadow-sm z-20 gap-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] min-h-[calc(80px+env(safe-area-inset-top,0px))]">
+        <div className="flex items-center gap-2 md:gap-3 shrink-0">
+          <img src={logoSer2} className="w-10 h-10 md:w-12 md:h-12 object-contain" alt="SerClin" />
           <div className="hidden lg:block text-left">
             <h1 className="text-md font-black text-gray-800 uppercase leading-none">SerClin</h1>
             <p className="text-[9px] text-gray-500 font-bold uppercase mt-1 tracking-widest">Gestão Integrada</p>
@@ -320,78 +325,81 @@ export function Dashboard() {
           <span className="text-[11px] font-black text-blue-700 uppercase tracking-tight">Olá, {nomeLogado || 'Colaborador'}</span>
         </div>
 
-        <div className="flex gap-1.5 items-center menu-icones-mobile">
+        {/* CONTAINER DE ÍCONES ROLÁVEL NO MOBILE PARA NÃO FICAR APERTADO */}
+        <div className="flex gap-2 items-center overflow-x-auto hide-scrollbar shrink-0 py-1">
           
           {userEmail === 'romulochaves77@gmail.com' && (
-            <Button variant="outline" size="icon" onClick={() => navigate('/sistema/permissoes')} className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-full h-9 w-9" title="Chaves">
+            <Button variant="outline" size="icon" onClick={() => navigate('/sistema/permissoes')} className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-full h-9 w-9 shrink-0" title="Chaves">
               <Shield size={18}/>
             </Button>
           )}
 
           {meuPerfil?.permissao_confirmacao_amanha && (
-            <Button onClick={() => setIsConfirmacaoAmanhaOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-5 h-9 mr-2 shadow-lg relative transition-all">
-              <Send size={14} /> Amanhã
-              {agendamentosAmanha.length > 0 && <span className="ml-1 bg-white text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black shadow-sm">{agendamentosAmanha.length}</span>}
+            <Button onClick={() => setIsConfirmacaoAmanhaOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-4 h-9 shadow-sm shrink-0 transition-all">
+              <Send size={14} /> <span className="hidden md:inline">Amanhã</span>
+              {agendamentosAmanha.length > 0 && <span className="ml-1 bg-white text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px] font-black">{agendamentosAmanha.length}</span>}
             </Button>
           )}
 
           {meuPerfil?.permissao_financeiro && (
             <>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600 shrink-0">
                 <Wallet size={20}/>
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500 shrink-0">
                 <Receipt size={20}/>
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600 shrink-0">
                 <Calculator size={20}/>
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600 shrink-0">
                 <Scale size={20}/>
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600 shrink-0">
                 <Clock size={20}/>
               </Button>
             </>
           )}
 
           {meuPerfil?.permissao_acessos && (
-            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600 shrink-0">
               <Users size={20}/>
             </Button>
           )}
 
           {meuPerfil?.permissao_relatorios && (
-            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500 shrink-0">
               <BarChart3 size={20}/>
             </Button>
           )}
 
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 shrink-0">
             <Users size={20}/>
           </Button>
           
+          {/* BOTÃO AGENDAR ORIGINAL (APARECE SÓ NO DESKTOP) */}
           {meuPerfil?.permissao_agendar && (
             <Button onClick={() => { 
               setEventoSelecionadoId(null); 
               setBuscaPaciente(""); 
               setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
               setIsAgendamentoOpen(true); 
-            }} className="bg-blue-600 hover:bg-black text-white rounded-full h-9 px-4 text-xs font-black shadow-lg">
+            }} className="hidden md:flex bg-blue-600 hover:bg-black text-white rounded-full h-9 px-4 text-xs font-black shadow-lg">
               <Plus size={16} className="mr-1" /> AGENDAR
             </Button>
           )}
 
-          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }}>
+          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="shrink-0 text-gray-500">
             <LogOut size={18} />
           </Button>
         </div>
       </header>
 
-      <main className="flex-1 p-2 md:p-4 overflow-hidden text-left">
-        <Card className="h-full border-none shadow-sm bg-white rounded-[2rem] overflow-hidden">
-          <CardContent className="p-0 h-full">
+      <main className="flex-1 p-2 md:p-4 overflow-hidden text-left flex flex-col relative">
+        <Card className="flex-1 border-none shadow-sm bg-white rounded-[2rem] overflow-hidden flex flex-col">
+          <CardContent className="p-0 flex-1 min-h-[500px]">
             <Calendar 
+              style={{ height: '100%', minHeight: '65vh' }}
               localizer={localizer} culture='pt-BR' messages={mensagensPortugues}
               events={filtroProfissional === "geral" ? events : events.filter((e: any) => e.original?.profissional_nome === filtroProfissional)} 
               view={view} onView={setView} date={date} onNavigate={setDate} 
@@ -410,8 +418,25 @@ export function Dashboard() {
             />
           </CardContent>
         </Card>
+
+        {/* FAB MOBILE - BOTÃO FLUTUANTE DE AGENDAR (APARECE SÓ NO CELULAR) */}
+        {meuPerfil?.permissao_agendar && (
+          <button 
+            onClick={() => { 
+              setEventoSelecionadoId(null); 
+              setBuscaPaciente(""); 
+              setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
+              setIsAgendamentoOpen(true); 
+            }} 
+            className="md:hidden fixed bottom-6 right-6 z-[45] bg-blue-600 hover:bg-blue-700 text-white rounded-full h-14 px-6 flex items-center justify-center shadow-[0_8px_30px_rgb(37,99,235,0.4)] active:scale-95 transition-transform"
+          >
+            <Plus size={20} className="mr-1.5" />
+            <span className="font-black text-[13px] uppercase tracking-widest">Agendar</span>
+          </button>
+        )}
       </main>
 
+      {/* MODAL DE CONFIRMAÇÃO DE AMANHÃ */}
       {isConfirmacaoAmanhaOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[650px] border border-gray-100 overflow-hidden">
@@ -458,6 +483,7 @@ export function Dashboard() {
         </div>
       )}
 
+      {/* MODAL DE AGENDAMENTO COMPLETO */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-0 md:p-2 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] h-full md:h-auto md:max-h-[95vh] flex flex-col overflow-hidden border border-gray-100">
