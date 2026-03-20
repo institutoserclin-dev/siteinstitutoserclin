@@ -11,22 +11,24 @@ export function usePerfil() {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
+          // REMOVIDO 'cargo' do select para eliminar o erro 400
           const { data, error } = await supabase
             .from('perfis')
-            .select('role, email, cargo')
+            .select('role, email') 
             .eq('id', user.id)
             .single();
 
           if (!error && data) {
-            // Normaliza o cargo vindo de 'role' ou 'cargo' para evitar falhas por acento
-            const cargoBruto = data.role || data.cargo || 'profissional';
-            const roleLimpa = cargoBruto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            // Normaliza o conteúdo da coluna 'role'
+            const roleBruta = data.role || 'profissional';
+            const roleLimpa = roleBruta.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             
             setPerfil({
               role: roleLimpa,
               email: data.email?.toLowerCase() || user.email?.toLowerCase() || ''
             });
           } else {
+            // Caso não encontre o perfil, define como profissional por segurança
             setPerfil({ role: 'profissional', email: user.email?.toLowerCase() || '' });
           }
         }
@@ -42,8 +44,9 @@ export function usePerfil() {
   const role = perfil?.role || 'profissional';
   const email = perfil?.email || '';
 
-  const isAdmin = role.includes('admin') || email === 'romulochaves77@gmail.com';
-  const isSecretaria = role.includes('secretaria') || role.includes('recep');
+  // Regras de permissão baseadas na coluna 'role' do banco
+  const isAdmin = role === 'admin' || email === 'romulochaves77@gmail.com' || email === 'nahpsicologiachaves@gmail.com';
+  const isSecretaria = role === 'secretaria' || role.includes('recep');
   
   return { 
     role, 
