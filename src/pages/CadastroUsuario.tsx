@@ -19,7 +19,6 @@ export function CadastroUsuario() {
 
     try {
       // 1. Criar o usuário na Autenticação (Auth)
-      // Usamos o 'supabase' oficial do projeto para evitar conflito de instâncias
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -31,7 +30,6 @@ export function CadastroUsuario() {
       if (error) throw error;
 
       // 2. Inserir ou Atualizar o Perfil na tabela 'perfis'
-      // Usamos .upsert para evitar o erro 409 (Conflict) caso o registro já exista parcial
       if (data.user) {
         const { error: perfilError } = await supabase
           .from('perfis')
@@ -51,7 +49,6 @@ export function CadastroUsuario() {
           icon: <CheckCircle2 className="text-green-500" />,
         });
         
-        // Limpar campos após o sucesso
         setEmail("");
         setPassword("");
         setNome("");
@@ -76,12 +73,13 @@ export function CadastroUsuario() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-left font-sans">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-left font-sans pb-10">
       <div className="max-w-2xl mx-auto">
         
+        {/* BOTÃO VOLTAR COM AJUSTE PARA IPHONE */}
         <button
           onClick={() => navigate("/sistema/acessos")}
-          className="flex items-center text-sm text-gray-500 hover:text-blue-600 mb-6 transition-colors font-black uppercase tracking-widest"
+          className="flex items-center text-sm text-gray-500 hover:text-blue-600 mb-6 transition-colors font-black uppercase tracking-widest pt-[calc(env(safe-area-inset-top,0px)+10px)]"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar para Acessos
@@ -93,14 +91,14 @@ export function CadastroUsuario() {
               <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg">
                 <UserPlus size={28} />
               </div>
-              <div>
+              <div className="text-left">
                 <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter leading-none">Novo Profissional</h1>
                 <p className="text-[11px] text-gray-400 font-bold uppercase mt-1 tracking-wider font-mono">SerClin ID Management</p>
               </div>
             </div>
           </div>
 
-          <div className="p-8">
+          <div className="p-8 text-left">
             <form onSubmit={handleCadastro} className="space-y-6">
               
               <div className="space-y-1">
@@ -147,7 +145,7 @@ export function CadastroUsuario() {
                   </select>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1 text-left">
                   <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                     <Palette size={14} className="text-blue-600" /> Cor na Agenda
                   </label>

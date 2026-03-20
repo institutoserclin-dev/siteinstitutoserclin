@@ -10,7 +10,7 @@ import Home from "@/pages/Home";
 import { Login } from "@/pages/Login";
 import { RedefinirSenha } from "@/pages/RedefinirSenha";
 import { Validar } from "@/pages/Validar";
-import Obrigado from "@/pages/Obrigado"; // 1. IMPORTAÇÃO INCORPORADA AQUI
+import Obrigado from "@/pages/Obrigado"; 
 
 // Páginas do Sistema (Privadas)
 import { Dashboard } from "@/pages/Dashboard";
@@ -20,6 +20,7 @@ import { Prontuario } from "@/pages/Prontuario";
 import { Acessos } from "@/pages/Acessos"; 
 import { Horarios } from "@/pages/Horarios";
 import { Lembretes } from "@/pages/Lembretes";
+import { GestaoPermissoes } from "@/pages/GestaoPermissoes"; // <-- 1. IMPORTAÇÃO DA NOVA PÁGINA
 
 // --- NOVAS PÁGINAS FINANCEIRAS ---
 import { Planos } from "@/pages/Planos";
@@ -37,8 +38,6 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/redefinir-senha" element={<RedefinirSenha />} />
           <Route path="/validar/:id" element={<Validar />} />
-          
-          {/* 2. ROTA INCORPORADA DENTRO DO BLOCO ROUTES */}
           <Route path="/obrigado" element={<Obrigado />} />
 
           {/* Rotas Privadas (Sistema SerClin) */}
@@ -49,6 +48,9 @@ function App() {
           <Route path="/sistema/horarios" element={<PrivateRoute><Horarios /></PrivateRoute>} />
           <Route path="/sistema/acessos" element={<PrivateRoute><Acessos /></PrivateRoute>} />
           <Route path="/sistema/cadastro" element={<PrivateRoute><CadastroUsuario /></PrivateRoute>} />
+          
+          {/* 2. NOVA ROTA DE GESTÃO DE PERMISSÕES UNITÁRIAS */}
+          <Route path="/sistema/permissoes" element={<PrivateRoute><GestaoPermissoes /></PrivateRoute>} />
           
           {/* Financeiro e Fechamento */}
           <Route path="/sistema/planos" element={<PrivateRoute><Planos /></PrivateRoute>} />
@@ -61,7 +63,6 @@ function App() {
           <Route path="/sistema/pacientes/:id" element={<PrivateRoute><Prontuario /></PrivateRoute>} />
         </Routes>
         
-        {/* Notificações flutuantes do sistema */}
         <Toaster position="top-right" />
       </BrowserRouter>
     </TooltipProvider>

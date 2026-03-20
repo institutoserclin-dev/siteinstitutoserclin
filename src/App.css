@@ -45,3 +45,25 @@ header {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* --- MENU DE ÍCONES ROLÁVEL NO MOBILE --- */
+@media (max-width: 768px) {
+  .menu-icones-mobile {
+    display: flex !important;
+    overflow-x: auto !important; /* Ativa o scroll horizontal */
+    white-space: nowrap !important; /* Impede que os ícones pulem linha */
+    gap: 8px !important;
+    padding: 5px 10px !important;
+    -webkit-overflow-scrolling: touch; /* Deixa a rolagem suave no iPhone */
+    scrollbar-width: none; /* Esconde a barrinha de scroll no Firefox */
+  }
+
+  /* Esconde a barrinha de scroll no Chrome/Safari para ficar mais limpo */
+  .menu-icones-mobile::-webkit-scrollbar {
+    display: none;
+  }
+
+  .menu-icones-mobile button {
+    flex-shrink: 0 !important; /* Impede que os botões "esmaguem" */
+  }
+}

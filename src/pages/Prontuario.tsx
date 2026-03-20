@@ -35,6 +35,7 @@ export function Prontuario() {
   const [resumoPresenca, setResumoPresenca] = useState({ presencas: 0, faltas: 0 });
   const [modoEdicao, setModoEdicao] = useState<string | null>(null);
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
+  const [meuPerfil, setMeuPerfil] = useState<any>(null); // CHAVES UNITÁRIAS
   
   const [isAgendamentoOpen, setIsAgendamentoOpen] = useState(false);
   const [equipeClinica, setEquipeClinica] = useState<any[]>([]); 
@@ -78,7 +79,7 @@ export function Prontuario() {
   };
 
   const carregarLogs = async () => {
-    if (!id) return;
+    if (!id || !meuPerfil?.permissao_auditoria) return;
     setLoadingLogs(true);
     const { data } = await supabase.from('logs_prontuario').select('*').eq('paciente_id', id).order('criado_em', { ascending: false }).limit(10);
     setLogs(data || []);
@@ -89,6 +90,14 @@ export function Prontuario() {
     try {
       setLoading(true);
       if (!id) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: todosPerfis } = await supabase.from('perfis').select('*').order('nome');
+      
+      if (user && todosPerfis) {
+        const perfilLogado = todosPerfis.find(p => p.email?.toLowerCase().trim() === user.email?.toLowerCase().trim());
+        setMeuPerfil(perfilLogado);
+      }
 
       const { data: p, error: errPac } = await supabase.from("pacientes").select("*").eq("id", id).maybeSingle();
       if (errPac) throw errPac;
@@ -108,28 +117,25 @@ export function Prontuario() {
       const { data: r } = await supabase.from("prontuarios").select("*").eq("paciente_id", id).order("created_at", { ascending: false });
       setRegistros(r || []);
 
-      const { data: todosPerfis } = await supabase.from('perfis').select('*').order('nome');
       if (todosPerfis) {
         const filtrados = todosPerfis.filter(perfil => {
           const n = (perfil.nome || "").toLowerCase();
-          const c = (perfil.cargo || "").toLowerCase();
           const listaNegra = ['renata', 'instituto', 'secretaria', 'recepcao', 'admin', 'recepção'];
-          return !listaNegra.some(termo => n.includes(termo) || c.includes(termo));
+          return !listaNegra.some(termo => n.includes(termo));
         });
         setEquipeClinica(filtrados);
       }
-      carregarLogs();
     } catch (e) { toast.error("Erro ao carregar dados."); } finally { setLoading(false); }
   };
 
   useEffect(() => { carregarDados(); }, [id]);
+  useEffect(() => { if (meuPerfil?.permissao_auditoria) carregarLogs(); }, [meuPerfil]);
 
   const handleSalvarDadosPaciente = async () => {
     setLoading(true);
     try {
       const { error } = await supabase.from("pacientes").update({ anamnese: tempDados.anamnese, observacoes: tempDados.observacoes }).eq("id", id);
       if (error) throw error;
-      
       await registrarLog("Editou Dados Clínicos", "Atualizou anamnese ou observações.");
       toast.success("Dados clínicos atualizados!");
       setIsEditPacienteOpen(false);
@@ -143,7 +149,6 @@ export function Prontuario() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       let nomeAutor = user?.email === 'romulochaves77@gmail.com' ? "Rômulo Chaves da Silva" : (user?.user_metadata?.full_name || "Profissional SerClin");
-      
       let arquivoUrl: string | null = null;
       let arquivoNome: string | null = null;
 
@@ -158,25 +163,19 @@ export function Prontuario() {
       if (modoEdicao) {
         const registroOriginal = registros.find(r => r.id === modoEdicao);
         const versaoAntiga = { texto: registroOriginal.descricao, data: new Date().toISOString(), autor: registroOriginal.profissional_nome || "Desconhecido" };
-        const historicoAtualizado = [ ...(registroOriginal.historico || []), versaoAntiga ];
-
         await supabase.from("prontuarios").update({
           descricao: novoRegistro.descricao, tipo_registro: novoRegistro.tipo, profissional_nome: nomeAutor,
-          historico: historicoAtualizado, arquivo_url: arquivoUrl || registroOriginal.arquivo_url,
+          historico: [ ...(registroOriginal.historico || []), versaoAntiga ], arquivo_url: arquivoUrl || registroOriginal.arquivo_url,
           arquivo_nome: arquivoNome || registroOriginal.arquivo_nome, updated_at: new Date().toISOString()
         }).eq("id", modoEdicao);
-        
         await registrarLog("Editou Registro", `Alterou ${novoRegistro.tipo}`);
-        toast.success("Atualizado!");
       } else {
         await supabase.from("prontuarios").insert([{
           paciente_id: id, tipo_registro: novoRegistro.tipo, descricao: novoRegistro.descricao,
           profissional_nome: nomeAutor, historico: [], arquivo_url: arquivoUrl, arquivo_nome: arquivoNome
         }]);
         await registrarLog("Criou Registro", `Adicionou ${novoRegistro.tipo}`);
-        toast.success("Salvo!");
       }
-
       setNovoRegistro({ tipo: isSecretaria ? "Laudo" : "Sessão", descricao: "" });
       setArquivoSelecionado(null); setModoEdicao(null); carregarDados();
     } catch (error) { toast.error("Erro ao salvar."); } finally { setLoading(false); }
@@ -197,7 +196,6 @@ export function Prontuario() {
         valor_atendimento: parseFloat(formAgendamento.valor_atendimento), forma_pagamento: formAgendamento.forma_pagamento
       }]);
       if (error) throw error;
-      
       await registrarLog("Novo Agendamento", `Marcou consulta com ${formAgendamento.profissional}`);
       setIsAgendamentoOpen(false); toast.success("Agendado!"); carregarDados();
     } catch (err) { toast.error("Erro ao agendar."); } finally { setLoadingAgendamento(false); }
@@ -209,30 +207,47 @@ export function Prontuario() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (loading && !paciente) return <div className="p-20 text-center font-black text-gray-400">Carregando...</div>;
+  if (loading && !paciente) return <div className="p-20 text-center font-black text-gray-400">Carregando Prontuário...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 p-2 md:p-10 font-sans text-left pb-20">
+      
+      {/* HEADER MOBILE FIXO */}
+      <header className="bg-white border-b p-4 flex items-center justify-between sticky top-0 z-40 shadow-sm pt-[calc(env(safe-area-inset-top,0px)+12px)] min-h-[calc(70px+env(safe-area-inset-top,0px))] -m-2 mb-4 md:hidden">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate("/sistema/pacientes")} className="p-2 -ml-2 text-gray-400"><ArrowLeft size={24} /></button>
+          <div className="text-left">
+            <h1 className="text-sm font-black uppercase text-gray-800 leading-none truncate max-w-[150px]">{paciente?.nome}</h1>
+            <p className="text-[9px] font-bold text-blue-600 uppercase mt-1 tracking-widest">Prontuário SerClin</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+           {meuPerfil?.permissao_agendar && <Button onClick={() => setIsAgendamentoOpen(true)} size="icon" className="bg-blue-600 rounded-xl h-10 w-10 shadow-md"><CalendarIcon size={18} /></Button>}
+           {meuPerfil?.permissao_excluir && <Button onClick={async () => { if(confirm("Apagar paciente?")) { await registrarLog("Excluiu Paciente", "Remoção via Header Mobile"); supabase.from("pacientes").delete().eq("id", id).then(() => navigate("/sistema/pacientes")) } }} size="icon" variant="ghost" className="text-red-300 h-10 w-10"><Trash2 size={18} /></Button>}
+        </div>
+      </header>
+
       <div className="max-w-6xl mx-auto space-y-4 md:space-y-8">
-        
-        {/* HEADER ADAPTADO PARA MOBILE */}
-        <div className="flex justify-between items-center gap-2">
-          <Button variant="ghost" onClick={() => navigate("/sistema/pacientes")} className="gap-2 text-gray-500 font-black uppercase text-[10px] md:text-xs">
+        {/* HEADER DESKTOP */}
+        <div className="hidden md:flex justify-between items-center gap-2">
+          <Button variant="ghost" onClick={() => navigate("/sistema/pacientes")} className="gap-2 text-gray-500 font-black uppercase text-xs">
             <ArrowLeft size={18} /> Voltar
           </Button>
           <div className="flex gap-2">
-            {isAdmin && (
-               <Button onClick={async () => { if(confirm("Apagar tudo?")) { await registrarLog("Excluiu Paciente", "Removeu prontuário completo"); supabase.from("pacientes").delete().eq("id", id).then(() => navigate("/sistema/pacientes")) } }} variant="ghost" className="text-red-400 hover:text-red-600 font-black uppercase text-[9px] md:text-[10px] gap-1 md:gap-2">
-                <Trash2 size={14} /> <span className="hidden sm:inline">Excluir Tudo</span>
+            {meuPerfil?.permissao_excluir && (
+               <Button onClick={async () => { if(confirm("Apagar tudo?")) { await registrarLog("Excluiu Paciente", "Removeu prontuário completo"); supabase.from("pacientes").delete().eq("id", id).then(() => navigate("/sistema/pacientes")) } }} variant="ghost" className="text-red-400 hover:text-red-600 font-black uppercase text-[10px] gap-2">
+                <Trash2 size={14} /> Excluir Tudo
               </Button>
             )}
-            <Button onClick={() => setIsAgendamentoOpen(true)} className="bg-[#1e3a8a] text-white font-black uppercase text-[9px] md:text-[10px] px-4 md:px-6 rounded-full h-9 md:h-10 shadow-md">
-              <CalendarIcon size={14} className="mr-1 md:mr-2" /> Agendar
-            </Button>
+            {meuPerfil?.permissao_agendar && (
+              <Button onClick={() => setIsAgendamentoOpen(true)} className="bg-[#1e3a8a] text-white font-black uppercase text-[10px] px-6 rounded-full h-10 shadow-md">
+                <CalendarIcon size={14} className="mr-2" /> Agendar
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* INFO PACIENTE MOBILE FRIENDLY */}
+        {/* CARD INFORMATIVO */}
         <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 md:gap-8 items-center">
           <div className="w-20 h-20 md:w-24 md:h-24 bg-blue-50 rounded-2xl md:rounded-3xl flex items-center justify-center text-[#1e3a8a] shadow-inner overflow-hidden border-2 border-white shrink-0">
             {paciente?.foto_url ? <img src={paciente.foto_url} className="w-full h-full object-cover" alt="Foto" /> : <User size={30} />}
@@ -251,13 +266,12 @@ export function Prontuario() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 text-left">
-          
+          {/* COLUNA ESQUERDA: DADOS E AUDITORIA */}
           <div className="lg:col-span-1 space-y-6">
-            {/* DADOS CLÍNICOS */}
             <Card className="border-none shadow-sm rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white">
               <div className="bg-blue-50 px-5 md:px-6 py-3 md:py-4 flex justify-between items-center border-b border-blue-100">
                 <h3 className="font-black text-[#1e3a8a] uppercase text-[9px] md:text-[10px] flex items-center gap-2"><ClipboardList size={18}/> Dados Clínicos</h3>
-                <button onClick={() => setIsEditPacienteOpen(true)} className="text-blue-600 hover:scale-110 transition-transform"><FileEdit size={18}/></button>
+                <button onClick={() => setIsEditPacienteOpen(true)} className="text-blue-600"><FileEdit size={18}/></button>
               </div>
               <CardContent className="p-4 md:p-6 space-y-4">
                 <div className="text-left"><label className="text-[9px] font-black text-gray-400 uppercase">Anamnese</label><p className="text-xs text-gray-800 mt-1 italic leading-relaxed">{paciente?.anamnese || "Não informada."}</p></div>
@@ -265,26 +279,24 @@ export function Prontuario() {
               </CardContent>
             </Card>
 
-            {/* AUDITORIA COMPACTA */}
-            <Card className="border-none shadow-sm rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white">
-              <div className="bg-gray-50 px-5 md:px-6 py-3 md:py-4 border-b flex items-center gap-2">
-                <History size={16} className="text-gray-400" />
-                <h3 className="font-black text-gray-500 uppercase text-[9px] md:text-[10px]">Auditoria</h3>
-              </div>
-              <CardContent className="p-4 md:p-6 space-y-3 max-h-[250px] overflow-y-auto">
-                {loadingLogs ? <p className="text-[9px] text-center font-bold text-gray-300">SINCRO...</p> : 
-                 logs.length === 0 ? <p className="text-[9px] text-center font-bold text-gray-300">SEM ATIVIDADE.</p> :
-                 logs.map(log => (
-                   <div key={log.id} className="border-l-2 border-blue-100 pl-3 py-1 text-left">
-                     <p className="text-[9px] font-black text-gray-700 uppercase leading-tight">{log.acao}</p>
-                     <p className="text-[8px] font-bold text-gray-400 mt-0.5">{log.profissional_nome?.split(' ')[0]} • {format(new Date(log.criado_em), "dd/MM HH:mm")}</p>
-                   </div>
-                 ))
-                }
-              </CardContent>
-            </Card>
+            {meuPerfil?.permissao_auditoria && (
+              <Card className="border-none shadow-sm rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white">
+                <div className="bg-gray-50 px-5 md:px-6 py-3 md:py-4 border-b flex items-center gap-2">
+                  <History size={16} className="text-gray-400" />
+                  <h3 className="font-black text-gray-500 uppercase text-[9px] md:text-[10px]">Auditoria</h3>
+                </div>
+                <CardContent className="p-4 md:p-6 space-y-3 max-h-[250px] overflow-y-auto">
+                  {loadingLogs ? <p className="text-[9px] font-bold text-gray-300">SINCRO...</p> : 
+                   logs.map(log => (
+                     <div key={log.id} className="border-l-2 border-blue-100 pl-3 py-1">
+                       <p className="text-[9px] font-black text-gray-700 uppercase leading-tight">{log.acao}</p>
+                       <p className="text-[8px] font-bold text-gray-400 mt-0.5">{log.profissional_nome?.split(' ')[0]} • {format(new Date(log.criado_em), "dd/MM HH:mm")}</p>
+                     </div>
+                   ))}
+                </CardContent>
+              </Card>
+            )}
 
-            {/* FORMULÁRIO DE REGISTRO */}
             <Card className={`border-none shadow-lg rounded-[1.5rem] md:rounded-[2rem] overflow-hidden ${modoEdicao ? 'ring-4 ring-amber-400' : ''}`}>
               <div className={`${modoEdicao ? 'bg-amber-500' : 'bg-[#1e3a8a]'} px-5 md:px-6 py-3 md:py-4 text-white font-black uppercase text-[9px] md:text-[10px] flex justify-between items-center`}>
                 <span>{modoEdicao ? 'Editando Registro' : 'Novo Registro'}</span>
@@ -300,7 +312,7 @@ export function Prontuario() {
             </Card>
           </div>
 
-          {/* LISTA DE REGISTROS (EM CARDS PARA MOBILE) */}
+          {/* LISTA DE REGISTROS */}
           <div className="lg:col-span-2 space-y-4 text-left">
             {registros.length === 0 ? <div className="bg-white p-12 rounded-[1.5rem] md:rounded-[2rem] border border-dashed border-gray-200 text-center"><p className="text-gray-400 font-bold uppercase text-xs">Nenhum registro.</p></div> :
             registros.map((reg) => (
@@ -312,14 +324,13 @@ export function Prontuario() {
                     <span className="text-[9px] md:text-[11px] font-black text-gray-800 uppercase truncate max-w-[120px] md:max-w-none">{reg.profissional_nome}</span>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button onClick={async () => { if(confirm("Apagar registro?")) { await registrarLog("Apagou Registro", `Removeu ${reg.tipo_registro}`); supabase.from("prontuarios").delete().eq("id", reg.id).then(carregarDados) } }} className="text-gray-200 hover:text-red-400 transition-colors"><Trash2 size={14}/></button>
+                    {meuPerfil?.permissao_excluir && <button onClick={async () => { if(confirm("Apagar registro?")) { await registrarLog("Apagou Registro", `Removeu ${reg.tipo_registro}`); supabase.from("prontuarios").delete().eq("id", reg.id).then(carregarDados) } }} className="text-gray-200 hover:text-red-400 transition-colors"><Trash2 size={14}/></button>}
                     <button onClick={() => iniciarEdicao(reg)} className="text-gray-300 hover:text-amber-500 transition-colors"><Edit size={16}/></button>
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 whitespace-pre-wrap mt-3 leading-relaxed">{reg.descricao}</p>
                 {reg.arquivo_url && <a href={reg.arquivo_url} target="_blank" className="inline-flex items-center gap-2 text-[9px] md:text-[10px] font-black text-[#1e3a8a] uppercase mt-4 hover:underline"><FileText size={14} /> Ver Documento</a>}
-                
-                {reg.historico && reg.historico.length > 0 && (
+                {meuPerfil?.permissao_auditoria && reg.historico && reg.historico.length > 0 && (
                   <details className="mt-4">
                     <summary className="text-[8px] md:text-[9px] font-black text-amber-600 uppercase cursor-pointer flex items-center gap-1"><AlertCircle size={12}/> Auditoria ({reg.historico.length})</summary>
                     <div className="mt-2 space-y-2 border-l-2 border-amber-50 pl-3">
@@ -334,11 +345,11 @@ export function Prontuario() {
           </div>
         </div>
 
-        {/* MODAL DE ANAMNESE ADAPTADO */}
+        {/* MODAIS */}
         {isEditPacienteOpen && (
           <div className="fixed inset-0 bg-black/60 z-[1000] flex items-center justify-center p-2 md:p-4 backdrop-blur-sm">
             <Card className="w-full max-w-[500px] h-full md:h-auto rounded-[1.5rem] md:rounded-[2.5rem] bg-white flex flex-col p-4 md:p-8 shadow-2xl overflow-hidden">
-              <div className="flex justify-between items-center mb-6"><h3 className="font-black text-[#1e3a8a] uppercase text-xs tracking-widest">Informações Clínicas</h3><button onClick={() => setIsEditPacienteOpen(false)} className="p-2"><X size={24}/></button></div>
+              <div className="flex justify-between items-center mb-6"><h3 className="font-black text-[#1e3a8a] uppercase text-xs tracking-widest text-left">Informações Clínicas</h3><button onClick={() => setIsEditPacienteOpen(false)} className="p-2"><X size={24}/></button></div>
               <div className="space-y-4 flex-1 overflow-y-auto">
                 <textarea value={tempDados.anamnese} onChange={e => setTempDados({...tempDados, anamnese: e.target.value})} className="w-full bg-gray-50 border-none rounded-xl p-4 text-sm h-40 outline-none resize-none" placeholder="Anamnese..." />
                 <textarea value={tempDados.observacoes} onChange={e => setTempDados({...tempDados, observacoes: e.target.value})} className="w-full bg-gray-50 border-none rounded-xl p-4 text-sm h-32 outline-none resize-none" placeholder="Observações..." />
@@ -348,11 +359,10 @@ export function Prontuario() {
           </div>
         )}
 
-        {/* MODAL DE AGENDAMENTO ADAPTADO */}
         {isAgendamentoOpen && (
           <div className="fixed inset-0 bg-black/60 z-[999] flex items-center justify-center p-2 md:p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
             <Card className="w-full max-w-[420px] h-full md:h-auto rounded-[1.5rem] md:rounded-[2.5rem] bg-white shadow-2xl overflow-hidden flex flex-col">
-              <div className="bg-[#1e3a8a] p-4 md:p-5 flex justify-between items-center shrink-0"><h3 className="font-black uppercase text-[10px] md:text-[11px] text-white">Agendar Consulta</h3><button onClick={() => setIsAgendamentoOpen(false)} className="text-white p-2"><X size={22}/></button></div>
+              <div className="bg-[#1e3a8a] p-4 md:p-5 flex justify-between items-center shrink-0 text-white"><h3 className="font-black uppercase text-[10px] md:text-[11px]">Agendar Consulta</h3><button onClick={() => setIsAgendamentoOpen(false)} className="text-white p-2"><X size={22}/></button></div>
               <form onSubmit={handleSalvarAgendamento} className="p-4 md:p-6 space-y-4 flex-1 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-3 md:gap-4">
                   <Select value={formAgendamento.status} onValueChange={(v) => setFormAgendamento({...formAgendamento, status: v})}><SelectTrigger className="bg-blue-50 font-bold text-blue-700 h-10 uppercase text-[9px] md:text-[10px] rounded-xl"><SelectValue /></SelectTrigger><SelectContent className="z-[1000]"><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem></SelectContent></Select>
@@ -362,7 +372,7 @@ export function Prontuario() {
                   <Input type="number" step="0.01" value={formAgendamento.valor_atendimento} onChange={e => setFormAgendamento({...formAgendamento, valor_atendimento: e.target.value})} className="bg-gray-50 h-10 font-bold text-sm rounded-xl" />
                   <Select value={formAgendamento.duracao} onValueChange={(v) => setFormAgendamento({...formAgendamento, duracao: v})}><SelectTrigger className="bg-gray-50 h-10 font-bold text-sm rounded-xl"><SelectValue /></SelectTrigger><SelectContent className="z-[1000]"><SelectItem value="30">30 Min</SelectItem><SelectItem value="40">40 Min</SelectItem><SelectItem value="60">60 Min</SelectItem></SelectContent></Select>
                 </div>
-                <Select value={formAgendamento.profissional} onValueChange={(v) => setFormAgendamento({...formAgendamento, profissional: v})} required><SelectTrigger className="bg-gray-50 h-10 font-bold text-sm uppercase rounded-xl"><SelectValue placeholder="Selecionar..." /></SelectTrigger><SelectContent className="z-[1000]">{equipeClinica.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}</SelectContent></Select>
+                <Select value={formAgendamento.profissional} onValueChange={(v) => setFormAgendamento({...formAgendamento, profissional: v})} required><SelectTrigger className="bg-gray-50 h-10 font-bold text-sm uppercase rounded-xl"><SelectValue placeholder="Selecionar..." /></SelectTrigger><SelectContent className="z-[1000] text-left">{equipeClinica.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}</SelectContent></Select>
                 <input type="datetime-local" className="w-full h-11 bg-gray-50 rounded-xl px-4 text-xs font-bold outline-none border-none" value={formAgendamento.inicio} onChange={e => setFormAgendamento({...formAgendamento, inicio: e.target.value})} />
                 <Button type="submit" disabled={loadingAgendamento} className="w-full bg-[#1e3a8a] text-white font-black uppercase h-14 rounded-2xl shadow-xl mt-2">Confirmar</Button>
               </form>

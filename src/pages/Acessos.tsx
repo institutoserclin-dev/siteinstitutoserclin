@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, UserPlus, Shield, Trash2, 
-  RefreshCw, CheckCircle2, UserCog, Mail, Palette, KeyRound
+  RefreshCw, UserCog, KeyRound, Palette
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from '@/lib/supabase';
@@ -64,9 +64,9 @@ export function Acessos() {
         redirectTo: `${window.location.origin}/redefinir-senha`,
       });
       if (error) throw error;
-      toast.success("E-mail de redefinição enviado para o profissional!");
+      toast.success("E-mail de redefinição enviado!");
     } catch (err) {
-      toast.error("Erro ao enviar e-mail de recuperação.");
+      toast.error("Erro ao enviar e-mail.");
     }
   };
 
@@ -83,119 +83,134 @@ export function Acessos() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-left font-sans">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-2 md:p-8 text-left font-sans pb-20">
+      <div className="max-w-6xl mx-auto space-y-6">
         
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        {/* HEADER COM PROTEÇÃO IPHONE */}
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
           <div>
             <button
               onClick={() => navigate("/sistema")}
-              className="flex items-center text-sm text-gray-500 hover:text-blue-600 mb-2 transition-colors font-bold uppercase tracking-widest"
+              className="flex items-center text-[10px] text-gray-500 hover:text-blue-600 mb-2 transition-colors font-black uppercase tracking-widest"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Painel Principal
+              Painel
             </button>
-            <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tighter flex items-center gap-3">
-              <Shield className="text-purple-600" size={32} />
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 uppercase tracking-tighter flex items-center gap-3">
+              <Shield className="text-purple-600" size={28} />
               Gestão de Acessos
             </h1>
           </div>
 
           <Button 
             onClick={() => navigate("/sistema/cadastro")}
-            className="bg-blue-600 hover:bg-black text-white font-black rounded-xl px-6 h-12 shadow-lg transition-all flex items-center gap-2 uppercase text-xs"
+            className="w-full md:w-auto bg-blue-600 hover:bg-black text-white font-black rounded-xl px-6 h-12 shadow-lg transition-all flex items-center justify-center gap-2 uppercase text-xs"
           >
             <UserPlus size={18} />
             Novo Profissional
           </Button>
         </header>
 
-        <Card className="border-none shadow-xl rounded-[2rem] overflow-hidden bg-white">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Profissional</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Cor da Agenda</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Nível de Acesso</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {loading ? (
-                    <tr><td colSpan={4} className="px-6 py-12 text-center"><RefreshCw className="animate-spin mx-auto text-blue-600" size={32} /></td></tr>
-                  ) : usuarios.map((user) => (
-                    <tr key={user.id} className="hover:bg-blue-50/30 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full flex items-center justify-center font-black text-white uppercase text-xs shadow-sm border-2 border-white" style={{ backgroundColor: user.cor || '#3b82f6' }}>
-                            {user.nome?.substring(0, 2)}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-black text-gray-800 uppercase text-sm leading-tight">{user.nome}</span>
-                            <span className="text-xs text-gray-400 font-medium">{user.email}</span>
-                          </div>
-                        </div>
-                      </td>
-                      
-                      <td className="px-6 py-4">
-                        <div className="flex justify-center items-center gap-3">
-                          <input 
-                            type="color" 
-                            value={user.cor || '#3b82f6'} 
-                            onChange={(e) => handleMudarCor(user.id, e.target.value)}
-                            className="w-8 h-8 rounded-lg cursor-pointer border-2 border-gray-100 p-0 overflow-hidden bg-transparent"
-                          />
-                          <span className="text-[10px] font-bold text-gray-400 uppercase font-mono">{user.cor || '#3B82F6'}</span>
-                        </div>
-                      </td>
+        {loading ? (
+          <div className="flex justify-center py-20"><RefreshCw className="animate-spin text-blue-600" size={32} /></div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            {/* VERSÃO MOBILE EM CARDS / DESKTOP EM TABELA */}
+            <Card className="border-none shadow-xl rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white">
+              <CardContent className="p-0">
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100">
+                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Profissional</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Cor</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Nível</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {usuarios.map((user) => (
+                        <tr key={user.id} className="hover:bg-blue-50/30 transition-colors group">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full flex items-center justify-center font-black text-white uppercase text-xs border-2 border-white shadow-sm" style={{ backgroundColor: user.cor || '#3b82f6' }}>
+                                {user.nome?.substring(0, 2)}
+                              </div>
+                              <div className="flex flex-col text-left">
+                                <span className="font-black text-gray-800 uppercase text-sm">{user.nome}</span>
+                                <span className="text-xs text-gray-400">{user.email}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex justify-center items-center gap-2">
+                              <input type="color" value={user.cor || '#3b82f6'} onChange={(e) => handleMudarCor(user.id, e.target.value)} className="w-8 h-8 rounded-lg cursor-pointer border-none p-0 overflow-hidden bg-transparent" />
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <Select disabled={atualizandoId === user.id} value={user.role || 'profissional'} onValueChange={(val) => handleMudarRole(user.id, val)}>
+                              <SelectTrigger className="border-none h-9 font-black text-[10px] uppercase rounded-full px-4 bg-gray-100"><SelectValue /></SelectTrigger>
+                              <SelectContent><SelectItem value="admin">Administrador</SelectItem><SelectItem value="secretaria">Secretária</SelectItem><SelectItem value="profissional">Profissional</SelectItem></SelectContent>
+                            </Select>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-1">
+                              <button onClick={() => handleResetSenha(user.email)} className="p-2 text-gray-300 hover:text-orange-500"><KeyRound size={18} /></button>
+                              <button onClick={() => handleExcluirUsuario(user.id, user.nome)} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={18} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                      <td className="px-6 py-4">
-                        <div className="w-44">
-                          <Select 
-                            disabled={atualizandoId === user.id}
-                            value={user.role || 'profissional'} 
-                            onValueChange={(val) => handleMudarRole(user.id, val)}
-                          >
-                            <SelectTrigger className="border-none h-9 font-black text-[10px] uppercase rounded-full px-4 bg-gray-100 group-hover:bg-white transition-all">
-                              <UserCog size={14} className="mr-2 text-blue-600" />
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-2xl shadow-2xl border-gray-100">
-                              <SelectItem value="admin" className="font-black text-[10px] uppercase">Administrador</SelectItem>
-                              <SelectItem value="secretaria" className="font-black text-[10px] uppercase">Secretária</SelectItem>
-                              <SelectItem value="profissional" className="font-black text-[10px] uppercase">Profissional</SelectItem>
-                            </SelectContent>
+                {/* VISUALIZAÇÃO MOBILE (CARDS) */}
+                <div className="md:hidden divide-y divide-gray-100">
+                  {usuarios.map((user) => (
+                    <div key={user.id} className="p-5 space-y-4">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-2xl flex items-center justify-center font-black text-white uppercase text-sm shadow-md" style={{ backgroundColor: user.cor || '#3b82f6' }}>
+                          {user.nome?.substring(0, 2)}
+                        </div>
+                        <div className="flex flex-col text-left flex-1 min-w-0">
+                          <span className="font-black text-gray-800 uppercase text-sm truncate">{user.nome}</span>
+                          <span className="text-[10px] text-gray-400 truncate">{user.email}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-gray-50 p-3 rounded-xl flex flex-col gap-1">
+                          <label className="text-[8px] font-black text-gray-400 uppercase">Cor da Agenda</label>
+                          <div className="flex items-center gap-2">
+                            <input type="color" value={user.cor || '#3b82f6'} onChange={(e) => handleMudarCor(user.id, e.target.value)} className="w-6 h-6 rounded-md border-none" />
+                            <span className="text-[9px] font-mono font-bold text-gray-500">{user.cor || '#3B82F6'}</span>
+                          </div>
+                        </div>
+                        <div className="bg-gray-50 p-3 rounded-xl flex flex-col gap-1">
+                          <label className="text-[8px] font-black text-gray-400 uppercase">Nível</label>
+                          <Select disabled={atualizandoId === user.id} value={user.role || 'profissional'} onValueChange={(val) => handleMudarRole(user.id, val)}>
+                            <SelectTrigger className="border-none h-6 p-0 bg-transparent font-black text-[10px] uppercase shadow-none"><SelectValue /></SelectTrigger>
+                            <SelectContent><SelectItem value="admin">Admin</SelectItem><SelectItem value="secretaria">Secretária</SelectItem><SelectItem value="profissional">Profissional</SelectItem></SelectContent>
                           </Select>
                         </div>
-                      </td>
+                      </div>
 
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-1">
-                          <button
-                            onClick={() => handleResetSenha(user.email)}
-                            className="p-2.5 text-gray-300 hover:text-orange-500 hover:bg-orange-50 rounded-full transition-all"
-                            title="Enviar E-mail de Recuperação"
-                          >
-                            <KeyRound size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleExcluirUsuario(user.id, user.nome)}
-                            className="p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
-                            title="Remover Acesso"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                      <div className="flex gap-2">
+                        <Button onClick={() => handleResetSenha(user.email)} variant="outline" className="flex-1 h-10 rounded-xl text-[9px] font-black uppercase border-orange-100 text-orange-600">
+                          <KeyRound size={14} className="mr-2"/> Reset Senha
+                        </Button>
+                        <Button onClick={() => handleExcluirUsuario(user.id, user.nome)} variant="outline" className="h-10 w-12 rounded-xl border-red-100 text-red-500">
+                          <Trash2 size={16}/>
+                        </Button>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

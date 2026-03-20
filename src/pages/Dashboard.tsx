@@ -82,6 +82,7 @@ export function Dashboard() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [nomeLogado, setNomeLogado] = useState<string>(""); 
   const [isGestorSeguro, setIsGestorSeguro] = useState(false);
+  const [meuPerfil, setMeuPerfil] = useState<any>(null); // Injeção de permissões unitárias
   
   const sigCanvas = useRef<SignatureCanvas>(null);
   
@@ -117,13 +118,14 @@ export function Dashboard() {
         const emailAutenticado = user.email?.toLowerCase().trim();
         setUserEmail(emailAutenticado ?? null);
 
-        const meuPerfil = todosPerfis.find(p => p.email?.toLowerCase().trim() === emailAutenticado);
+        const perfilLogado = todosPerfis.find((p: any) => p.email?.toLowerCase().trim() === emailAutenticado);
         
-        if (meuPerfil) {
-          nomeParaFiltro = meuPerfil.nome || "";
+        if (perfilLogado) {
+          setMeuPerfil(perfilLogado); // Carrega as permissões do banco
+          nomeParaFiltro = perfilLogado.nome || "";
           setNomeLogado(nomeParaFiltro);
           
-          const roleNoBanco = (meuPerfil.role || "").toLowerCase().trim();
+          const roleNoBanco = (perfilLogado.role || "").toLowerCase().trim();
           
           if (
             emailAutenticado === 'romulochaves77@gmail.com' || 
@@ -139,7 +141,7 @@ export function Dashboard() {
       setIsGestorSeguro(ehGestorEfetivo);
 
       if (todosPerfis) {
-        const filtrados = todosPerfis.filter(p => {
+        const filtrados = todosPerfis.filter((p: any) => {
           const n = (p.nome || "").toLowerCase();
           const r = (p.role || "").toLowerCase();
           const proibidos = ['instituto', 'recepcao', 'recepção'];
@@ -154,14 +156,14 @@ export function Dashboard() {
           
           if (!ehGestorEfetivo && nomeParaFiltro) {
             const nomeLogadoNorm = nomeParaFiltro.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-            permitidos = agendamentos.filter(ag => {
+            permitidos = agendamentos.filter((ag: any) => {
               const nomeAgNorm = (ag.profissional_nome || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
               return nomeAgNorm === nomeLogadoNorm;
             });
           }
 
-          const eventosFormatados = permitidos.map(evt => {
-            const perfil = todosPerfis.find(p => p.nome?.trim().toLowerCase() === evt.profissional_nome?.trim().toLowerCase());
+          const eventosFormatados = permitidos.map((evt: any) => {
+            const perfil = todosPerfis.find((p: any) => p.nome?.trim().toLowerCase() === evt.profissional_nome?.trim().toLowerCase());
             return {
               id: evt.id,
               title: `${evt.paciente_nome} (S${evt.sala_id})`,
@@ -275,55 +277,38 @@ export function Dashboard() {
   };
 
   const agendamentosAmanha = events
-    .filter(e => isSameDay(new Date(e.start), addDays(new Date(), 1)))
-    .map(e => e.original)
-    .sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime());
+    .filter((e: any) => isSameDay(new Date(e.start), addDays(new Date(), 1)))
+    .map((e: any) => e.original)
+    .sort((a: any, b: any) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime());
+
+  // Define o horário de início e fim do calendário (Dia e Semana)
+  const minTime = new Date();
+  minTime.setHours(7, 0, 0); // Começa às 07:00 da manhã
+
+  const maxTime = new Date();
+  maxTime.setHours(20, 0, 0); // Termina às 20:00 (8 PM)
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
       <style>{`
-        /* --- ESTILOS ORIGINAIS INTEGRADOS --- */
         .rbc-agenda-view table.rbc-agenda-table tbody > tr > td { color: #1f2937 !important; font-weight: 800 !important; font-size: 14px !important; }
         .rbc-agenda-view { background-color: #ffffff; border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
         .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: #1e3a8a !important; font-weight: 800 !important; }
         .rbc-toolbar button { color: #1e3a8a !important; font-weight: bold; }
         .rbc-toolbar button.rbc-active { background-color: #1e3a8a !important; color: white !important; }
         .rbc-event-content { font-size: 13px !important; }
-        
-        @keyframes pulse-emerald {
-          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-          70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
+        @keyframes pulse-emerald { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
         .animate-priority { animation: pulse-emerald 2s infinite; }
-
-        .rbc-time-view { border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; box-sizing: border-box !important; }
-        .rbc-time-content { border-top: none !important; }
-        .rbc-timeslot-group { 
-          min-height: 48px !important; 
-          display: flex !important; 
-          flex-direction: column !important; 
-          justify-content: center !important; 
-          border-bottom: 1px solid #f3f4f6 !important; 
-          box-sizing: border-box !important; 
-        }
-        .rbc-label { 
-          display: block !important; height: 100% !important; padding: 0 8px !important; line-height: 48px !important; 
-          color: #9ca3af !important; font-weight: 700 !important; font-size: 11px !important; text-align: right !important; 
-        }
-
+        .rbc-time-view { border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
+        .rbc-timeslot-group { min-height: 48px !important; border-bottom: 1px solid #f3f4f6 !important; }
+        .rbc-label { color: #9ca3af !important; font-weight: 700 !important; font-size: 11px !important; }
         @media (max-width: 768px) {
           .rbc-toolbar { flex-direction: column; gap: 8px; height: auto !important; padding: 10px !important; }
-          .fixed.inset-0 .bg-white.rounded-\[2\.5rem\] { 
-            max-width: 100% !important; width: 100% !important; height: 100% !important; 
-            max-height: 100% !important; border-radius: 0 !important; margin: 0 !important; 
-            padding-top: env(safe-area-inset-top, 20px) !important;
-          }
+          .fixed.inset-0 .bg-white.rounded-\[2\.5rem\] { max-width: 100% !important; width: 100% !important; height: 100% !important; border-radius: 0 !important; margin: 0 !important; padding-top: env(safe-area-inset-top, 20px) !important; }
           .sigCanvas { width: 100% !important; height: 120px !important; }
         }
       `}</style>
 
-      {/* HEADER CORRIGIDO COM SAFE AREA IPHONE */}
       <header className="bg-white border-b px-6 pb-3 flex justify-between items-center shadow-sm z-20 gap-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] min-h-[calc(80px+env(safe-area-inset-top,0px))]">
         <div className="flex items-center gap-3 shrink-0">
           <img src={logoSer2} className="w-12 h-12 object-contain" alt="SerClin" />
@@ -335,70 +320,62 @@ export function Dashboard() {
 
         <div className="hidden md:flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full border border-blue-100">
           <User size={16} className="text-blue-600" />
-          <span className="text-[11px] font-black text-blue-700 uppercase tracking-tight">
-            Olá, {nomeLogado || 'Colaborador'}
-          </span>
+          <span className="text-[11px] font-black text-blue-700 uppercase tracking-tight">Olá, {nomeLogado || 'Colaborador'}</span>
         </div>
 
-        <div className="flex gap-1.5 items-center">
-          {isGestorSeguro && (
+        <div className="flex gap-1.5 items-center menu-icones-mobile">
+          
+          {userEmail === 'romulochaves77@gmail.com' && (
+            <Button variant="outline" size="icon" onClick={() => navigate('/sistema/permissoes')} className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-full h-9 w-9" title="Chaves"><Shield size={18}/></Button>
+          )}
+
+          {meuPerfil?.permissao_confirmacao_amanha && (
+            <Button onClick={() => setIsConfirmacaoAmanhaOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-5 h-9 mr-2 shadow-lg relative transition-all">
+              <Send size={14} /> Amanhã
+              {agendamentosAmanha.length > 0 && <span className="ml-1 bg-white text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black shadow-sm">{agendamentosAmanha.length}</span>}
+            </Button>
+          )}
+
+          {meuPerfil?.permissao_financeiro && (
             <>
-              <div className="hidden md:flex flex-1 max-w-xs">
-                <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
-                  <SelectTrigger className="bg-gray-50 border-none h-9 text-[10px] font-bold uppercase tracking-widest text-left">
-                    <Filter size={14} className="mr-2 text-blue-600"/><SelectValue placeholder="Filtrar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="geral">Agenda Geral</SelectItem>
-                    {equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={() => setIsConfirmacaoAmanhaOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-5 h-9 mr-2 shadow-lg relative transition-all">
-                <Send size={14} /> Amanhã
-                {agendamentosAmanha.length > 0 && (
-                  <span className="ml-1 bg-white text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black shadow-sm">
-                    {agendamentosAmanha.length}
-                  </span>
-                )}
-              </Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600"><Wallet size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500"><Receipt size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600"><Calculator size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600"><Scale size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600"><Clock size={20}/></Button>
             </>
           )}
 
-          {isGestorSeguro && (
-            <div className="hidden md:flex gap-1">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600" title="Financeiro"><Wallet size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500" title="Despesas"><Receipt size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600" title="Repasses"><Calculator size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600" title="Fechamento"><Scale size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600" title="Horários"><Clock size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Acessos"><Shield size={20}/></Button>
-            </div>
+          {meuPerfil?.permissao_acessos && (
+            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600"><Users size={20}/></Button>
           )}
 
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500" title="Relatórios"><BarChart3 size={20}/></Button>
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2" title="Pacientes"><Users size={20}/></Button>
+          {meuPerfil?.permissao_relatorios && (
+            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500"><BarChart3 size={20}/></Button>
+          )}
+
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2"><Users size={20}/></Button>
           
-          <Button onClick={() => { 
-            setEventoSelecionadoId(null); setBuscaPaciente(""); 
-            setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
-            setIsAgendamentoOpen(true); 
-          }} className="bg-blue-600 hover:bg-black text-white rounded-full h-9 px-4 text-xs font-black shadow-lg transition-all">
-            <Plus size={16} className="mr-1" /> AGENDAR
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} title="Sair"><LogOut size={18} /></Button>
+          {meuPerfil?.permissao_agendar && (
+            <Button onClick={() => { setEventoSelecionadoId(null); setBuscaPaciente(""); setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); setIsAgendamentoOpen(true); }} className="bg-blue-600 hover:bg-black text-white rounded-full h-9 px-4 text-xs font-black shadow-lg">
+              <Plus size={16} className="mr-1" /> AGENDAR
+            </Button>
+          )}
+
+          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }}><LogOut size={18} /></Button>
         </div>
       </header>
 
-      {/* ÁREA PRINCIPAL DO CALENDÁRIO */}
       <main className="flex-1 p-2 md:p-4 overflow-hidden text-left">
-        <Card className="h-full border-none shadow-sm bg-white overflow-hidden rounded-[2rem]">
+        <Card className="h-full border-none shadow-sm bg-white rounded-[2rem] overflow-hidden">
           <CardContent className="p-0 h-full">
             <Calendar 
               localizer={localizer} culture='pt-BR' messages={mensagensPortugues}
-              events={filtroProfissional === "geral" ? events : events.filter(e => e.original?.profissional_nome === filtroProfissional)} 
+              events={filtroProfissional === "geral" ? events : events.filter((e: any) => e.original?.profissional_nome === filtroProfissional)} 
               view={view} onView={setView} date={date} onNavigate={setDate} 
               views={['day', 'week', 'month', 'agenda']} 
+              min={minTime} 
+              max={maxTime} 
               components={{ event: EventoCustomizado }} 
               eventPropGetter={(event: any) => ({ style: { backgroundColor: event.color, color: 'white', border: 'none', borderRadius: '6px', opacity: event.original?.status === 'Falta' ? 0.5 : 1 } })}
               onSelectEvent={(e) => { 
@@ -429,7 +406,7 @@ export function Dashboard() {
               {agendamentosAmanha.length === 0 ? (
                 <div className="text-center py-20"><p className="text-gray-400 font-bold uppercase text-xs text-left">Nenhum agendamento para amanhã.</p></div>
               ) : (
-                agendamentosAmanha.map((ag, idx) => (
+                agendamentosAmanha.map((ag: any, idx: number) => (
                   <div key={idx} className="flex items-center justify-between p-5 bg-white rounded-3xl border border-gray-100 shadow-sm group">
                     <div className="flex items-center gap-5 text-left">
                       <div className="h-14 w-20 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-100"><span className="font-black text-[#1e3a8a]">{format(new Date(ag.data_inicio), "HH:mm")}</span></div>
@@ -490,7 +467,7 @@ export function Dashboard() {
 
               <div className="space-y-1"><label className="text-[12px] font-black text-gray-400 uppercase text-left">Paciente</label>
                 <div className="relative"><Input placeholder="Buscar..." className="bg-gray-50 border-none h-11 text-sm font-bold uppercase text-gray-700" value={buscaPaciente} onChange={(e) => setBuscaPaciente(e.target.value)} required />
-                {pacientesSugeridos.length > 0 && (<div className="absolute z-[110] w-full bg-white border shadow-xl rounded-xl mt-1 overflow-hidden">{pacientesSugeridos.map(p => (<button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: aplicarMascaraTelefone(p.telefone || '') }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}><span className="font-bold text-sm uppercase text-gray-700">{p.nome}</span></button>))}</div>)}</div>
+                {pacientesSugeridos.length > 0 && (<div className="absolute z-[110] w-full bg-white border shadow-xl rounded-xl mt-1 overflow-hidden">{pacientesSugeridos.map((p: any) => (<button key={p.id} type="button" className="w-full text-left p-3 hover:bg-blue-50 border-b flex flex-col" onClick={() => { setForm({ ...form, paciente_nome: p.nome, paciente_id: p.id, telefone: aplicarMascaraTelefone(p.telefone || '') }); setBuscaPaciente(p.nome); setPacientesSugeridos([]); }}><span className="font-bold text-sm uppercase text-gray-700">{p.nome}</span></button>))}</div>)}</div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -503,7 +480,7 @@ export function Dashboard() {
 
               <div className="space-y-1"><label className="text-[12px] font-black text-gray-400 uppercase text-left">Profissional Clínico</label>
                 <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required disabled={!isGestorSeguro}><SelectTrigger className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
-                <SelectContent className="z-[110] text-left">{isGestorSeguro ? equipe.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>) : <SelectItem value={nomeLogado}>{nomeLogado}</SelectItem>}</SelectContent></Select>
+                <SelectContent className="z-[110] text-left">{isGestorSeguro ? equipe.map((p: any) => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>) : <SelectItem value={nomeLogado}>{nomeLogado}</SelectItem>}</SelectContent></Select>
               </div>
 
               <div className="space-y-1"><label className="text-[12px] font-black text-gray-400 uppercase text-left">Horário/Data</label>
@@ -522,7 +499,11 @@ export function Dashboard() {
                 {eventoSelecionadoId && (<Button type="button" onClick={gerarComprovante} className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all"><FileText size={16} /> Gerar Atestado</Button>)}
                 <div className="flex gap-2">
                   {eventoSelecionadoId && (<Button type="button" variant="outline" onClick={handleExcluirAgendamento} className="px-5 border-red-200 text-red-500 hover:bg-red-50 h-12 rounded-2xl transition-all"><Trash2 size={20} /></Button>)}
-                  <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-black text-white font-black h-12 rounded-2xl shadow-xl uppercase text-xs transition-all">{loading ? <RefreshCw className="animate-spin" /> : 'Confirmar Agenda'}</Button>
+                  
+                  {/* TRAVA DE BOTÃO SALVAR (OBEDECE CHAVE) */}
+                  {meuPerfil?.permissao_agendar && (
+                    <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-black text-white font-black h-12 rounded-2xl shadow-xl uppercase text-xs transition-all">{loading ? <RefreshCw className="animate-spin" /> : 'Confirmar Agenda'}</Button>
+                  )}
                 </div>
               </div>
             </form>

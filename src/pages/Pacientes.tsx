@@ -15,7 +15,7 @@ import { usePerfil } from "@/hooks/usePerfil";
 import { format, differenceInDays, isSameDay, parseISO } from "date-fns";
 
 // --- UTILITÁRIOS PARA CORTE DE IMAGEM ---
-const createImage = (url: string): Promise<HTMLElement> =>
+const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();
     image.addEventListener('load', () => resolve(image));
@@ -24,7 +24,7 @@ const createImage = (url: string): Promise<HTMLElement> =>
   });
 
 async function getCroppedImg(imageSrc: string, pixelCrop: any): Promise<Blob | null> {
-  const image = await createImage(imageSrc) as HTMLImageElement;
+  const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
@@ -51,6 +51,7 @@ export function Pacientes() {
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [meuPerfil, setMeuPerfil] = useState<any>(null); // NOVO: Estado de controle unitário
   
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -70,6 +71,13 @@ export function Pacientes() {
   const fetchPacientes = async () => {
     setLoading(true);
     try {
+      // BUSCA PERFIL LOGADO PARA AS CHAVES UNITÁRIAS
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: pLogado } = await supabase.from('perfis').select('*').eq('email', user.email).single();
+        if (pLogado) setMeuPerfil(pLogado);
+      }
+
       const { data, error } = await supabase
         .from("pacientes")
         .select(`*, agendamentos (data_inicio)`)
@@ -174,92 +182,104 @@ export function Pacientes() {
   const inputClass = "flex w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium transition-all";
 
   return (
-    <div className="p-4 md:p-10 max-w-7xl mx-auto bg-gray-50 min-h-screen font-sans text-left text-gray-800">
-      <Button variant="ghost" onClick={() => navigate("/sistema")} className="gap-2 mb-4 font-bold uppercase text-[10px] text-gray-500 hover:bg-transparent tracking-widest">
-        <ArrowLeft size={16} /> Voltar ao Painel
-      </Button>
-
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
-        <div>
-          <h1 className="text-3xl font-black text-gray-800 uppercase tracking-tighter">Pacientes</h1>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Gestão de prontuários SerClin</p>
-        </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-80">
-            <Search className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
-            <Input placeholder="Buscar..." className="bg-white border-none shadow-sm h-12 pl-10 text-sm rounded-xl" value={busca} onChange={e => setBusca(e.target.value)} />
-          </div>
-          {(isAdmin || isSecretaria) && (
-            <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 font-black uppercase text-xs h-12 px-6 rounded-xl shadow-lg">
-              <Plus size={18} className="mr-1"/> Novo
+    <div className="bg-gray-50 min-h-screen font-sans text-left text-gray-800">
+      
+      {/* HEADER COM PROTEÇÃO PARA IPHONE E CHAVE DE SEGURANÇA */}
+      <header className="bg-white border-b px-4 md:px-10 shadow-sm sticky top-0 z-40 flex flex-col justify-center min-h-[calc(70px+var(--safe-top))] pt-[calc(var(--safe-top)+12px)]">
+        <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={() => navigate("/sistema")} className="p-2 -ml-2 text-gray-400 hover:bg-transparent">
+              <ArrowLeft size={24} />
             </Button>
-          )}
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black text-gray-800 uppercase tracking-tighter leading-none">Pacientes</h1>
+              <p className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Gestão SerClin</p>
+            </div>
+          </div>
+
+          <div className="flex gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input placeholder="Buscar..." className="bg-gray-50 border-none h-10 pl-9 text-xs rounded-xl" value={busca} onChange={e => setBusca(e.target.value)} />
+            </div>
+            
+            {/* TRAVA UNITÁRIA: NOVO PACIENTE ACOMPANHA A CHAVE DE AGENDAR (LÓGICA CLINICA) OU ADMIN */}
+            {(isAdmin || isSecretaria || meuPerfil?.permissao_agendar) && (
+              <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 font-black uppercase text-[10px] h-10 px-5 rounded-xl shadow-md">
+                <Plus size={16} className="mr-1"/> Novo
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
-        {pacientes.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()) || p.cpf?.includes(busca)).map((p) => {
-           const diasAusente = p.ultimaConsulta ? differenceInDays(new Date(), p.ultimaConsulta) : null;
-           const eAniversariante = p.data_nascimento && isSameDay(new Date(), parseISO(p.data_nascimento));
+      <main className="p-4 md:p-10 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+          {pacientes.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()) || p.cpf?.includes(busca)).map((p) => {
+             const diasAusente = p.ultimaConsulta ? differenceInDays(new Date(), p.ultimaConsulta) : null;
+             const eAniversariante = p.data_nascimento && isSameDay(new Date(), parseISO(p.data_nascimento));
 
-           return (
-            <Card key={p.id} className="border-none shadow-sm bg-white overflow-hidden rounded-[2rem] hover:shadow-md transition-all border border-gray-100">
-              <CardContent className="p-6 md:p-8">
-                <div className="flex gap-4 items-start mb-6">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 text-xl md:text-2xl font-black uppercase shrink-0 overflow-hidden border-2 border-white shadow-sm">
-                    {p.foto_url ? <img src={p.foto_url} className="w-full h-full object-cover" alt={p.nome} /> : p.nome.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-black text-gray-800 uppercase text-md md:text-lg leading-tight truncate mb-1">{p.nome}</h3>
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                        <span className="text-[9px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded uppercase">{p.convenio}</span>
-                        {eAniversariante && <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase flex items-center gap-1"><Cake size={10}/> Níver!</span>}
+             return (
+              <Card key={p.id} className="border-none shadow-sm bg-white overflow-hidden rounded-[2rem] hover:shadow-md transition-all border border-gray-100">
+                <CardContent className="p-6 md:p-8">
+                  <div className="flex gap-4 items-start mb-6">
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 text-xl md:text-2xl font-black uppercase shrink-0 overflow-hidden border-2 border-white shadow-sm">
+                      {p.foto_url ? <img src={p.foto_url} className="w-full h-full object-cover" alt={p.nome} /> : p.nome.charAt(0)}
                     </div>
-                    
-                    {p.telefone && (
-                      <button onClick={() => abrirWhatsApp(p.telefone, p.nome)} className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-[10px] font-black border border-green-100 hover:bg-green-600 hover:text-white transition-all">
-                        <MessageCircle size={12} className="fill-current" /> {p.telefone}
-                      </button>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-black text-gray-800 uppercase text-md md:text-lg leading-tight truncate mb-1">{p.nome}</h3>
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                          <span className="text-[9px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded uppercase">{p.convenio}</span>
+                          {eAniversariante && <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase flex items-center gap-1"><Cake size={10}/> Níver!</span>}
+                      </div>
+                      
+                      {p.telefone && (
+                        <button onClick={() => abrirWhatsApp(p.telefone, p.nome)} className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-[10px] font-black border border-green-100 hover:bg-green-600 hover:text-white transition-all">
+                          <MessageCircle size={12} className="fill-current" /> {p.telefone}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {diasAusente !== null && diasAusente >= 90 && (
+                     <div className="mb-4 bg-amber-50 border border-amber-100 p-3 rounded-xl flex items-center justify-between text-amber-700">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle size={16} />
+                          <span className="text-[9px] font-black uppercase">Ausente {diasAusente} dias</span>
+                        </div>
+                        <button className="text-[9px] font-black uppercase underline" onClick={() => abrirWhatsApp(p.telefone, p.nome)}>Chamar</button>
+                     </div>
+                  )}
+
+                  <div className="flex gap-2 pt-4 border-t border-gray-50">
+                    <Button variant="outline" className="flex-1 h-11 rounded-xl font-black uppercase text-[10px] border-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white transition-all shadow-sm" onClick={() => navigate(`/sistema/pacientes/${p.id}`)}>
+                      <FileText size={16} className="mr-1.5"/> Prontuário
+                    </Button>
+
+                    {/* TRAVA UNITÁRIA: O BOTÃO EDITAR APARECE PARA ADMINS, SECRETARIAS OU QUEM PODE EXCLUIR/EDITAR */}
+                    {(isAdmin || isSecretaria || meuPerfil?.permissao_excluir) && (
+                      <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl text-gray-300 hover:text-blue-600 hover:bg-blue-50" onClick={() => { 
+                        setForm({ ...p, anamnese: p.anamnese || "", observacoes: p.observacoes || "" }); 
+                        setPreviewUrl(p.foto_url); 
+                        setIsModalOpen(true); 
+                      }}>
+                        <Edit size={18}/>
+                      </Button>
                     )}
                   </div>
-                </div>
+                </CardContent>
+              </Card>
+             )
+          })}
+        </div>
+      </main>
 
-                {diasAusente !== null && diasAusente >= 90 && (
-                   <div className="mb-4 bg-amber-50 border border-amber-100 p-3 rounded-xl flex items-center justify-between text-amber-700">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle size={16} />
-                        <span className="text-[9px] font-black uppercase">Ausente {diasAusente} dias</span>
-                      </div>
-                      <button className="text-[9px] font-black uppercase underline" onClick={() => abrirWhatsApp(p.telefone, p.nome)}>Chamar</button>
-                   </div>
-                )}
-
-                <div className="flex gap-2 pt-4 border-t border-gray-50">
-                  <Button variant="outline" className="flex-1 h-11 rounded-xl font-black uppercase text-[10px] border-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white transition-all shadow-sm" onClick={() => navigate(`/sistema/pacientes/${p.id}`)}>
-                    <FileText size={16} className="mr-1.5"/> Prontuário
-                  </Button>
-                  {(isAdmin || isSecretaria) && (
-                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl text-gray-300 hover:text-blue-600 hover:bg-blue-50" onClick={() => { 
-                      setForm({ ...p, anamnese: p.anamnese || "", observacoes: p.observacoes || "" }); 
-                      setPreviewUrl(p.foto_url); 
-                      setIsModalOpen(true); 
-                    }}>
-                      <Edit size={18}/>
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-           )
-        })}
-      </div>
-
-      {/* MODAL ADAPTADO PARA MOBILE TELA CHEIA */}
+      {/* MODAL ADAPTADO PARA MOBILE TELA CHEIA E SAFE AREA */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center md:p-4 backdrop-blur-md">
           <div className="bg-white md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] overflow-hidden flex flex-col">
             {isCropping ? (
-              <div className="h-full flex flex-col bg-gray-900">
+              <div className="h-full flex flex-col bg-gray-900 pt-[var(--safe-top)]">
                 <div className="p-6 flex justify-between items-center text-white">
                   <h3 className="font-bold uppercase text-xs tracking-widest">Ajustar Foto</h3>
                   <X className="cursor-pointer" onClick={() => setIsCropping(false)} />
@@ -274,8 +294,8 @@ export function Pacientes() {
               </div>
             ) : (
               <>
-                <div className="bg-white px-6 md:px-8 py-5 flex justify-between items-center border-b sticky top-0 z-10">
-                  <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest">{form.id ? "Editar Registro" : "Novo Cadastro"}</h3>
+                <div className="bg-white px-6 md:px-8 py-5 flex justify-between items-center border-b sticky top-0 z-10 pt-[calc(var(--safe-top)+12px)]">
+                  <h3 className="font-black text-gray-800 uppercase text-xs md:text-sm tracking-widest">{form.id ? "Editar Registro" : "Novo Cadastro"}</h3>
                   <button onClick={limparModal} className="p-2 -mr-2 text-gray-400 hover:text-red-500"><X size={24}/></button>
                 </div>
 
@@ -308,7 +328,7 @@ export function Pacientes() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Telefone / WhatsApp</label>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Telefone</label>
                       <input value={form.telefone} onChange={handleTelefone} className={inputClass} placeholder="(00) 00000-0000" />
                     </div>
 
@@ -353,7 +373,7 @@ export function Pacientes() {
                       </div>
                     </div>
 
-                    <div className="md:col-span-2 pt-6 flex flex-col md:flex-row gap-3 mt-4 mb-8">
+                    <div className="md:col-span-2 pt-6 flex flex-col md:flex-row gap-3 mt-4 mb-20 md:mb-8">
                       <Button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-black uppercase tracking-widest h-14 rounded-2xl shadow-xl order-1 md:order-2">
                         {loading ? "Salvando..." : "Salvar Cadastro"}
                       </Button>
