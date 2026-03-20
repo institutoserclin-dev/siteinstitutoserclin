@@ -58,15 +58,22 @@ const mapearStatusParaBanco = (statusVisual: string) => {
   return 'Agendado';
 };
 
-// --- VISUAL DE PRESENÇA ORIGINAL ---
-const EventoCustomizado = ({ event }: any) => (
-  <div className="h-full w-full flex flex-col items-center justify-center text-center p-1 overflow-hidden">
-    <span className="text-white font-bold text-[13px] uppercase leading-tight truncate w-full px-1">
-      {event.title}
-    </span>
-    {(event.original?.status === 'Presenca' || event.original?.status === 'Presença') && <CheckCircle size={10} className="text-white mt-0.5" />}
-  </div>
-);
+// --- VISUAL SUPER CLEAN (CHECK NO INÍCIO E FALTA RISCADA) ---
+const EventoCustomizado = ({ event }: any) => {
+  const isPresenca = event.original?.status === 'Presenca' || event.original?.status === 'Presença';
+  const isFalta = event.original?.status === 'Falta';
+  
+  return (
+    <div className="h-full w-full flex items-center justify-start gap-1.5 px-1 overflow-hidden">
+      {isPresenca && (
+        <CheckCircle size={13} className="text-white shrink-0" strokeWidth={3} />
+      )}
+      <span className={`text-white font-bold text-[11px] uppercase leading-tight truncate text-left ${isFalta ? 'line-through opacity-75' : ''}`}>
+        {event.title}
+      </span>
+    </div>
+  );
+};
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -74,7 +81,7 @@ export function Dashboard() {
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [nomeLogado, setNomeLogado] = useState<string>(""); 
-  const [isGestorSeguro, setIsGestorSeguro] = useState(false); // INJEÇÃO: Trava Absoluta
+  const [isGestorSeguro, setIsGestorSeguro] = useState(false);
   
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [view, setView] = useState<View>(Views.WEEK);
@@ -93,7 +100,7 @@ export function Dashboard() {
     profissional: '', paciente_nome: '', paciente_id: null as number | null,
     telefone: '', sala: '1', inicio: '', duracao: '40', status: 'Agendado',
     assinatura_url: null as string | null,
-    valor_atendimento: "0.00",
+    valor_atendimento: "0,00",
     forma_pagamento: "Pix"
   });
 
@@ -115,13 +122,11 @@ export function Dashboard() {
         setUserEmail(user.email ?? null);
         if (user.email === 'romulochaves77@gmail.com') ehGestorDeFato = true;
 
-        // TRAVA DE IDENTIDADE: Busca o usuário real pelo ID ou Email diretamente no banco
         const meuPerfil = todosPerfis.find(p => p.id === user.id || p.email === user.email);
         if (meuPerfil) {
           meuNomeReal = meuPerfil.nome || "";
           setNomeLogado(meuNomeReal);
           
-          // Verifica o CARGO no banco (ignora hooks com bug)
           const cargo = (meuPerfil.cargo || "").toLowerCase();
           if (cargo.includes('admin') || cargo.includes('secretar') || cargo.includes('recep') || cargo.includes('gestor')) {
             ehGestorDeFato = true;
@@ -143,11 +148,9 @@ export function Dashboard() {
         const { data: agendamentos, error } = await supabase.from('agendamentos').select('*');
         if (!error && agendamentos) {
           
-          // --- TRAVA DE SEGURANÇA BLINDADA DA AGENDA ---
           let agendamentosPermitidos = agendamentos;
           
           if (!ehGestorDeFato) {
-            // Se NÃO for gestor provado pelo banco, CORTA A AGENDA DOS OUTROS!
             agendamentosPermitidos = agendamentos.filter(ag => {
               if (!meuNomeReal || !ag.profissional_nome) return false;
               return ag.profissional_nome.trim().toLowerCase() === meuNomeReal.trim().toLowerCase();
@@ -182,7 +185,6 @@ export function Dashboard() {
     pesquisar();
   }, [buscaPaciente]);
 
-  // --- MÁSCARAS ---
   const aplicarMascaraTelefone = (value: string) => {
     if (!value) return "";
     const apenasNumeros = value.replace(/\D/g, "");
@@ -286,7 +288,6 @@ export function Dashboard() {
           assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
       }
 
-      // Converte o valor limpo pro banco
       const valorString = form.valor_atendimento.toString();
       const valorLimpo = parseFloat(valorString.replace(/\./g, "").replace(",", "."));
 
@@ -336,7 +337,6 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* INJEÇÃO: Filtro só aparece se for gestor */}
         {isGestorSeguro && (
           <div className="flex-1 max-w-xs">
             <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
@@ -353,7 +353,6 @@ export function Dashboard() {
 
         <div className="flex gap-1.5 items-center">
           
-          {/* INJEÇÃO: Botão Confirmar Amanhã só para Gestão */}
           {isGestorSeguro && (
             <Button 
               onClick={() => setIsConfirmacaoAmanhaOpen(true)} 
@@ -369,7 +368,6 @@ export function Dashboard() {
             </Button>
           )}
 
-          {/* SEUS BOTÕES DE NAVEGAÇÃO ORIGINAIS */}
           {(souEuOAdmin || isSecretaria) && (
             <>
               <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600" title="Financeiro"><Wallet size={20}/></Button>
@@ -388,7 +386,7 @@ export function Dashboard() {
             setBuscaPaciente(""); 
             setForm({
               ...form, 
-              profissional: isGestorSeguro ? '' : nomeLogado, // Preenche automático para profissional comum
+              profissional: isGestorSeguro ? '' : nomeLogado, 
               paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix"
             }); 
             setIsAgendamentoOpen(true); 
@@ -409,9 +407,18 @@ export function Dashboard() {
               view={view} onView={setView} date={date} onNavigate={setDate} 
               views={['day', 'week', 'month', 'agenda']} 
               components={{ event: EventoCustomizado }} 
-              eventPropGetter={(event: any) => ({ 
-                style: { backgroundColor: event.color, color: 'white', border: 'none', borderRadius: '6px', opacity: (event.original?.status === 'Falta') ? 0.5 : 1 } 
-              })} 
+              eventPropGetter={(event: any) => {
+                const isFalta = event.original?.status === 'Falta';
+                return { 
+                  style: { 
+                    backgroundColor: event.color, 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '6px', 
+                    opacity: isFalta ? 0.5 : 1 // DEIXA OPACIDADE CAIR APENAS NA FALTA
+                  } 
+                } 
+              }} 
               onSelectEvent={(e) => { 
                 const evt = e.original; 
                 setEventoSelecionadoId(evt.id); setBuscaPaciente(evt.paciente_nome); 
@@ -491,7 +498,7 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* MODAL DE AGENDAMENTO (CABEÇALHO FIXO PARA NÃO CORTAR) */}
+      {/* MODAL DE AGENDAMENTO */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-2 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] max-h-[95vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100 my-auto">
@@ -593,7 +600,6 @@ export function Dashboard() {
 
               <div className="space-y-1">
                 <label className="text-[12px] font-black text-gray-400 uppercase">Profissional Clínico</label>
-                {/* INJEÇÃO: Trava o Select se não for Gestor */}
                 <Select value={form.profissional} onValueChange={(v) => setForm({...form, profissional: v})} required disabled={!isGestorSeguro}>
                   <SelectTrigger className="bg-gray-50 border-none h-11 font-bold text-sm text-gray-700"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                   <SelectContent className="z-[110]">
