@@ -64,25 +64,28 @@ export function Pacientes() {
     id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", 
     endereco: "", telefone: "", convenio: "Particular", foto_url: "",
     responsavel_nome: "", responsavel_cpf: "",
-    anamnese: "", observacoes: "" // CAMPOS RESTAURADOS NO ESTADO
+    anamnese: "", observacoes: ""
   });
 
   const fetchPacientes = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("pacientes")
-      .select(`*, agendamentos (data_inicio)`)
-      .order("nome", { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from("pacientes")
+        .select(`*, agendamentos (data_inicio)`)
+        .order("nome", { ascending: true });
 
-    if (!error && data) {
-      const processados = data.map(pac => {
-        const datas = pac.agendamentos?.map((a: any) => new Date(a.data_inicio)) || [];
-        const ultima = datas.length > 0 ? new Date(Math.max(...datas.map(d => d.getTime()))) : null;
-        return { ...pac, ultimaConsulta: ultima };
-      });
-      setPacientes(processados);
+      if (!error && data) {
+        const processados = data.map(pac => {
+          const datas = pac.agendamentos?.map((a: any) => new Date(a.data_inicio)) || [];
+          const ultima = datas.length > 0 ? new Date(Math.max(...datas.map(d => d.getTime()))) : null;
+          return { ...pac, ultimaConsulta: ultima };
+        });
+        setPacientes(processados);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { fetchPacientes(); }, []);
@@ -168,84 +171,80 @@ export function Pacientes() {
     setForm({id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", endereco: "", telefone: "", convenio: "Particular", foto_url: "", responsavel_nome: "", responsavel_cpf: "", anamnese: "", observacoes: ""});
   };
 
-  const inputClass = "flex w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium";
+  const inputClass = "flex w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium transition-all";
 
   return (
     <div className="p-4 md:p-10 max-w-7xl mx-auto bg-gray-50 min-h-screen font-sans text-left text-gray-800">
-      <Button variant="ghost" onClick={() => navigate("/sistema")} className="gap-2 mb-6 font-bold uppercase text-sm text-gray-500 hover:bg-transparent">
-        <ArrowLeft size={20} /> Voltar ao Painel
+      <Button variant="ghost" onClick={() => navigate("/sistema")} className="gap-2 mb-4 font-bold uppercase text-[10px] text-gray-500 hover:bg-transparent tracking-widest">
+        <ArrowLeft size={16} /> Voltar ao Painel
       </Button>
 
-      <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-800 uppercase tracking-tight">Pacientes</h1>
-          <p className="text-sm text-gray-400 font-bold uppercase tracking-widest mt-1">Instituto SerClin • Gestão Integrada</p>
+          <h1 className="text-3xl font-black text-gray-800 uppercase tracking-tighter">Pacientes</h1>
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Gestão de prontuários SerClin</p>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex gap-2 w-full md:w-auto">
           <div className="relative flex-1 md:w-80">
-            <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-            <Input placeholder="Buscar por nome ou CPF..." className="bg-white border-none shadow-sm h-12 pl-10 text-base" value={busca} onChange={e => setBusca(e.target.value)} />
+            <Search className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+            <Input placeholder="Buscar..." className="bg-white border-none shadow-sm h-12 pl-10 text-sm rounded-xl" value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
           {(isAdmin || isSecretaria) && (
-            <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 font-bold uppercase text-sm h-12 px-8 rounded-full shadow-lg">
-              <Plus size={20} className="mr-2"/> Novo
+            <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 font-black uppercase text-xs h-12 px-6 rounded-xl shadow-lg">
+              <Plus size={18} className="mr-1"/> Novo
             </Button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
         {pacientes.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()) || p.cpf?.includes(busca)).map((p) => {
            const diasAusente = p.ultimaConsulta ? differenceInDays(new Date(), p.ultimaConsulta) : null;
            const eAniversariante = p.data_nascimento && isSameDay(new Date(), parseISO(p.data_nascimento));
 
            return (
-            <Card key={p.id} className="border-none shadow-md bg-white overflow-hidden rounded-[2.5rem] hover:shadow-xl transition-all border border-gray-100">
-              <CardContent className="p-8">
-                <div className="flex gap-5 items-start mb-6">
-                  <div className="w-20 h-20 bg-blue-100 rounded-3xl flex items-center justify-center text-blue-600 text-2xl font-black uppercase shrink-0 overflow-hidden border-2 border-white shadow-sm">
+            <Card key={p.id} className="border-none shadow-sm bg-white overflow-hidden rounded-[2rem] hover:shadow-md transition-all border border-gray-100">
+              <CardContent className="p-6 md:p-8">
+                <div className="flex gap-4 items-start mb-6">
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 text-xl md:text-2xl font-black uppercase shrink-0 overflow-hidden border-2 border-white shadow-sm">
                     {p.foto_url ? <img src={p.foto_url} className="w-full h-full object-cover" alt={p.nome} /> : p.nome.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-800 uppercase text-lg leading-tight truncate mb-1">{p.nome}</h3>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                        <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded uppercase">{p.convenio}</span>
-                        {eAniversariante && <span className="text-[10px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase flex items-center gap-1"><Cake size={10}/> Níver Hoje!</span>}
+                    <h3 className="font-black text-gray-800 uppercase text-md md:text-lg leading-tight truncate mb-1">{p.nome}</h3>
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                        <span className="text-[9px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded uppercase">{p.convenio}</span>
+                        {eAniversariante && <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase flex items-center gap-1"><Cake size={10}/> Níver!</span>}
                     </div>
                     
                     {p.telefone && (
-                      <button onClick={() => abrirWhatsApp(p.telefone, p.nome)} className="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full text-xs font-bold border border-green-100 hover:bg-green-600 hover:text-white transition-all shadow-sm">
-                        <MessageCircle size={14} className="fill-current" /> {p.telefone}
+                      <button onClick={() => abrirWhatsApp(p.telefone, p.nome)} className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-[10px] font-black border border-green-100 hover:bg-green-600 hover:text-white transition-all">
+                        <MessageCircle size={12} className="fill-current" /> {p.telefone}
                       </button>
                     )}
                   </div>
                 </div>
 
                 {diasAusente !== null && diasAusente >= 90 && (
-                   <div className="mb-4 bg-amber-50 border border-amber-100 p-3 rounded-2xl flex items-center justify-between text-amber-700">
+                   <div className="mb-4 bg-amber-50 border border-amber-100 p-3 rounded-xl flex items-center justify-between text-amber-700">
                       <div className="flex items-center gap-2">
-                        <AlertTriangle size={18} />
-                        <span className="text-[10px] font-bold uppercase">Ausente há {diasAusente} dias</span>
+                        <AlertTriangle size={16} />
+                        <span className="text-[9px] font-black uppercase">Ausente {diasAusente} dias</span>
                       </div>
-                      <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase text-amber-600 hover:bg-amber-100" onClick={() => abrirWhatsApp(p.telefone, p.nome)}>Chamar</Button>
+                      <button className="text-[9px] font-black uppercase underline" onClick={() => abrirWhatsApp(p.telefone, p.nome)}>Chamar</button>
                    </div>
                 )}
 
-                <div className="flex gap-3 pt-6 border-t border-gray-100">
-                  <Button variant="outline" className="flex-1 h-12 rounded-2xl font-bold uppercase text-xs border-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white transition-all shadow-sm" onClick={() => navigate(`/sistema/pacientes/${p.id}`)}>
-                    <FileText size={18} className="mr-2"/> Prontuário
+                <div className="flex gap-2 pt-4 border-t border-gray-50">
+                  <Button variant="outline" className="flex-1 h-11 rounded-xl font-black uppercase text-[10px] border-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white transition-all shadow-sm" onClick={() => navigate(`/sistema/pacientes/${p.id}`)}>
+                    <FileText size={16} className="mr-1.5"/> Prontuário
                   </Button>
                   {(isAdmin || isSecretaria) && (
-                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl text-gray-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => { 
-                      setForm({
-                        ...p,
-                        anamnese: p.anamnese || "",
-                        observacoes: p.observacoes || ""
-                      }); 
+                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl text-gray-300 hover:text-blue-600 hover:bg-blue-50" onClick={() => { 
+                      setForm({ ...p, anamnese: p.anamnese || "", observacoes: p.observacoes || "" }); 
                       setPreviewUrl(p.foto_url); 
                       setIsModalOpen(true); 
                     }}>
-                      <Edit size={20}/>
+                      <Edit size={18}/>
                     </Button>
                   )}
                 </div>
@@ -255,39 +254,40 @@ export function Pacientes() {
         })}
       </div>
 
+      {/* MODAL ADAPTADO PARA MOBILE TELA CHEIA */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center md:p-4 backdrop-blur-md">
+          <div className="bg-white md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] overflow-hidden flex flex-col">
             {isCropping ? (
               <div className="h-full flex flex-col bg-gray-900">
                 <div className="p-6 flex justify-between items-center text-white">
-                  <h3 className="font-bold uppercase text-sm tracking-widest">Ajustar Foto</h3>
+                  <h3 className="font-bold uppercase text-xs tracking-widest">Ajustar Foto</h3>
                   <X className="cursor-pointer" onClick={() => setIsCropping(false)} />
                 </div>
-                <div className="relative flex-1 min-h-[400px]">
+                <div className="relative flex-1 min-h-[300px]">
                   <Cropper image={imageSrc || ""} crop={crop} zoom={zoom} aspect={1} cropShape="round" onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} />
                 </div>
                 <div className="p-8 bg-white space-y-6">
                   <input type="range" value={zoom} min={1} max={3} step={0.1} onChange={(e) => setZoom(Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-                  <Button onClick={confirmCrop} className="w-full bg-blue-600 text-white font-bold uppercase tracking-widest h-14 rounded-2xl shadow-xl text-base">Confirmar Foto</Button>
+                  <Button onClick={confirmCrop} className="w-full bg-blue-600 text-white font-black uppercase tracking-widest h-14 rounded-2xl shadow-xl">Confirmar Foto</Button>
                 </div>
               </div>
             ) : (
               <>
-                <div className="bg-gray-50 px-8 py-6 flex justify-between items-center border-b">
-                  <div className="flex items-center gap-4">
-                    <h3 className="font-black text-gray-800 uppercase text-base tracking-widest">{form.id ? "Editar Registro" : "Novo Cadastro"}</h3>
-                  </div>
-                  <X className="text-gray-400 cursor-pointer hover:text-red-500" size={28} onClick={limparModal} />
+                <div className="bg-white px-6 md:px-8 py-5 flex justify-between items-center border-b sticky top-0 z-10">
+                  <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest">{form.id ? "Editar Registro" : "Novo Cadastro"}</h3>
+                  <button onClick={limparModal} className="p-2 -mr-2 text-gray-400 hover:text-red-500"><X size={24}/></button>
                 </div>
-                <div className="overflow-y-auto p-8">
-                  <form onSubmit={handleSalvar} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="md:col-span-2 flex flex-col items-center mb-6">
+
+                <div className="overflow-y-auto p-6 md:p-8 flex-1 custom-scrollbar">
+                  <form onSubmit={handleSalvar} className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    
+                    <div className="md:col-span-2 flex flex-col items-center mb-4">
                       <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                        {previewUrl ? <img src={previewUrl} className="w-32 h-32 rounded-3xl object-cover border-4 border-blue-50 shadow-xl" alt="Preview" /> : (
-                          <div className="w-32 h-32 rounded-3xl bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300 group-hover:border-blue-400"><Camera className="text-gray-300" size={40}/></div>
+                        {previewUrl ? <img src={previewUrl} className="w-28 h-28 md:w-32 md:h-32 rounded-[2rem] object-cover border-4 border-blue-50 shadow-lg" alt="Preview" /> : (
+                          <div className="w-28 h-28 md:w-32 md:h-32 rounded-[2rem] bg-gray-50 flex items-center justify-center border-2 border-dashed border-gray-200 group-hover:border-blue-400 transition-all"><Camera className="text-gray-300" size={32}/></div>
                         )}
-                        <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-3 rounded-2xl shadow-lg"><ImageIcon size={18}/></div>
+                        <div className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-2.5 rounded-xl shadow-lg"><ImageIcon size={16}/></div>
                       </div>
                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={onFileChange} />
                     </div>
@@ -303,7 +303,7 @@ export function Pacientes() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Data de Nascimento</label>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Data Nasc.</label>
                       <input type="date" value={form.data_nascimento} onChange={e => setForm({...form, data_nascimento: e.target.value})} className={inputClass} />
                     </div>
 
@@ -315,61 +315,49 @@ export function Pacientes() {
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Convênio</label>
                       <Select value={form.convenio} onValueChange={v => setForm({...form, convenio: v})}>
-                        <SelectTrigger className="bg-white h-[50px] text-base"><SelectValue /></SelectTrigger>
-                        <SelectContent>{CONVENIOS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                        <SelectTrigger className="bg-white h-[52px] rounded-xl border-gray-200"><SelectValue /></SelectTrigger>
+                        <SelectContent>{CONVENIOS.map(c => <SelectItem key={c} value={c} className="font-bold uppercase text-xs">{c}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
 
                     <div className="md:col-span-2 space-y-1">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1"><MapPin size={12}/> Endereço Residencial</label>
-                      <input value={form.endereco} onChange={e => setForm({...form, endereco: e.target.value})} className={inputClass} placeholder="Rua, número, bairro..." />
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1"><MapPin size={12}/> Endereço</label>
+                      <input value={form.endereco} onChange={e => setForm({...form, endereco: e.target.value})} className={inputClass} placeholder="Rua, bairro..." />
                     </div>
 
                     <div className="md:col-span-2 pt-4 mt-2 border-t border-dashed">
-                       <p className="text-[11px] font-black text-blue-600 uppercase mb-4 flex items-center gap-2"><ShieldAlert size={14}/> Responsável Legal (Opcional)</p>
+                       <p className="text-[10px] font-black text-blue-600 uppercase mb-4 flex items-center gap-2 tracking-widest"><ShieldAlert size={14}/> Responsável Legal</p>
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black text-gray-400 uppercase">Nome do Responsável</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase">Nome Responsável</label>
                             <input value={form.responsavel_nome} onChange={e => setForm({...form, responsavel_nome: e.target.value})} className={inputClass} />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black text-gray-400 uppercase">CPF do Responsável</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase">CPF Responsável</label>
                             <input value={form.responsavel_cpf} onChange={e => setForm({...form, responsavel_cpf: e.target.value})} className={inputClass} />
                           </div>
                        </div>
                     </div>
 
-                    {/* SEÇÃO DE ANAMNESE E OBSERVAÇÕES RESTAURADA */}
                     <div className="md:col-span-2 space-y-4 pt-4 mt-2 border-t border-dashed">
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
                           <ClipboardList size={12}/> Anamnese / Histórico Clínico
                         </label>
-                        <textarea 
-                          rows={4}
-                          value={form.anamnese} 
-                          onChange={e => setForm({...form, anamnese: e.target.value})} 
-                          className={`${inputClass} min-h-[100px] resize-none py-2`} 
-                          placeholder="Alergias, medicações de uso contínuo, cirurgias anteriores..."
-                        />
+                        <textarea rows={4} value={form.anamnese} onChange={e => setForm({...form, anamnese: e.target.value})} className={`${inputClass} min-h-[120px] resize-none py-3`} placeholder="Alergias, medicações..." />
                       </div>
 
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Observações Internas</label>
-                        <input 
-                          value={form.observacoes} 
-                          onChange={e => setForm({...form, observacoes: e.target.value})} 
-                          className={inputClass} 
-                          placeholder="Notas administrativas ou lembretes..." 
-                        />
+                        <input value={form.observacoes} onChange={e => setForm({...form, observacoes: e.target.value})} className={inputClass} />
                       </div>
                     </div>
 
-                    <div className="md:col-span-2 pt-6 border-t flex gap-4 mt-4 mb-8">
-                      <Button type="button" variant="ghost" onClick={limparModal} className="flex-1 font-bold h-14 rounded-2xl uppercase">CANCELAR</Button>
-                      <Button type="submit" disabled={loading} className="flex-[2] bg-blue-600 text-white font-black uppercase tracking-widest h-14 rounded-2xl shadow-xl">
-                        {loading ? "SALVANDO..." : "SALVAR DADOS"}
+                    <div className="md:col-span-2 pt-6 flex flex-col md:flex-row gap-3 mt-4 mb-8">
+                      <Button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-black uppercase tracking-widest h-14 rounded-2xl shadow-xl order-1 md:order-2">
+                        {loading ? "Salvando..." : "Salvar Cadastro"}
                       </Button>
+                      <Button type="button" variant="ghost" onClick={limparModal} className="w-full font-black h-14 rounded-2xl uppercase text-[10px] tracking-widest text-gray-400 order-2 md:order-1">CANCELAR</Button>
                     </div>
                   </form>
                 </div>
