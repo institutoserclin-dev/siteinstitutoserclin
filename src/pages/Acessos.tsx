@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { supabase } from '@/lib/supabase';
-import { createClient } from "@supabase/supabase-js"; // INJEÇÃO: Import necessário para não deslogar o admin
+import { createClient } from "@supabase/supabase-js"; 
 import logoSerClin from "@/assets/ser2.png";
 
 export function Acessos() {
@@ -84,7 +84,6 @@ export function Acessos() {
     e.preventDefault();
     setLoading(true);
     try {
-      // INJEÇÃO: Cliente temporário para criar usuário sem derrubar a sua sessão
       const supabaseAdmin = createClient(
         import.meta.env.VITE_SUPABASE_URL,
         import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -100,14 +99,12 @@ export function Acessos() {
       if (authError) throw authError;
 
       if (authData.user) {
-        // INJEÇÃO: Salva em 'role' e 'cargo' para garantir que o Dashboard e o usePerfil funcionem
         await supabase.from("perfis").upsert({ 
           id: authData.user.id,
           nome: novoColaborador.nome, 
           email: novoColaborador.email,
           cor: novoColaborador.cor,
-          role: novoColaborador.role,
-          cargo: novoColaborador.role 
+          role: novoColaborador.role
         });
       }
 
@@ -121,22 +118,28 @@ export function Acessos() {
     }
   };
 
-  const handleAlterarCor = async (userId: string, novaCor: string) => {
-    await supabase.from("perfis").update({ cor: novaCor }).eq("id", userId);
-    setListaUsuarios(current => current.map(u => u.id === userId ? { ...u, cor: novaCor } : u));
-    toast.success("Cor atualizada!");
-  };
-
   const handleAlterarRole = async (userId: string, newRole: string) => {
-    // INJEÇÃO: Atualiza tanto role quanto cargo para sincronia total
-    await supabase.from("perfis").update({ 
-      role: newRole,
-      cargo: newRole 
-    }).eq("id", userId);
+    setLoading(true);
+    try {
+      // Atualiza apenas a coluna 'role' que existe no banco
+      const { error } = await supabase
+        .from("perfis")
+        .update({ role: newRole })
+        .eq("id", userId);
 
-    setListaUsuarios(current => current.map(u => u.id === userId ? { ...u, role: newRole, cargo: newRole } : u));
-    toast.success(`Cargo alterado para ${newRole}!`);
-    fetchEquipe();
+      if (error) throw error;
+
+      setListaUsuarios(current => 
+        current.map(u => u.id === userId ? { ...u, role: newRole } : u)
+      );
+      
+      toast.success(`Cargo alterado para ${newRole}!`);
+      fetchEquipe();
+    } catch (err: any) {
+      toast.error("Erro ao mudar cargo no banco de dados.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRedefinirSenha = async (email: string) => {
@@ -148,7 +151,7 @@ export function Acessos() {
   };
 
   const handleRemover = async (id: string, nome: string) => {
-    if (!confirm(`Remover acesso de ${nome}? Esta ação é irreversível no banco de dados.`)) return;
+    if (!confirm(`Remover acesso de ${nome}?`)) return;
     await supabase.from("perfis").delete().eq("id", id);
     toast.success("Acesso removido.");
     fetchEquipe();
@@ -205,8 +208,8 @@ export function Acessos() {
 
         <div className="space-y-4">
           <div className="flex items-center justify-between px-2">
-            <h3 className="font-bold text-[#1e3a8a] uppercase text-xs flex items-center gap-2"><Users size={16}/> Membros da Clínica ({listaUsuarios.length})</h3>
-            <Input placeholder="Buscar por nome ou e-mail..." value={filtro} onChange={e => setFiltro(e.target.value)} className="h-9 w-64 bg-white text-xs rounded-full border-gray-200 shadow-sm" />
+            <h3 className="font-bold text-[#1e3a8a] uppercase text-xs flex items-center gap-2"><Users size={16}/> Membros ({listaUsuarios.length})</h3>
+            <Input placeholder="Buscar..." value={filtro} onChange={e => setFiltro(e.target.value)} className="h-9 w-64 bg-white text-xs rounded-full border-gray-200 shadow-sm" />
           </div>
 
           <div className="grid grid-cols-1 gap-3">
@@ -226,9 +229,9 @@ export function Acessos() {
                 </div>
 
                 <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl">
-                  <button onClick={() => handleAlterarRole(u.id, 'profissional')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${u.role === 'profissional' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}>Profissional</button>
-                  <button onClick={() => handleAlterarRole(u.id, 'secretaria')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${u.role === 'secretaria' ? 'bg-slate-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}>Secretária</button>
-                  <button onClick={() => handleAlterarRole(u.id, 'admin')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${u.role === 'admin' ? 'bg-amber-500 text-white shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}>Admin</button>
+                  <button onClick={() => handleAlterarRole(u.id, 'profissional')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase ${u.role === 'profissional' ? 'bg-[#1e3a8a] text-white' : 'text-gray-400'}`}>Profissional</button>
+                  <button onClick={() => handleAlterarRole(u.id, 'secretaria')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase ${u.role === 'secretaria' ? 'bg-slate-600 text-white' : 'text-gray-400'}`}>Secretária</button>
+                  <button onClick={() => handleAlterarRole(u.id, 'admin')} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase ${u.role === 'admin' ? 'bg-amber-500 text-white' : 'text-gray-400'}`}>Admin</button>
                   <div className="w-px h-6 bg-gray-200 mx-1"></div>
                   <button onClick={() => handleRedefinirSenha(u.email)} className="text-gray-400 hover:text-blue-600 p-1.5" title="Redefinir Senha"><KeyRound size={18} /></button>
                   <button onClick={() => handleRemover(u.id, u.nome)} className="text-gray-400 hover:text-red-500 p-1.5" title="Excluir"><Trash2 size={18} /></button>

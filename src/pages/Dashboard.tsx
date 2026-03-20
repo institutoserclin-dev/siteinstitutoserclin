@@ -108,8 +108,6 @@ export function Dashboard() {
     fetchData();
   }, []);
 
-  const souEuOAdmin = isAdmin || userEmail === 'romulochaves77@gmail.com';
-
   const fetchData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -119,17 +117,20 @@ export function Dashboard() {
       let ehGestorDeFato = false;
 
       if (user && todosPerfis) {
-        setUserEmail(user.email ?? null);
-        if (user.email === 'romulochaves77@gmail.com') ehGestorDeFato = true;
+        const emailAtual = user.email?.toLowerCase();
+        setUserEmail(emailAtual ?? null);
+        
+        // Regra Master: Seu e-mail sempre vê tudo
+        if (emailAtual === 'romulochaves77@gmail.com') ehGestorDeFato = true;
 
-        const meuPerfil = todosPerfis.find(p => p.id === user.id || p.email === user.email);
+        const meuPerfil = todosPerfis.find(p => p.id === user.id || p.email?.toLowerCase() === emailAtual);
         if (meuPerfil) {
           meuNomeReal = meuPerfil.nome || "";
           setNomeLogado(meuNomeReal);
           
-          // INJEÇÃO: Normalização para garantir que Renata/Instituto entrem como Gestores
-          const cargoLimpo = (meuPerfil.role || meuPerfil.cargo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-          if (cargoLimpo.includes('admin') || cargoLimpo.includes('secretaria') || cargoLimpo.includes('gestor')) {
+          // Verifica se o cargo no banco indica gestão (Admin ou Secretária)
+          const cargoNoBanco = (meuPerfil.role || meuPerfil.cargo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          if (cargoNoBanco.includes('admin') || cargoNoBanco.includes('secretaria') || cargoNoBanco.includes('gestor')) {
             ehGestorDeFato = true;
           }
         }
@@ -138,20 +139,19 @@ export function Dashboard() {
       setIsGestorSeguro(ehGestorDeFato);
 
       if (todosPerfis) {
-        // INJEÇÃO: Permitir que perfis de gestão apareçam para agendar se necessário (removido Renata/Instituto da trava)
-        const listaNegra = ['recepcao', 'admin', 'recepção'];
+        // Na lista de "Dentistas", só tiramos quem é EXCLUSIVAMENTE recepção para não poluir
+        const listaNegra = ['recepcao', 'recepção'];
         const filtrados = todosPerfis.filter(p => {
-          const n = (p.nome || "").toLowerCase();
           const c = (p.cargo || p.role || "").toLowerCase();
-          return !listaNegra.some(termo => n.includes(termo) || c.includes(termo));
+          return !listaNegra.some(termo => c.includes(termo));
         });
         setEquipe(filtrados);
 
         const { data: agendamentos, error } = await supabase.from('agendamentos').select('*');
         if (!error && agendamentos) {
-          
           let agendamentosPermitidos = agendamentos;
           
+          // Se não for gestor, Antonio só vê Antonio, Rayca só vê Rayca
           if (!ehGestorDeFato) {
             agendamentosPermitidos = agendamentos.filter(ag => {
               if (!meuNomeReal || !ag.profissional_nome) return false;
@@ -370,7 +370,7 @@ export function Dashboard() {
             </Button>
           )}
 
-          {(souEuOAdmin || isSecretaria) && (
+          {(isAdmin || isSecretaria) && (
             <>
               <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600" title="Financeiro"><Wallet size={20}/></Button>
               <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500" title="Despesas"><Receipt size={20}/></Button>
@@ -379,8 +379,8 @@ export function Dashboard() {
             </>
           )}
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500" title="Relatórios"><BarChart3 size={20}/></Button>
-          {(souEuOAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600" title="Horários"><Clock size={20}/></Button>}
-          {souEuOAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Acessos"><Shield size={20}/></Button>}
+          {(isAdmin || isSecretaria) && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600" title="Horários"><Clock size={20}/></Button>}
+          {isAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600" title="Acessos"><Shield size={20}/></Button>}
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 mr-2" title="Pacientes"><Users size={20}/></Button>
           
           <Button onClick={() => { 

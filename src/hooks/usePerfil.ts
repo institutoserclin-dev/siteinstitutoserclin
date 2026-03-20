@@ -13,13 +13,15 @@ export function usePerfil() {
         if (user) {
           const { data, error } = await supabase
             .from('perfis')
-            .select('role, email')
+            .select('role, email, cargo')
             .eq('id', user.id)
             .single();
 
           if (!error && data) {
-            // Limpeza rigorosa: remove acentos e espaços
-            const roleLimpa = data.role?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() || 'profissional';
+            // Normaliza o cargo vindo de 'role' ou 'cargo' para evitar falhas por acento
+            const cargoBruto = data.role || data.cargo || 'profissional';
+            const roleLimpa = cargoBruto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            
             setPerfil({
               role: roleLimpa,
               email: data.email?.toLowerCase() || user.email?.toLowerCase() || ''
@@ -40,7 +42,6 @@ export function usePerfil() {
   const role = perfil?.role || 'profissional';
   const email = perfil?.email || '';
 
-  // Definições claras de poder
   const isAdmin = role.includes('admin') || email === 'romulochaves77@gmail.com';
   const isSecretaria = role.includes('secretaria') || role.includes('recep');
   
@@ -49,8 +50,6 @@ export function usePerfil() {
     loading, 
     isAdmin,
     isSecretaria,
-    isProfissional: !isAdmin && !isSecretaria,
-    // Ver tudo: Se for admin OU secretaria
-    podeVerTudo: isAdmin || isSecretaria 
+    isGestorSeguro: isAdmin || isSecretaria 
   };
 }
