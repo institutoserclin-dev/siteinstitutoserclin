@@ -7,8 +7,8 @@ import { format, parse, startOfWeek, getDay, addMinutes, addDays, isSameDay } fr
 import { ptBR } from 'date-fns/locale';
 import { 
   LogOut, Calendar as CalendarIcon, Plus, X, Trash2, 
-  FileText, BarChart3, Shield, Clock, Users, Filter, 
-  CheckCircle, RefreshCw, Wallet, Receipt, Calculator, Scale, MessageCircle, Send, User 
+  FileText, BarChart3, Shield, Clock, Users, 
+  CheckCircle, RefreshCw, Wallet, Receipt, Calculator, Scale, MessageCircle, Send, User, Menu, Filter
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,8 +22,8 @@ import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import QRCode from 'qrcode'; 
 
-import 'react-big-calendar/lib/css/react-big-calendar.css';
 import logoSer2 from "@/assets/ser2.png";
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 // --- CONFIGURAÇÃO DE TRADUÇÃO ---
 const locales = { 'pt-BR': ptBR };
@@ -82,7 +82,7 @@ export function Dashboard() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [nomeLogado, setNomeLogado] = useState<string>(""); 
   const [isGestorSeguro, setIsGestorSeguro] = useState(false);
-  const [meuPerfil, setMeuPerfil] = useState<any>(null); // Injeção de permissões unitárias
+  const [meuPerfil, setMeuPerfil] = useState<any>(null);
   
   const sigCanvas = useRef<SignatureCanvas>(null);
   
@@ -91,8 +91,12 @@ export function Dashboard() {
   const [events, setEvents] = useState<any[]>([]);
   const [equipe, setEquipe] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Modais e UI
   const [isAgendamentoOpen, setIsAgendamentoOpen] = useState(false);
   const [isConfirmacaoAmanhaOpen, setIsConfirmacaoAmanhaOpen] = useState(false);
+  const [isMenuMobileOpen, setIsMenuMobileOpen] = useState(false); // NOVO: Controle do Menu Lateral
+  
   const [eventoSelecionadoId, setEventoSelecionadoId] = useState<number | null>(null);
   const [filtroProfissional, setFiltroProfissional] = useState<string>("geral");
   const [buscaPaciente, setBuscaPaciente] = useState("");
@@ -121,7 +125,7 @@ export function Dashboard() {
         const perfilLogado = todosPerfis.find((p: any) => p.email?.toLowerCase().trim() === emailAutenticado);
         
         if (perfilLogado) {
-          setMeuPerfil(perfilLogado); // Carrega as permissões do banco
+          setMeuPerfil(perfilLogado);
           nomeParaFiltro = perfilLogado.nome || "";
           setNomeLogado(nomeParaFiltro);
           
@@ -164,11 +168,16 @@ export function Dashboard() {
 
           const eventosFormatados = permitidos.map((evt: any) => {
             const perfil = todosPerfis.find((p: any) => p.nome?.trim().toLowerCase() === evt.profissional_nome?.trim().toLowerCase());
+            
+            const dataInicio = new Date(evt.data_inicio);
+            let dataFim = evt.data_fim ? new Date(evt.data_fim) : addMinutes(dataInicio, parseInt(evt.duracao || '40'));
+            if (isNaN(dataFim.getTime())) { dataFim = addMinutes(dataInicio, 40); }
+
             return {
               id: evt.id,
               title: `${evt.paciente_nome} (S${evt.sala_id})`,
-              start: new Date(evt.data_inicio),
-              end: new Date(evt.data_fim),
+              start: dataInicio,
+              end: dataFim,
               color: perfil?.cor || '#1e3a8a',
               original: evt
             };
@@ -179,9 +188,7 @@ export function Dashboard() {
     } catch (err) { toast.error("Erro ao carregar dados."); }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   useEffect(() => {
     const pesquisar = async () => {
@@ -223,7 +230,7 @@ export function Dashboard() {
       const qrCodeDataUrl = await QRCode.toDataURL(urlValidacao);
       
       const doc = new jsPDF();
-      doc.addImage(logoSer2, 'PNG', 75, 10, 60, 40);
+      doc.addImage("/ser2.png", 'PNG', 75, 10, 60, 40);
       doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
       doc.text("ATESTADO DE COMPARECIMENTO", 105, 60, { align: "center" });
       const textoCorpo = `Declaramos para os devidos fins de comprovação que o(a) paciente ${form.paciente_nome.toUpperCase()} esteve presente no INSTITUTO SERCLIN para atendimento especializado no dia ${format(new Date(form.inicio), "dd/MM/yyyy")}. O atendimento teve início às ${format(new Date(form.inicio), "HH:mm")} sob a responsabilidade do(a) profissional ${form.profissional.toUpperCase()}.`;
@@ -281,7 +288,6 @@ export function Dashboard() {
     .map((e: any) => e.original)
     .sort((a: any, b: any) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime());
 
-  // --- LIMITES DE HORÁRIO PARA O CALENDÁRIO (07:00 às 20:00) ---
   const minTime = new Date(2024, 0, 1, 7, 0, 0); 
   const maxTime = new Date(2024, 0, 1, 20, 0, 0); 
 
@@ -294,15 +300,9 @@ export function Dashboard() {
         .rbc-toolbar button { color: #1e3a8a !important; font-weight: bold; }
         .rbc-toolbar button.rbc-active { background-color: #1e3a8a !important; color: white !important; }
         .rbc-event-content { font-size: 13px !important; }
-        @keyframes pulse-emerald { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
-        .animate-priority { animation: pulse-emerald 2s infinite; }
         .rbc-time-view { border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
         .rbc-timeslot-group { border-bottom: 1px solid #f3f4f6 !important; }
         .rbc-label { color: #9ca3af !important; font-weight: 700 !important; font-size: 11px !important; }
-        
-        /* Oculta a barra de rolagem no menu mobile */
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         @media (max-width: 768px) {
           .rbc-toolbar { flex-direction: column; gap: 8px; height: auto !important; padding: 10px !important; }
@@ -311,6 +311,7 @@ export function Dashboard() {
         }
       `}</style>
 
+      {/* HEADER PRINCIPAL */}
       <header className="bg-white border-b px-4 md:px-6 pb-2 md:pb-3 flex justify-between items-center shadow-sm z-20 gap-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] min-h-[calc(80px+env(safe-area-inset-top,0px))]">
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <img src={logoSer2} className="w-10 h-10 md:w-12 md:h-12 object-contain" alt="SerClin" />
@@ -320,14 +321,13 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="hidden md:flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full border border-blue-100">
-          <User size={16} className="text-blue-600" />
-          <span className="text-[11px] font-black text-blue-700 uppercase tracking-tight">Olá, {nomeLogado || 'Colaborador'}</span>
-        </div>
+        {/* CONTAINER DESKTOP (SOME NO MOBILE) */}
+        <div className="hidden md:flex gap-2 items-center py-1">
+          <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 mr-2">
+            <User size={16} className="text-blue-600" />
+            <span className="text-[11px] font-black text-blue-700 uppercase tracking-tight">Olá, {nomeLogado || 'Colaborador'}</span>
+          </div>
 
-        {/* CONTAINER DE ÍCONES ROLÁVEL NO MOBILE PARA NÃO FICAR APERTADO */}
-        <div className="flex gap-2 items-center overflow-x-auto hide-scrollbar shrink-0 py-1">
-          
           {userEmail === 'romulochaves77@gmail.com' && (
             <Button variant="outline" size="icon" onClick={() => navigate('/sistema/permissoes')} className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-full h-9 w-9 shrink-0" title="Chaves">
               <Shield size={18}/>
@@ -336,66 +336,155 @@ export function Dashboard() {
 
           {meuPerfil?.permissao_confirmacao_amanha && (
             <Button onClick={() => setIsConfirmacaoAmanhaOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-4 h-9 shadow-sm shrink-0 transition-all">
-              <Send size={14} /> <span className="hidden md:inline">Amanhã</span>
+              <Send size={14} /> Amanhã
               {agendamentosAmanha.length > 0 && <span className="ml-1 bg-white text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px] font-black">{agendamentosAmanha.length}</span>}
             </Button>
           )}
 
           {meuPerfil?.permissao_financeiro && (
             <>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600 shrink-0">
-                <Wallet size={20}/>
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500 shrink-0">
-                <Receipt size={20}/>
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600 shrink-0">
-                <Calculator size={20}/>
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600 shrink-0">
-                <Scale size={20}/>
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600 shrink-0">
-                <Clock size={20}/>
-              </Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600 shrink-0"><Wallet size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500 shrink-0"><Receipt size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600 shrink-0"><Calculator size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600 shrink-0"><Scale size={20}/></Button>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600 shrink-0"><Clock size={20}/></Button>
             </>
           )}
 
           {meuPerfil?.permissao_acessos && (
-            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600 shrink-0">
-              <Users size={20}/>
-            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600 shrink-0"><Users size={20}/></Button>
           )}
 
           {meuPerfil?.permissao_relatorios && (
-            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500 shrink-0">
-              <BarChart3 size={20}/>
-            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500 shrink-0"><BarChart3 size={20}/></Button>
           )}
 
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 shrink-0">
-            <Users size={20}/>
-          </Button>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 shrink-0"><Users size={20}/></Button>
           
-          {/* BOTÃO AGENDAR ORIGINAL (APARECE SÓ NO DESKTOP) */}
           {meuPerfil?.permissao_agendar && (
             <Button onClick={() => { 
-              setEventoSelecionadoId(null); 
-              setBuscaPaciente(""); 
+              setEventoSelecionadoId(null); setBuscaPaciente(""); 
               setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
               setIsAgendamentoOpen(true); 
-            }} className="hidden md:flex bg-blue-600 hover:bg-black text-white rounded-full h-9 px-4 text-xs font-black shadow-lg">
+            }} className="bg-blue-600 hover:bg-black text-white rounded-full h-9 px-4 text-xs font-black shadow-lg ml-2">
               <Plus size={16} className="mr-1" /> AGENDAR
             </Button>
           )}
 
-          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="shrink-0 text-gray-500">
+          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="shrink-0 text-gray-500 ml-2">
             <LogOut size={18} />
+          </Button>
+        </div>
+
+        {/* BOTÃO MENU MOBILE (SÓ APARECE NO CELULAR) */}
+        <div className="md:hidden flex items-center">
+          <Button variant="ghost" size="icon" onClick={() => setIsMenuMobileOpen(true)} className="text-[#1e3a8a]">
+            <Menu size={28} />
           </Button>
         </div>
       </header>
 
+      {/* OVERLAY E MENU LATERAL (GAVETA) NO MOBILE */}
+      {isMenuMobileOpen && (
+        <div className="md:hidden fixed inset-0 z-[100] bg-black/60 flex justify-end backdrop-blur-sm transition-opacity" onClick={() => setIsMenuMobileOpen(false)}>
+          {/* O Menu (Gaveta) desliza da direita para a esquerda */}
+          <div className="w-[80%] max-w-[300px] bg-white h-full shadow-2xl flex flex-col pt-[calc(env(safe-area-inset-top,0px)+16px)] animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
+            
+            <div className="flex justify-between items-center px-6 pb-6 border-b border-gray-100">
+              <div>
+                <span className="font-black text-[#1e3a8a] uppercase text-lg tracking-tighter block">Menu</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{nomeLogado || 'Colaborador'}</span>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setIsMenuMobileOpen(false)} className="text-gray-400 -mr-2"><X size={24} /></Button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 text-left hide-scrollbar flex flex-col">
+              
+              <div className="mb-2 px-2">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Ações Diárias</span>
+              </div>
+
+              {meuPerfil?.permissao_confirmacao_amanha && (
+                <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-700 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); setIsConfirmacaoAmanhaOpen(true); }}>
+                  <Send size={18} /> Confirmar Amanhã
+                  {agendamentosAmanha.length > 0 && <span className="ml-auto bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px]">{agendamentosAmanha.length}</span>}
+                </Button>
+              )}
+
+              <Button variant="ghost" className="w-full justify-start gap-4 text-blue-700 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/pacientes'); }}>
+                <Users size={18} /> Pacientes / Prontuários
+              </Button>
+
+              {meuPerfil?.permissao_financeiro && (
+                <>
+                  <div className="mt-6 mb-2 px-2 border-t pt-4">
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Financeiro & Caixa</span>
+                  </div>
+                  <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/planos'); }}><Wallet size={18} /> Controle de Planos</Button>
+                  <Button variant="ghost" className="w-full justify-start gap-4 text-red-500 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/despesas'); }}><Receipt size={18} /> Despesas e Custos</Button>
+                  <Button variant="ghost" className="w-full justify-start gap-4 text-blue-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/repasses'); }}><Calculator size={18} /> Repasses Médicos</Button>
+                  <Button variant="ghost" className="w-full justify-start gap-4 text-indigo-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/fechamento'); }}><Scale size={18} /> Fechamento de Caixa</Button>
+                </>
+              )}
+
+              <div className="mt-6 mb-2 px-2 border-t pt-4">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gestão da Clínica</span>
+              </div>
+
+              {meuPerfil?.permissao_financeiro && (
+                <Button variant="ghost" className="w-full justify-start gap-4 text-green-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/horarios'); }}><Clock size={18} /> Grade de Horários</Button>
+              )}
+
+              {meuPerfil?.permissao_relatorios && (
+                <Button variant="ghost" className="w-full justify-start gap-4 text-orange-500 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/relatorios'); }}><BarChart3 size={18} /> Relatórios Gerenciais</Button>
+              )}
+
+              {meuPerfil?.permissao_acessos && (
+                <Button variant="ghost" className="w-full justify-start gap-4 text-purple-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/acessos'); }}><Users size={18} /> Gestão de Acessos</Button>
+              )}
+
+              {userEmail === 'romulochaves77@gmail.com' && (
+                <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-600 h-12 rounded-xl font-bold uppercase text-[11px] bg-emerald-50" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/permissoes'); }}>
+                  <Shield size={18} /> Chaves de Segurança
+                </Button>
+              )}
+
+            </div>
+
+            <div className="p-4 border-t border-gray-100 pb-[calc(env(safe-area-inset-bottom,0px)+16px)]">
+              <Button onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="w-full bg-red-50 hover:bg-red-100 text-red-600 border-none font-black uppercase tracking-widest h-14 rounded-2xl flex items-center justify-center gap-3">
+                <LogOut size={18} /> Sair do Sistema
+              </Button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* CALENDÁRIO */}
       <main className="flex-1 p-2 md:p-4 overflow-hidden text-left flex flex-col relative">
+       {/* FILTRO DE PROFISSIONAIS (Aparece só para Rômulo, Renata e Instituto) */}
+        {isGestorSeguro && (
+          <div className="mb-3 flex justify-end z-10 shrink-0">
+            <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
+              <SelectTrigger className="bg-white border border-gray-100 text-[#1e3a8a] font-black h-11 text-xs rounded-2xl px-4 shadow-sm w-full md:w-[250px]">
+                <div className="flex items-center gap-2 uppercase tracking-widest">
+                  <Filter size={16} className="text-emerald-500" />
+                  <SelectValue placeholder="Filtrar Agenda" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="z-[100]">
+                <SelectItem value="geral" className="font-black uppercase text-xs text-blue-700">Visão Geral (Todos)</SelectItem>
+                {equipe.map((p: any) => (
+                  <SelectItem key={p.id} value={p.nome} className="font-bold uppercase text-xs text-gray-600">
+                    {p.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <Card className="flex-1 border-none shadow-sm bg-white rounded-[2rem] overflow-hidden flex flex-col">
           <CardContent className="p-0 flex-1 min-h-[500px]">
             <Calendar 
@@ -419,7 +508,7 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* FAB MOBILE - BOTÃO FLUTUANTE DE AGENDAR (APARECE SÓ NO CELULAR) */}
+        {/* FAB MOBILE - BOTÃO FLUTUANTE DE AGENDAR */}
         {meuPerfil?.permissao_agendar && (
           <button 
             onClick={() => { 
@@ -436,6 +525,7 @@ export function Dashboard() {
         )}
       </main>
 
+      {/* MODAIS (CONFIRMAR AMANHÃ E NOVO AGENDAMENTO) MANTIDOS INTACTOS AQUI... */}
       {/* MODAL DE CONFIRMAÇÃO DE AMANHÃ */}
       {isConfirmacaoAmanhaOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">

@@ -1,71 +1,106 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
+import { supabase } from './lib/supabase';
 
-// Componentes de Proteção
-import { PrivateRoute } from "@/components/PrivateRoute";
+// --- IMPORTAÇÃO DAS PÁGINAS ---
+import { Login } from './pages/Login';
+import { Dashboard } from './pages/Dashboard';
+import { Pacientes } from './pages/Pacientes';
+import { Permissoes } from './pages/Permissoes';
+import { Relatorios } from './pages/Relatorios';
+import { Horarios } from './pages/Horarios';
+import { Checkin } from './pages/Checkin';
+import { Prontuario } from './pages/Prontuario';
 
-// Páginas Públicas
-import Home from "@/pages/Home";
-import { Login } from "@/pages/Login";
-import { RedefinirSenha } from "@/pages/RedefinirSenha";
-import { Validar } from "@/pages/Validar";
-import Obrigado from "@/pages/Obrigado"; 
+// Importe as outras páginas aqui conforme for criando:
+// import { ValidarAtestado } from './pages/ValidarAtestado';
+// import { Planos } from './pages/Planos';
+// import { Despesas } from './pages/Despesas';
+// import { Repasses } from './pages/Repasses';
+// import { Fechamento } from './pages/Fechamento';
+// import { Acessos } from './pages/Acessos';
 
-// Páginas do Sistema (Privadas)
-import { Dashboard } from "@/pages/Dashboard";
-import { CadastroUsuario } from "@/pages/CadastroUsuario"; 
-import { Pacientes } from "@/pages/Pacientes"; 
-import { Prontuario } from "@/pages/Prontuario";
-import { Acessos } from "@/pages/Acessos"; 
-import { Horarios } from "@/pages/Horarios";
-import { Lembretes } from "@/pages/Lembretes";
-import { GestaoPermissoes } from "@/pages/GestaoPermissoes"; // <-- 1. IMPORTAÇÃO DA NOVA PÁGINA
+// --- COMPONENTE DE SEGURANÇA (ROTA PRIVADA) ---
+// Este componente impede que pessoas não logadas acessem a URL /sistema
+function PrivateRoute({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-// --- NOVAS PÁGINAS FINANCEIRAS ---
-import { Planos } from "@/pages/Planos";
-import { Despesas } from "@/pages/Despesas";
-import { Repasses } from "@/pages/Repasses";
-import { Fechamento } from "@/pages/Fechamento"; 
+  useEffect(() => {
+    // Verifica se tem alguém logado ao carregar a página
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    // Fica "escutando" se o usuário fez login ou logout
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="h-screen bg-gray-50 flex items-center justify-center font-black uppercase text-gray-400 tracking-widest text-xs">
+        Carregando SerClin...
+      </div>
+    );
+  }
+  
+  // Se não tem sessão, chuta o invasor de volta para a tela de Login
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
 
 function App() {
   return (
-    <TooltipProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Rotas Públicas */}
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/redefinir-senha" element={<RedefinirSenha />} />
-          <Route path="/validar/:id" element={<Validar />} />
-          <Route path="/obrigado" element={<Obrigado />} />
-
-          {/* Rotas Privadas (Sistema SerClin) */}
-          <Route path="/sistema" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-          
-          {/* Gestão e Equipe */}
-          <Route path="/sistema/lembretes" element={<PrivateRoute><Lembretes /></PrivateRoute>} />
-          <Route path="/sistema/horarios" element={<PrivateRoute><Horarios /></PrivateRoute>} />
-          <Route path="/sistema/acessos" element={<PrivateRoute><Acessos /></PrivateRoute>} />
-          <Route path="/sistema/cadastro" element={<PrivateRoute><CadastroUsuario /></PrivateRoute>} />
-          
-          {/* 2. NOVA ROTA DE GESTÃO DE PERMISSÕES UNITÁRIAS */}
-          <Route path="/sistema/permissoes" element={<PrivateRoute><GestaoPermissoes /></PrivateRoute>} />
-          
-          {/* Financeiro e Fechamento */}
-          <Route path="/sistema/planos" element={<PrivateRoute><Planos /></PrivateRoute>} />
-          <Route path="/sistema/despesas" element={<PrivateRoute><Despesas /></PrivateRoute>} />
-          <Route path="/sistema/repasses" element={<PrivateRoute><Repasses /></PrivateRoute>} />
-          <Route path="/sistema/fechamento" element={<PrivateRoute><Fechamento /></PrivateRoute>} />
-
-          {/* Pacientes e Prontuários */}
-          <Route path="/sistema/pacientes" element={<PrivateRoute><Pacientes /></PrivateRoute>} />
-          <Route path="/sistema/pacientes/:id" element={<PrivateRoute><Prontuario /></PrivateRoute>} />
-        </Routes>
+    <BrowserRouter>
+      {/* O Toaster é o componente que faz aquelas notificações bonitas (toast.success) aparecerem */}
+      <Toaster position="top-center" richColors />
+      
+      <Routes>
+        {/* ==========================================
+            ROTAS PÚBLICAS (Pacientes e Visitantes) 
+            ========================================== */}
+        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         
-        <Toaster position="top-right" />
-      </BrowserRouter>
-    </TooltipProvider>
+        {/* A Rota do Portal do Paciente (Onde a mágica acontece pelo celular deles) */}
+        <Route path="/checkin" element={<Checkin />} />
+        
+        {/* <Route path="/validar/:id" element={<ValidarAtestado />} /> */}
+
+
+        {/* ==========================================
+            ROTAS PRIVADAS (Gestão SerClin) 
+            ========================================== */}
+        <Route path="/sistema" element={ <PrivateRoute><Dashboard /></PrivateRoute> } />
+        <Route path="/sistema/pacientes" element={ <PrivateRoute><Pacientes /></PrivateRoute> } />
+        <Route path="/sistema/permissoes" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
+        <Route path="/sistema/relatorios" element={ <PrivateRoute><Relatorios /></PrivateRoute> } />
+        <Route path="/sistema/horarios" element={ <PrivateRoute><Horarios /></PrivateRoute> } />
+        
+        {/* ROTAS DE PRONTUÁRIO */}
+        <Route path="/sistema/pacientes/:id" element={ <PrivateRoute><Prontuario /></PrivateRoute> } />
+
+        {/* Rotas Futuras (Descomente quando o arquivo existir na pasta pages) */}
+        {/* <Route path="/sistema/despesas" element={ <PrivateRoute><Despesas /></PrivateRoute> } /> */}
+        {/* <Route path="/sistema/planos" element={ <PrivateRoute><Planos /></PrivateRoute> } /> */}
+        {/* <Route path="/sistema/repasses" element={ <PrivateRoute><Repasses /></PrivateRoute> } /> */}
+        {/* <Route path="/sistema/fechamento" element={ <PrivateRoute><Fechamento /></PrivateRoute> } /> */}
+        {/* <Route path="/sistema/acessos" element={ <PrivateRoute><Acessos /></PrivateRoute> } /> */}
+        
+        {/* Rota de fallback: Se digitar URL errada, volta pro login */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

@@ -51,7 +51,7 @@ export function Pacientes() {
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [meuPerfil, setMeuPerfil] = useState<any>(null); // NOVO: Estado de controle unitário
+  const [meuPerfil, setMeuPerfil] = useState<any>(null);
   
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -71,7 +71,6 @@ export function Pacientes() {
   const fetchPacientes = async () => {
     setLoading(true);
     try {
-      // BUSCA PERFIL LOGADO PARA AS CHAVES UNITÁRIAS
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: pLogado } = await supabase.from('perfis').select('*').eq('email', user.email).single();
@@ -184,7 +183,7 @@ export function Pacientes() {
   return (
     <div className="bg-gray-50 min-h-screen font-sans text-left text-gray-800">
       
-      {/* HEADER COM PROTEÇÃO PARA IPHONE E CHAVE DE SEGURANÇA */}
+      {/* HEADER */}
       <header className="bg-white border-b px-4 md:px-10 shadow-sm sticky top-0 z-40 flex flex-col justify-center min-h-[calc(70px+var(--safe-top))] pt-[calc(var(--safe-top)+12px)]">
         <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4">
           <div className="flex items-center gap-3">
@@ -203,7 +202,6 @@ export function Pacientes() {
               <Input placeholder="Buscar..." className="bg-gray-50 border-none h-10 pl-9 text-xs rounded-xl" value={busca} onChange={e => setBusca(e.target.value)} />
             </div>
             
-            {/* TRAVA UNITÁRIA: NOVO PACIENTE ACOMPANHA A CHAVE DE AGENDAR (LÓGICA CLINICA) OU ADMIN */}
             {(isAdmin || isSecretaria || meuPerfil?.permissao_agendar) && (
               <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 font-black uppercase text-[10px] h-10 px-5 rounded-xl shadow-md">
                 <Plus size={16} className="mr-1"/> Novo
@@ -256,16 +254,30 @@ export function Pacientes() {
                       <FileText size={16} className="mr-1.5"/> Prontuário
                     </Button>
 
-                    {/* TRAVA UNITÁRIA: O BOTÃO EDITAR APARECE PARA ADMINS, SECRETARIAS OU QUEM PODE EXCLUIR/EDITAR */}
                     {(isAdmin || isSecretaria || meuPerfil?.permissao_excluir) && (
-                      <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl text-gray-300 hover:text-blue-600 hover:bg-blue-50" onClick={() => { 
-                        setForm({ ...p, anamnese: p.anamnese || "", observacoes: p.observacoes || "" }); 
-                        setPreviewUrl(p.foto_url); 
-                        setIsModalOpen(true); 
-                      }}>
-                        <Edit size={18}/>
-                      </Button>
+                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl text-gray-300 hover:text-blue-600 hover:bg-blue-50" onClick={() => { 
+                    setForm({ 
+                     id: p.id, 
+                    nome: p.nome || "", 
+                    cpf: p.cpf || "", 
+                    data_nascimento: p.data_nascimento || "", 
+                    genero: p.genero || "Feminino", 
+                    endereco: p.endereco || "", 
+                    telefone: p.telefone || "", 
+                    convenio: p.convenio || "Particular", 
+                    foto_url: p.foto_url || "", 
+                    responsavel_nome: p.responsavel_nome || "", 
+                    responsavel_cpf: p.responsavel_cpf || "", 
+                    anamnese: p.anamnese || "", 
+                    observacoes: p.observacoes || "" 
+                    }); 
+                      setPreviewUrl(p.foto_url); 
+                      setIsModalOpen(true); 
+                     }}>
+                    <Edit size={18}/>
+                    </Button>
                     )}
+                    
                   </div>
                 </CardContent>
               </Card>
@@ -274,10 +286,10 @@ export function Pacientes() {
         </div>
       </main>
 
-      {/* MODAL ADAPTADO PARA MOBILE TELA CHEIA E SAFE AREA */}
+      {/* MODAL ADAPTADO PARA MOBILE TELA CHEIA */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center md:p-4 backdrop-blur-md">
-          <div className="bg-white md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl h-full md:h-[90vh] overflow-hidden flex flex-col">
             {isCropping ? (
               <div className="h-full flex flex-col bg-gray-900 pt-[var(--safe-top)]">
                 <div className="p-6 flex justify-between items-center text-white">
@@ -294,13 +306,15 @@ export function Pacientes() {
               </div>
             ) : (
               <>
-                <div className="bg-white px-6 md:px-8 py-5 flex justify-between items-center border-b sticky top-0 z-10 pt-[calc(var(--safe-top)+12px)]">
+                {/* CABEÇALHO DO MODAL */}
+                <div className="bg-white px-6 md:px-8 py-5 flex justify-between items-center border-b sticky top-0 z-10 pt-[calc(var(--safe-top)+12px)] shrink-0">
                   <h3 className="font-black text-gray-800 uppercase text-xs md:text-sm tracking-widest">{form.id ? "Editar Registro" : "Novo Cadastro"}</h3>
                   <button onClick={limparModal} className="p-2 -mr-2 text-gray-400 hover:text-red-500"><X size={24}/></button>
                 </div>
 
-                <div className="overflow-y-auto p-6 md:p-8 flex-1 custom-scrollbar">
-                  <form onSubmit={handleSalvar} className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                {/* ÁREA DE SCROLL DO FORMULÁRIO (CORRIGIDA) */}
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
+                  <form id="pacienteForm" onSubmit={handleSalvar} className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     
                     <div className="md:col-span-2 flex flex-col items-center mb-4">
                       <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
@@ -359,7 +373,7 @@ export function Pacientes() {
                        </div>
                     </div>
 
-                    <div className="md:col-span-2 space-y-4 pt-4 mt-2 border-t border-dashed">
+                    <div className="md:col-span-2 space-y-4 pt-4 mt-2 border-t border-dashed pb-6">
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
                           <ClipboardList size={12}/> Anamnese / Histórico Clínico
@@ -372,14 +386,17 @@ export function Pacientes() {
                         <input value={form.observacoes} onChange={e => setForm({...form, observacoes: e.target.value})} className={inputClass} />
                       </div>
                     </div>
-
-                    <div className="md:col-span-2 pt-6 flex flex-col md:flex-row gap-3 mt-4 mb-20 md:mb-8">
-                      <Button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-black uppercase tracking-widest h-14 rounded-2xl shadow-xl order-1 md:order-2">
-                        {loading ? "Salvando..." : "Salvar Cadastro"}
-                      </Button>
-                      <Button type="button" variant="ghost" onClick={limparModal} className="w-full font-black h-14 rounded-2xl uppercase text-[10px] tracking-widest text-gray-400 order-2 md:order-1">CANCELAR</Button>
-                    </div>
                   </form>
+                </div>
+
+                {/* RODAPÉ FIXO DO MODAL (EVITA QUE O BOTÃO SAIA ROLANDO) */}
+                <div className="bg-white border-t p-4 md:p-6 shrink-0 z-10 flex flex-col md:flex-row-reverse gap-3 pb-[calc(var(--safe-bottom)+16px)]">
+                  <Button type="submit" form="pacienteForm" disabled={loading} className="w-full md:w-auto bg-blue-600 text-white font-black uppercase tracking-widest h-14 px-8 rounded-2xl shadow-xl flex-1">
+                    {loading ? "Salvando..." : "Salvar Cadastro"}
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={limparModal} className="w-full md:w-auto font-black h-14 px-8 rounded-2xl uppercase text-[10px] tracking-widest text-gray-400">
+                    CANCELAR
+                  </Button>
                 </div>
               </>
             )}
