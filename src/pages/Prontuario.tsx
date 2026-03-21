@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 import { 
   ArrowLeft, User, Save, Edit, AlertCircle, 
   Paperclip, FileText, Trash2, 
   Calendar as CalendarIcon, X, RefreshCw, Clock,
-  FileEdit, ClipboardList, History 
+  FileEdit, ClipboardList, History, Brain, Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,9 +18,25 @@ import { format, addMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePerfil } from "@/hooks/usePerfil";
 
+// FUNÇÕES DE MÁSCARA E FORMATAÇÃO
 const formatarDataSegura = (data: string | null | undefined) => {
   if (!data) return "Data desconhecida";
   try { return format(new Date(data), "dd/MM/yyyy HH:mm", { locale: ptBR }); } catch (e) { return "Data inválida"; }
+};
+
+const formatarTelefone = (tel: string | null | undefined) => {
+  if (!tel) return "Não informado";
+  let v = tel.replace(/\D/g, "");
+  if (v.length === 11) return v.replace(/(\d{2})(\d)(\d{4})(\d{4})/, "($1) $2 $3-$4");
+  if (v.length === 10) return v.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+  return tel;
+};
+
+const formatarCPF = (cpf: string | null | undefined) => {
+  if (!cpf) return "Não informado";
+  let v = cpf.replace(/\D/g, "");
+  if (v.length === 11) return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  return cpf;
 };
 
 export function Prontuario() {
@@ -35,7 +53,7 @@ export function Prontuario() {
   const [resumoPresenca, setResumoPresenca] = useState({ presencas: 0, faltas: 0 });
   const [modoEdicao, setModoEdicao] = useState<string | null>(null);
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
-  const [meuPerfil, setMeuPerfil] = useState<any>(null); // CHAVES UNITÁRIAS
+  const [meuPerfil, setMeuPerfil] = useState<any>(null); 
   
   const [isAgendamentoOpen, setIsAgendamentoOpen] = useState(false);
   const [equipeClinica, setEquipeClinica] = useState<any[]>([]); 
@@ -58,6 +76,18 @@ export function Prontuario() {
     tipo: isSecretaria ? "Laudo" : "Sessão", 
     descricao: "" 
   });
+
+  // ESTADOS DO SMART FORM (LAUDO AUTOMÁTICO)
+  const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [formLaudo, setFormLaudo] = useState({
+    finalidade: "Delinear o perfil neuropsicológico diante das alterações de comportamento.",
+    demanda: "",
+    conclusao: "",
+    encaminhamentos: ""
+  });
+  const [testes, setTestes] = useState([
+    { id: 1, funcao: "Quociente Intelectual", nome: "SON-R 2½-7", percentil: "", classificacao: "", interpretacao: "" }
+  ]);
 
   const getCorProfissional = (nome: string) => {
     const prof = equipeClinica.find(p => p.nome === nome);
@@ -144,11 +174,11 @@ export function Prontuario() {
   };
 
   const handleSalvarRegistro = async () => {
-    if (!novoRegistro.descricao) return toast.warning("Descreva o atendimento.");
+    if (!novoRegistro.descricao && novoRegistro.tipo !== "Laudo Estruturado") return toast.warning("Descreva o atendimento.");
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      let nomeAutor = user?.email === 'romulochaves77@gmail.com' ? "Rômulo Chaves da Silva" : (user?.user_metadata?.full_name || "Profissional SerClin");
+      let nomeAutor = user?.email === 'romulochaves77@gmail.com' ? "Rômulo Chaves da Silva" : (meuPerfil?.nome || "Profissional SerClin");
       let arquivoUrl: string | null = null;
       let arquivoNome: string | null = null;
 
@@ -179,6 +209,96 @@ export function Prontuario() {
       setNovoRegistro({ tipo: isSecretaria ? "Laudo" : "Sessão", descricao: "" });
       setArquivoSelecionado(null); setModoEdicao(null); carregarDados();
     } catch (error) { toast.error("Erro ao salvar."); } finally { setLoading(false); }
+  };
+
+  // FUNÇÃO MÁGICA: GERA PDF E SALVA NO HISTÓRICO AUTOMATICAMENTE
+  const gerarESalvarLaudoPDF = async () => {
+    setGerandoPdf(true);
+    try {
+      const doc = new jsPDF();
+      const margemEsq = 20;
+      let y = 20;
+
+      // Monta PDF
+      doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(30, 58, 138);
+      doc.text("LAUDO PSICOLÓGICO – AVALIAÇÃO NEUROPSICOLÓGICA", 45, y);
+      y += 15;
+
+      doc.setFontSize(10); doc.text("1. IDENTIFICAÇÃO DO PROFISSIONAL", margemEsq, y); y += 7;
+      doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
+      doc.text(`Nome: ${meuPerfil?.nome || 'Profissional SerClin'}`, margemEsq, y); y += 6;
+      doc.text(`Registro/CRP: ${meuPerfil?.conselho || 'Não informado'}`, margemEsq, y); y += 10;
+
+      doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
+      doc.text("2. IDENTIFICAÇÃO DO PACIENTE", margemEsq, y); y += 7;
+      doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
+      doc.text(`Nome: ${paciente?.nome || ''}`, margemEsq, y); y += 6;
+      doc.text(`Data de Nascimento: ${paciente?.data_nascimento || ''}`, margemEsq, y); y += 6;
+      const finalidadeLines = doc.splitTextToSize(`Finalidade: ${formLaudo.finalidade}`, 170);
+      doc.text(finalidadeLines, margemEsq, y); y += (finalidadeLines.length * 6) + 10;
+
+      doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
+      doc.text("3. DESCRIÇÃO DA DEMANDA", margemEsq, y); y += 7;
+      doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
+      const demandaLines = doc.splitTextToSize(formLaudo.demanda || 'Nenhuma demanda descrita.', 170);
+      doc.text(demandaLines, margemEsq, y); y += (demandaLines.length * 6) + 10;
+
+      if (y > 230) { doc.addPage(); y = 20; }
+
+      doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
+      doc.text("4. INSTRUMENTOS E RESULTADOS", margemEsq, y); y += 5;
+      const tableData = testes.map(t => [t.funcao, t.nome, t.percentil, t.classificacao, t.interpretacao]);
+      
+      (doc as any).autoTable({
+        startY: y, head: [['Função Cognitiva', 'Teste', 'Percentil', 'Classificação', 'Interpretação']],
+        body: tableData, theme: 'grid', headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
+        styles: { fontSize: 8, cellPadding: 3 }, margin: { left: margemEsq, right: 20 }
+      });
+      y = (doc as any).lastAutoTable.finalY + 15;
+      if (y > 230) { doc.addPage(); y = 20; }
+
+      doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
+      doc.text("5. CONCLUSÃO DIAGNÓSTICA", margemEsq, y); y += 7;
+      doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
+      const conclusaoLines = doc.splitTextToSize(formLaudo.conclusao || 'Nenhuma conclusão descrita.', 170);
+      doc.text(conclusaoLines, margemEsq, y); y += (conclusaoLines.length * 6) + 10;
+
+      if (y > 230) { doc.addPage(); y = 20; }
+      doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
+      doc.text("6. ENCAMINHAMENTOS E CONDUTAS", margemEsq, y); y += 7;
+      doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
+      const encLines = doc.splitTextToSize(formLaudo.encaminhamentos || 'Nenhum encaminhamento sugerido.', 170);
+      doc.text(encLines, margemEsq, y); y += (encLines.length * 6) + 30;
+
+      if (y > 250) { doc.addPage(); y = 50; }
+      doc.setLineWidth(0.5); doc.line(70, y, 140, y); y += 5;
+      doc.setFont("helvetica", "bold"); doc.text(meuPerfil?.nome || 'Profissional SerClin', 105, y, { align: "center" });
+
+      // Transforma PDF em arquivo e faz Upload
+      const pdfBlob = doc.output('blob');
+      const nomeArquivo = `Laudo_${paciente?.nome?.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+      const fileNamePath = `${id}/${nomeArquivo}`;
+      
+      const { error: upErr } = await supabase.storage.from('documentos').upload(fileNamePath, pdfBlob);
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(fileNamePath);
+
+      // Salva no banco de dados como Prontuário
+      let nomeAutor = meuPerfil?.nome || "Profissional SerClin";
+      await supabase.from("prontuarios").insert([{
+        paciente_id: id, tipo_registro: "Laudo Neuropsicológico", descricao: "Laudo Neuropsicológico gerado e assinado digitalmente pelo sistema.",
+        profissional_nome: nomeAutor, historico: [], arquivo_url: publicUrl, arquivo_nome: nomeArquivo
+      }]);
+
+      await registrarLog("Gerou Laudo", "Laudo Estruturado em PDF criado e anexado ao prontuário.");
+      toast.success("Laudo gerado e salvo no histórico com sucesso!");
+      setNovoRegistro({...novoRegistro, tipo: 'Sessão'}); 
+      carregarDados();
+    } catch (error) {
+      toast.error("Erro ao gerar e salvar laudo.");
+    } finally {
+      setGerandoPdf(false);
+    }
   };
 
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
@@ -247,7 +367,7 @@ export function Prontuario() {
           </div>
         </div>
 
-        {/* CARD INFORMATIVO */}
+        {/* CARD INFORMATIVO COM MÁSCARA */}
         <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 md:gap-8 items-center">
           <div className="w-20 h-20 md:w-24 md:h-24 bg-blue-50 rounded-2xl md:rounded-3xl flex items-center justify-center text-[#1e3a8a] shadow-inner overflow-hidden border-2 border-white shrink-0">
             {paciente?.foto_url ? <img src={paciente.foto_url} className="w-full h-full object-cover" alt="Foto" /> : <User size={30} />}
@@ -257,7 +377,10 @@ export function Prontuario() {
               <h1 className="text-xl md:text-2xl font-black text-gray-800 uppercase leading-tight truncate">{paciente?.nome}</h1>
               <button onClick={() => setIsEditPacienteOpen(true)} className="text-gray-300 hover:text-blue-600 shrink-0"><Edit size={16}/></button>
             </div>
-            <p className="text-xs md:text-sm font-bold text-gray-400 mt-1 truncate">{paciente?.telefone} | {paciente?.convenio}</p>
+            {/* Máscara de Telefone e CPF aplicadas aqui */}
+            <p className="text-xs md:text-sm font-bold text-gray-400 mt-1 truncate">
+              Tel: {formatarTelefone(paciente?.telefone)} | CPF: {formatarCPF(paciente?.cpf)} | {paciente?.convenio}
+            </p>
           </div>
           <div className="flex gap-2 md:gap-3 text-center w-full md:w-auto justify-center">
             <div className="bg-green-50 px-3 md:px-5 py-2 rounded-xl md:rounded-2xl border border-green-100 flex-1 md:flex-none"><p className="text-lg md:text-xl font-black text-green-600">{resumoPresenca.presencas}</p><p className="text-[7px] md:text-[8px] font-black uppercase text-green-400 tracking-tighter">Presenças</p></div>
@@ -303,16 +426,73 @@ export function Prontuario() {
                 {modoEdicao && <X size={16} className="cursor-pointer" onClick={() => setModoEdicao(null)} />}
               </div>
               <CardContent className="p-4 md:p-6 space-y-4">
-                <select className="w-full rounded-xl border-none bg-gray-50 px-4 py-3 text-xs font-bold uppercase outline-none" value={novoRegistro.tipo} onChange={e => setNovoRegistro({...novoRegistro, tipo: e.target.value})}><option value="Sessão">Sessão</option><option value="Laudo">Laudo / PDF</option><option value="Avaliação">Avaliação</option></select>
-                <textarea className="w-full rounded-xl border-none bg-gray-50 px-4 py-3 text-sm min-h-[120px] md:min-h-[180px] outline-none resize-none" placeholder="Relato clínico..." value={novoRegistro.descricao} onChange={e => setNovoRegistro({...novoRegistro, descricao: e.target.value})} />
-                <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full border-dashed border-2 text-[9px] md:text-[10px] font-black uppercase h-11 md:h-12"><Paperclip size={16} className="mr-2" /> {arquivoSelecionado ? arquivoSelecionado.name : "Anexar PDF"}</Button>
-                <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => setArquivoSelecionado(e.target.files?.[0] || null)} />
-                <Button onClick={handleSalvarRegistro} className={`w-full text-white font-black uppercase text-xs h-11 md:h-12 rounded-xl shadow-lg ${modoEdicao ? 'bg-amber-600' : 'bg-[#1e3a8a]'}`}><Save size={18} className="mr-2"/> {modoEdicao ? 'Atualizar' : 'Salvar'}</Button>
+                <select className="w-full rounded-xl border-none bg-gray-50 px-4 py-3 text-xs font-bold uppercase outline-none" value={novoRegistro.tipo} onChange={e => setNovoRegistro({...novoRegistro, tipo: e.target.value})}>
+                  <option value="Sessão">Sessão / Evolução</option>
+                  <option value="Laudo Estruturado">Laudo Estruturado (PDF)</option>
+                  <option value="Avaliação">Avaliação</option>
+                  <option value="Anexo">Apenas Anexo PDF</option>
+                </select>
+
+                {/* SE FOR LAUDO ESTRUTURADO, MOSTRA O SMART FORM AQUI DENTRO */}
+                {novoRegistro.tipo === "Laudo Estruturado" ? (
+                  <div className="space-y-4 bg-blue-50/30 p-4 rounded-xl border border-blue-100/50">
+                    <div>
+                      <label className="text-[9px] font-black text-gray-400 uppercase">Finalidade</label>
+                      <Input className="h-8 text-xs font-medium bg-white" value={formLaudo.finalidade} onChange={e => setFormLaudo({...formLaudo, finalidade: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-gray-400 uppercase">Demanda</label>
+                      <textarea className="w-full rounded-lg bg-white p-2 text-xs border border-gray-200 resize-none h-20" value={formLaudo.demanda} onChange={e => setFormLaudo({...formLaudo, demanda: e.target.value})} />
+                    </div>
+                    
+                    <div className="border-t border-blue-100 pt-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="text-[9px] font-black text-[#1e3a8a] uppercase flex gap-1 items-center"><Brain size={12}/> Testes</label>
+                        <button onClick={() => setTestes([...testes, { id: Date.now(), funcao: "", nome: "", percentil: "", classificacao: "", interpretacao: "" }])} className="text-[9px] font-black text-blue-600 uppercase flex items-center gap-1 bg-blue-100 px-2 py-1 rounded-md"><Plus size={10}/> Adicionar</button>
+                      </div>
+                      <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
+                        {testes.map(t => (
+                          <div key={t.id} className="bg-white p-2 rounded-lg border border-gray-200 relative">
+                            <button onClick={() => setTestes(testes.filter(item => item.id !== t.id))} className="absolute top-1 right-1 text-red-400 hover:text-red-600"><Trash2 size={12}/></button>
+                            <div className="grid grid-cols-2 gap-1 mb-1 pr-4">
+                              <Input placeholder="Função" className="h-6 text-[10px]" value={t.funcao} onChange={e => setTestes(testes.map(item => item.id === t.id ? {...item, funcao: e.target.value} : item))} />
+                              <Input placeholder="Teste" className="h-6 text-[10px]" value={t.nome} onChange={e => setTestes(testes.map(item => item.id === t.id ? {...item, nome: e.target.value} : item))} />
+                              <Input placeholder="Percentil" className="h-6 text-[10px]" value={t.percentil} onChange={e => setTestes(testes.map(item => item.id === t.id ? {...item, percentil: e.target.value} : item))} />
+                              <Input placeholder="Classificação" className="h-6 text-[10px]" value={t.classificacao} onChange={e => setTestes(testes.map(item => item.id === t.id ? {...item, classificacao: e.target.value} : item))} />
+                            </div>
+                            <Input placeholder="Interpretação" className="h-6 text-[10px] w-full" value={t.interpretacao} onChange={e => setTestes(testes.map(item => item.id === t.id ? {...item, interpretacao: e.target.value} : item))} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] font-black text-gray-400 uppercase">Conclusão</label>
+                      <textarea className="w-full rounded-lg bg-white p-2 text-xs border border-gray-200 resize-none h-16" value={formLaudo.conclusao} onChange={e => setFormLaudo({...formLaudo, conclusao: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-gray-400 uppercase">Encaminhamentos</label>
+                      <textarea className="w-full rounded-lg bg-white p-2 text-xs border border-gray-200 resize-none h-16" value={formLaudo.encaminhamentos} onChange={e => setFormLaudo({...formLaudo, encaminhamentos: e.target.value})} />
+                    </div>
+
+                    <Button onClick={gerarESalvarLaudoPDF} disabled={gerandoPdf} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase text-xs h-12 rounded-xl shadow-lg mt-2">
+                      <FileText size={16} className="mr-2"/> {gerandoPdf ? "Processando..." : "Gerar Laudo e Salvar"}
+                    </Button>
+                  </div>
+                ) : (
+                  /* SE NÃO FOR LAUDO, MOSTRA O FORMULÁRIO NORMAL */
+                  <>
+                    <textarea className="w-full rounded-xl border-none bg-gray-50 px-4 py-3 text-sm min-h-[120px] md:min-h-[180px] outline-none resize-none" placeholder="Relato clínico..." value={novoRegistro.descricao} onChange={e => setNovoRegistro({...novoRegistro, descricao: e.target.value})} />
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full border-dashed border-2 text-[9px] md:text-[10px] font-black uppercase h-11 md:h-12"><Paperclip size={16} className="mr-2" /> {arquivoSelecionado ? arquivoSelecionado.name : "Anexar PDF / Imagem"}</Button>
+                    <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => setArquivoSelecionado(e.target.files?.[0] || null)} />
+                    <Button onClick={handleSalvarRegistro} className={`w-full text-white font-black uppercase text-xs h-11 md:h-12 rounded-xl shadow-lg ${modoEdicao ? 'bg-amber-600' : 'bg-[#1e3a8a]'}`}><Save size={18} className="mr-2"/> {modoEdicao ? 'Atualizar' : 'Salvar Registro'}</Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          {/* LISTA DE REGISTROS */}
+          {/* LISTA DE REGISTROS (TIMELINE) */}
           <div className="lg:col-span-2 space-y-4 text-left">
             {registros.length === 0 ? <div className="bg-white p-12 rounded-[1.5rem] md:rounded-[2rem] border border-dashed border-gray-200 text-center"><p className="text-gray-400 font-bold uppercase text-xs">Nenhum registro.</p></div> :
             registros.map((reg) => (
@@ -329,7 +509,14 @@ export function Prontuario() {
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 whitespace-pre-wrap mt-3 leading-relaxed">{reg.descricao}</p>
-                {reg.arquivo_url && <a href={reg.arquivo_url} target="_blank" className="inline-flex items-center gap-2 text-[9px] md:text-[10px] font-black text-[#1e3a8a] uppercase mt-4 hover:underline"><FileText size={14} /> Ver Documento</a>}
+                
+                {/* Botão de Ver Documento se houver anexo */}
+                {reg.arquivo_url && (
+                  <a href={reg.arquivo_url} target="_blank" className="inline-flex items-center gap-2 text-[10px] md:text-[11px] font-black text-white bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-xl uppercase mt-4 shadow-sm transition-colors">
+                    <FileText size={16} /> Abrir Documento Anexado
+                  </a>
+                )}
+                
                 {meuPerfil?.permissao_auditoria && reg.historico && reg.historico.length > 0 && (
                   <details className="mt-4">
                     <summary className="text-[8px] md:text-[9px] font-black text-amber-600 uppercase cursor-pointer flex items-center gap-1"><AlertCircle size={12}/> Auditoria ({reg.historico.length})</summary>
@@ -345,7 +532,7 @@ export function Prontuario() {
           </div>
         </div>
 
-        {/* MODAIS */}
+        {/* MODAL EDITAR PACIENTE */}
         {isEditPacienteOpen && (
           <div className="fixed inset-0 bg-black/60 z-[1000] flex items-center justify-center p-2 md:p-4 backdrop-blur-sm">
             <Card className="w-full max-w-[500px] h-full md:h-auto rounded-[1.5rem] md:rounded-[2.5rem] bg-white flex flex-col p-4 md:p-8 shadow-2xl overflow-hidden">
@@ -359,6 +546,7 @@ export function Prontuario() {
           </div>
         )}
 
+        {/* MODAL AGENDAMENTO */}
         {isAgendamentoOpen && (
           <div className="fixed inset-0 bg-black/60 z-[999] flex items-center justify-center p-2 md:p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
             <Card className="w-full max-w-[420px] h-full md:h-auto rounded-[1.5rem] md:rounded-[2.5rem] bg-white shadow-2xl overflow-hidden flex flex-col">
