@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { CheckCircle, XCircle, ShieldCheck, Calendar, User, Stethoscope, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, ShieldCheck, Calendar, User, Stethoscope, RefreshCw, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button"; // <--- Adicionado para o botão
 import logoSer2 from "@/assets/ser2.png";
 
 export function Validar() {
@@ -44,11 +45,11 @@ export function Validar() {
       
       <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl max-w-md w-full border border-gray-100 relative overflow-hidden">
         {/* BARRA DE TOPO DECORATIVA */}
-        <div className={`absolute top-0 left-0 w-full h-2 ${status === 'valid' ? 'bg-emerald-500' : status === 'invalid' ? 'bg-red-500' : 'bg-blue-600'}`}></div>
+        <div className={`absolute top-0 left-0 w-full h-2 ${status === 'valid' ? 'bg-emerald-500' : status === 'invalid' ? 'bg-red-500' : 'bg-[#1e3a8a]'}`}></div>
 
         {status === 'loading' && (
           <div className="py-10 space-y-4">
-            <RefreshCw className="animate-spin text-blue-600 mx-auto" size={40} />
+            <RefreshCw className="animate-spin text-[#1e3a8a] mx-auto" size={40} />
             <p className="font-black text-[#1e3a8a] uppercase text-xs tracking-widest">Verificando Assinatura Digital...</p>
           </div>
         )}
@@ -90,7 +91,17 @@ export function Validar() {
               </div>
             </div>
 
-            <p className="text-[11px] text-gray-400 leading-relaxed italic">
+            {/* BOTÃO PARA VISUALIZAR O PDF ORIGINAL SE EXISTIR */}
+            {dados.arquivo_url && (
+              <Button 
+                onClick={() => window.open(dados.arquivo_url, '_blank')} 
+                className="w-full bg-[#1e3a8a] hover:bg-black text-white rounded-2xl h-14 font-black uppercase text-xs shadow-lg transition-all"
+              >
+                <FileText className="mr-2" size={18} /> Ver Documento Original
+              </Button>
+            )}
+
+            <p className="text-[10px] text-gray-400 leading-relaxed italic px-2">
               Este documento foi emitido eletronicamente e possui validade jurídica em todo território nacional.
             </p>
           </div>
@@ -101,7 +112,7 @@ export function Validar() {
             <XCircle size={64} className="text-red-500 mx-auto" />
             <div>
               <h1 className="text-xl font-black text-red-600 uppercase leading-none">Documento Inválido</h1>
-              <p className="text-[10px] text-red-400 font-bold uppercase mt-2 tracking-widest">Falha na Verificação de Origem</p>
+              <p className="text-[10px] text-red-400 font-bold uppercase mt-2 tracking-widest">Falha na Verificação</p>
             </div>
             <p className="text-gray-500 text-sm leading-relaxed px-4">
               O código de validação consultado não foi encontrado em nossa base de dados ou foi revogado por inconsistências.
@@ -117,7 +128,7 @@ export function Validar() {
       <footer className="mt-10 flex items-center gap-2 opacity-40">
         <ShieldCheck size={16} className="text-[#1e3a8a]" />
         <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.2em]">
-          SerClin Autenticidade Digital &copy; 2026
+          SerClin Autenticidade Digital &copy; {new Date().getFullYear()}
         </p>
       </footer>
     </div>

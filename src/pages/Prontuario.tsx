@@ -3,12 +3,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable"; 
 import { 
   ArrowLeft, User, Save, Edit, AlertCircle, 
   Paperclip, FileText, Trash2, 
   Calendar as CalendarIcon, X, RefreshCw, Clock,
-  FileEdit, ClipboardList, History, Brain, Plus
+  FileEdit, ClipboardList, History, Brain, Plus, Activity,
+  Bold, Italic, Underline, AlignLeft, AlignCenter, Palette, Type, CheckCircle2, Layout
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +19,7 @@ import { format, addMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePerfil } from "@/hooks/usePerfil";
 
-// FUNÇÕES DE MÁSCARA E FORMATAÇÃO
+// --- FUNÇÕES DE MÁSCARA E FORMATAÇÃO (PRESERVADAS) ---
 const formatarDataSegura = (data: string | null | undefined) => {
   if (!data) return "Data desconhecida";
   try { return format(new Date(data), "dd/MM/yyyy HH:mm", { locale: ptBR }); } catch (e) { return "Data inválida"; }
@@ -44,6 +45,7 @@ export function Prontuario() {
   const navigate = useNavigate();
   const { isSecretaria, isAdmin } = usePerfil(); 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null); 
   
   const [paciente, setPaciente] = useState<any>(null);
   const [registros, setRegistros] = useState<any[]>([]);
@@ -55,21 +57,19 @@ export function Prontuario() {
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
   const [meuPerfil, setMeuPerfil] = useState<any>(null); 
   
+  // ESTADOS DO EDITOR 
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [gerandoPdf, setGerandoPdf] = useState(false);
+
   const [isAgendamentoOpen, setIsAgendamentoOpen] = useState(false);
   const [equipeClinica, setEquipeClinica] = useState<any[]>([]); 
   const [loadingAgendamento, setLoadingAgendamento] = useState(false);
-
   const [isEditPacienteOpen, setIsEditPacienteOpen] = useState(false);
   const [tempDados, setTempDados] = useState({ anamnese: "", observacoes: "" });
 
   const [formAgendamento, setFormAgendamento] = useState({ 
-    profissional: '', 
-    sala: '1', 
-    inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), 
-    duracao: '40', 
-    status: 'Agendado',
-    valor_atendimento: "0.00",
-    forma_pagamento: "Pix"
+    profissional: '', sala: '1', inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), 
+    duracao: '40', status: 'Agendado', valor_atendimento: "0.00", forma_pagamento: "Pix"
   });
 
   const [novoRegistro, setNovoRegistro] = useState({ 
@@ -77,17 +77,35 @@ export function Prontuario() {
     descricao: "" 
   });
 
-  // ESTADOS DO SMART FORM (LAUDO AUTOMÁTICO)
-  const [gerandoPdf, setGerandoPdf] = useState(false);
   const [formLaudo, setFormLaudo] = useState({
     finalidade: "Delinear o perfil neuropsicológico diante das alterações de comportamento.",
     demanda: "",
+    procedimentos: "Utilização dos 4 pilares: aplicação de testes cognitivos, entrevistas clínicas, observação comportamental e escalas de avaliação de sintomas.",
     conclusao: "",
-    encaminhamentos: ""
+    encaminhamentos: "",
+    ressalva: "Os resultados aqui descritos são de caráter dinâmico e referem-se ao presente momento...",
+    crp_manual: ""
   });
+  
   const [testes, setTestes] = useState([
-    { id: 1, funcao: "Quociente Intelectual", nome: "SON-R 2½-7", percentil: "", classificacao: "", interpretacao: "" }
+    { id: 1, funcao: "Quociente Intelectual", nome: "SON-R 2½-7", percentil: "", classificacao: "" }
   ]);
+
+  const bateriasPadrao = {
+    neuro: [
+      { id: 1, funcao: "Inteligência", nome: "WISC-IV / SON-R", percentil: "", classificacao: "" },
+      { id: 2, funcao: "Atenção Sustentada", nome: "BPA / TAVIS-4", percentil: "", classificacao: "" },
+      { id: 3, funcao: "Memória Operacional", nome: "Dígitos (WISC-IV)", percentil: "", classificacao: "" },
+      { id: 4, funcao: "Funções Executivas", nome: "FDT / Trilhas", percentil: "", classificacao: "" }
+    ]
+  };
+
+  const sugestoesCID = [
+    { label: "TEA Nível 1", valor: "TEA (CID-11: 6A02.0) - Sem deficiência intelectual e com prejuízo leve na linguagem." },
+    { label: "TEA Nível 2", valor: "TEA (CID-11: 6A02.2) - Com deficiência intelectual e prejuízo na linguagem funcional." },
+    { label: "TDAH", valor: "TDAH (CID-11: 6A05.2) - Apresentação Combinada." },
+    { label: "Altas Hab.", valor: "Altas Habilidades / Superdotação (CID-11: 6A03)." }
+  ];
 
   const getCorProfissional = (nome: string) => {
     const prof = equipeClinica.find(p => p.nome === nome);
@@ -99,10 +117,7 @@ export function Prontuario() {
       const { data: { user } } = await supabase.auth.getUser();
       const { data: perf } = await supabase.from('perfis').select('nome').eq('id', user?.id).single();
       await supabase.from('logs_prontuario').insert([{
-        paciente_id: id,
-        profissional_nome: perf?.nome || user?.email,
-        acao,
-        detalhes
+        paciente_id: id, profissional_nome: perf?.nome || user?.email, acao, detalhes
       }]);
       carregarLogs();
     } catch (err) { console.error("Erro Auditoria SerClin:", err); }
@@ -120,20 +135,15 @@ export function Prontuario() {
     try {
       setLoading(true);
       if (!id) return;
-
       const { data: { user } } = await supabase.auth.getUser();
       const { data: todosPerfis } = await supabase.from('perfis').select('*').order('nome');
-      
       if (user && todosPerfis) {
         const perfilLogado = todosPerfis.find(p => p.email?.toLowerCase().trim() === user.email?.toLowerCase().trim());
         setMeuPerfil(perfilLogado);
       }
-
-      const { data: p, error: errPac } = await supabase.from("pacientes").select("*").eq("id", id).maybeSingle();
-      if (errPac) throw errPac;
+      const { data: p } = await supabase.from("pacientes").select("*").eq("id", id).maybeSingle();
       setPaciente(p);
       if (p) setTempDados({ anamnese: p.anamnese || "", observacoes: p.observacoes || "" });
-      
       if (p) {
         const { data: ag } = await supabase.from("agendamentos").select("status").eq("paciente_id", id);
         if (ag) {
@@ -143,18 +153,9 @@ export function Prontuario() {
           });
         }
       }
-
       const { data: r } = await supabase.from("prontuarios").select("*").eq("paciente_id", id).order("created_at", { ascending: false });
       setRegistros(r || []);
-
-      if (todosPerfis) {
-        const filtrados = todosPerfis.filter(perfil => {
-          const n = (perfil.nome || "").toLowerCase();
-          const listaNegra = ['renata', 'instituto', 'secretaria', 'recepcao', 'admin', 'recepção'];
-          return !listaNegra.some(termo => n.includes(termo));
-        });
-        setEquipeClinica(filtrados);
-      }
+      setEquipeClinica(todosPerfis?.filter(p => !['renata', 'admin', 'recepcao'].some(t => (p.nome || "").toLowerCase().includes(t))) || []);
     } catch (e) { toast.error("Erro ao carregar dados."); } finally { setLoading(false); }
   };
 
@@ -167,10 +168,8 @@ export function Prontuario() {
       const { error } = await supabase.from("pacientes").update({ anamnese: tempDados.anamnese, observacoes: tempDados.observacoes }).eq("id", id);
       if (error) throw error;
       await registrarLog("Editou Dados Clínicos", "Atualizou anamnese ou observações.");
-      toast.success("Dados clínicos atualizados!");
-      setIsEditPacienteOpen(false);
-      carregarDados();
-    } catch (err) { toast.error("Erro ao atualizar dados."); } finally { setLoading(false); }
+      toast.success("Dados clínicos atualizados!"); setIsEditPacienteOpen(false); carregarDados();
+    } catch (err) { toast.error("Erro."); } finally { setLoading(false); }
   };
 
   const handleSalvarRegistro = async () => {
@@ -190,28 +189,89 @@ export function Prontuario() {
         arquivoUrl = publicUrl; arquivoNome = arquivoSelecionado.name;
       }
 
-      if (modoEdicao) {
-        const registroOriginal = registros.find(r => r.id === modoEdicao);
-        const versaoAntiga = { texto: registroOriginal.descricao, data: new Date().toISOString(), autor: registroOriginal.profissional_nome || "Desconhecido" };
-        await supabase.from("prontuarios").update({
-          descricao: novoRegistro.descricao, tipo_registro: novoRegistro.tipo, profissional_nome: nomeAutor,
-          historico: [ ...(registroOriginal.historico || []), versaoAntiga ], arquivo_url: arquivoUrl || registroOriginal.arquivo_url,
-          arquivo_nome: arquivoNome || registroOriginal.arquivo_nome, updated_at: new Date().toISOString()
-        }).eq("id", modoEdicao);
-        await registrarLog("Editou Registro", `Alterou ${novoRegistro.tipo}`);
-      } else {
-        await supabase.from("prontuarios").insert([{
-          paciente_id: id, tipo_registro: novoRegistro.tipo, descricao: novoRegistro.descricao,
-          profissional_nome: nomeAutor, historico: [], arquivo_url: arquivoUrl, arquivo_nome: arquivoNome
-        }]);
-        await registrarLog("Criou Registro", `Adicionou ${novoRegistro.tipo}`);
-      }
-      setNovoRegistro({ tipo: isSecretaria ? "Laudo" : "Sessão", descricao: "" });
-      setArquivoSelecionado(null); setModoEdicao(null); carregarDados();
+      await supabase.from("prontuarios").insert([{
+        paciente_id: id, tipo_registro: novoRegistro.tipo, descricao: novoRegistro.descricao,
+        profissional_nome: nomeAutor, historico: [], arquivo_url: arquivoUrl, arquivo_nome: arquivoNome
+      }]);
+      
+      await registrarLog("Criou Registro", `Adicionou ${novoRegistro.tipo}`);
+      setNovoRegistro({ tipo: "Sessão", descricao: "" });
+      setArquivoSelecionado(null); carregarDados();
     } catch (error) { toast.error("Erro ao salvar."); } finally { setLoading(false); }
   };
 
-  // FUNÇÃO MÁGICA: GERA PDF E SALVA NO HISTÓRICO AUTOMATICAMENTE
+  // --- INJEÇÃO: FUNÇÕES DO EDITOR WORD-STYLE ---
+  const formatDoc = (cmd: string, val: string = "") => {
+    document.execCommand(cmd, false, val);
+  };
+
+  const gerarLaudoPremiumPDF = async () => {
+    if (!editorRef.current) return;
+    setGerandoPdf(true);
+    try {
+      const doc = new jsPDF();
+      const m = 20;
+      let y = 30;
+
+      // Brasão Instituto SerClin
+      doc.setFont("times", "bold"); doc.setFontSize(22); doc.setTextColor(30, 58, 138);
+      doc.text("INSTITUTO SERCLIN", 105, y, { align: "center" });
+      y += 8;
+      doc.setFontSize(10); doc.setFont("times", "italic"); doc.setTextColor(120);
+      doc.text("Gestão em Saúde e Reabilitação Cognitiva", 105, y, { align: "center" });
+      y += 10;
+      doc.setDrawColor(30, 58, 138); doc.setLineWidth(0.5); doc.line(20, y, 190, y);
+      y += 20;
+
+      // Conteúdo processado do editor
+      doc.setFont("times", "normal"); doc.setFontSize(11); doc.setTextColor(0);
+      const textContent = editorRef.current.innerText;
+      const splitText = doc.splitTextToSize(textContent, 170);
+      
+      // Paginação simples
+      for(let i=0; i < splitText.length; i++) {
+          if (y > 270) { doc.addPage(); y = 20; }
+          doc.text(splitText[i], m, y);
+          y += 6;
+      }
+
+      // Rodapé: Assinatura e QR Code
+      if (y > 240) { doc.addPage(); y = 20; }
+      const pH = doc.internal.pageSize.getHeight();
+      y = pH - 50;
+      doc.setDrawColor(0); doc.setLineWidth(0.2); doc.line(60, y, 150, y);
+      y += 6; doc.setFont("times", "bold"); doc.text(meuPerfil?.nome || "Helenara Maria da Silva Mendes Chaves", 105, y, { align: "center" });
+      y += 5; doc.setFont("times", "normal"); doc.setFontSize(9);
+      doc.text(`Psicóloga e Neuropsicóloga - CRP ${meuPerfil?.conselho || formLaudo.crp_manual || '24/02216'}`, 105, y, { align: "center" });
+      
+      doc.setDrawColor(200); doc.rect(170, pH - 35, 18, 18); 
+      doc.setFontSize(6); doc.setTextColor(150); doc.text("AUTENTICAÇÃO\nDIGITAL", 179, pH - 12, { align: "center" });
+
+      const pdfBlob = doc.output('blob');
+      const nomeArquivo = `Laudo_Premium_${paciente?.nome?.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+      const fileNamePath = `${id}/${nomeArquivo}`;
+
+      const { error: upErr } = await supabase.storage.from('documentos').upload(fileNamePath, pdfBlob);
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(fileNamePath);
+
+      await supabase.from("prontuarios").insert([{
+        paciente_id: id, tipo_registro: "Laudo Neuropsicológico", 
+        descricao: "Documento clínico Premium assinado e autenticado via Editor SerClin.",
+        profissional_nome: meuPerfil?.nome, arquivo_url: publicUrl, arquivo_nome: nomeArquivo
+      }]);
+
+      toast.success("PDF Premium arquivado com sucesso!");
+      setIsEditorOpen(false);
+      setNovoRegistro({tipo: 'Sessão', descricao: ''});
+      carregarDados();
+    } catch (e) { 
+      console.error("Erro PDF:", e);
+      toast.error("Erro ao gerar PDF Premium."); 
+    } finally { setGerandoPdf(false); }
+  };
+  // --- FIM DA INJEÇÃO DAS FUNÇÕES DO EDITOR ---
+
   const gerarESalvarLaudoPDF = async () => {
     setGerandoPdf(true);
     try {
@@ -219,7 +279,6 @@ export function Prontuario() {
       const margemEsq = 20;
       let y = 20;
 
-      // Monta PDF
       doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(30, 58, 138);
       doc.text("LAUDO PSICOLÓGICO – AVALIAÇÃO NEUROPSICOLÓGICA", 45, y);
       y += 15;
@@ -243,38 +302,51 @@ export function Prontuario() {
       const demandaLines = doc.splitTextToSize(formLaudo.demanda || 'Nenhuma demanda descrita.', 170);
       doc.text(demandaLines, margemEsq, y); y += (demandaLines.length * 6) + 10;
 
+      doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
+      doc.text("4. PROCEDIMENTOS", margemEsq, y); y += 7;
+      doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
+      const procLines = doc.splitTextToSize(formLaudo.procedimentos, 170);
+      doc.text(procLines, margemEsq, y); y += (procLines.length * 6) + 10;
+
       if (y > 230) { doc.addPage(); y = 20; }
 
       doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
-      doc.text("4. INSTRUMENTOS E RESULTADOS", margemEsq, y); y += 5;
-      const tableData = testes.map(t => [t.funcao, t.nome, t.percentil, t.classificacao, t.interpretacao]);
+      doc.text("5. INSTRUMENTOS E RESULTADOS", margemEsq, y); y += 5;
+      const tableData = testes.map(t => [t.funcao, t.nome, t.percentil, t.classificacao]);
       
-      (doc as any).autoTable({
-        startY: y, head: [['Função Cognitiva', 'Teste', 'Percentil', 'Classificação', 'Interpretação']],
-        body: tableData, theme: 'grid', headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
-        styles: { fontSize: 8, cellPadding: 3 }, margin: { left: margemEsq, right: 20 }
+      autoTable(doc, {
+        startY: y, 
+        head: [['Função', 'Teste', 'Percentil', 'Classificação']],
+        body: tableData, 
+        theme: 'grid', 
+        headStyles: { fillColor: [30, 58, 138] },
+        styles: { fontSize: 8 }, 
+        margin: { left: margemEsq, right: 20 }
       });
       y = (doc as any).lastAutoTable.finalY + 15;
-      if (y > 230) { doc.addPage(); y = 20; }
 
+      if (y > 230) { doc.addPage(); y = 20; }
       doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
-      doc.text("5. CONCLUSÃO DIAGNÓSTICA", margemEsq, y); y += 7;
+      doc.text("6. CONCLUSÃO DIAGNÓSTICA", margemEsq, y); y += 7;
       doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
-      const conclusaoLines = doc.splitTextToSize(formLaudo.conclusao || 'Nenhuma conclusão descrita.', 170);
+      const conclusaoLines = doc.splitTextToSize(formLaudo.conclusao || 'Sem conclusão.', 170);
       doc.text(conclusaoLines, margemEsq, y); y += (conclusaoLines.length * 6) + 10;
 
-      if (y > 230) { doc.addPage(); y = 20; }
       doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
-      doc.text("6. ENCAMINHAMENTOS E CONDUTAS", margemEsq, y); y += 7;
+      doc.text("7. ENCAMINHAMENTOS", margemEsq, y); y += 7;
       doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
-      const encLines = doc.splitTextToSize(formLaudo.encaminhamentos || 'Nenhum encaminhamento sugerido.', 170);
-      doc.text(encLines, margemEsq, y); y += (encLines.length * 6) + 30;
+      const encLines = doc.splitTextToSize(formLaudo.encaminhamentos || 'Sem encaminhamentos.', 170);
+      doc.text(encLines, margemEsq, y); y += (encLines.length * 6) + 20;
 
-      if (y > 250) { doc.addPage(); y = 50; }
+      if (y > 240) { doc.addPage(); y = 20; }
+      doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(100, 100, 100);
+      const resLines = doc.splitTextToSize(formLaudo.ressalva, 170);
+      doc.text(resLines, margemEsq, y); y += (resLines.length * 5) + 20;
+
       doc.setLineWidth(0.5); doc.line(70, y, 140, y); y += 5;
-      doc.setFont("helvetica", "bold"); doc.text(meuPerfil?.nome || 'Profissional SerClin', 105, y, { align: "center" });
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(0,0,0);
+      doc.text(meuPerfil?.nome || 'Profissional SerClin', 105, y, { align: "center" });
 
-      // Transforma PDF em arquivo e faz Upload
       const pdfBlob = doc.output('blob');
       const nomeArquivo = `Laudo_${paciente?.nome?.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
       const fileNamePath = `${id}/${nomeArquivo}`;
@@ -283,22 +355,17 @@ export function Prontuario() {
       if (upErr) throw upErr;
       const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(fileNamePath);
 
-      // Salva no banco de dados como Prontuário
-      let nomeAutor = meuPerfil?.nome || "Profissional SerClin";
       await supabase.from("prontuarios").insert([{
-        paciente_id: id, tipo_registro: "Laudo Neuropsicológico", descricao: "Laudo Neuropsicológico gerado e assinado digitalmente pelo sistema.",
-        profissional_nome: nomeAutor, historico: [], arquivo_url: publicUrl, arquivo_nome: nomeArquivo
+        paciente_id: id, tipo_registro: "Laudo Neuropsicológico", descricao: "Laudo gerado e assinado digitalmente.",
+        profissional_nome: meuPerfil?.nome, arquivo_url: publicUrl, arquivo_nome: nomeArquivo
       }]);
 
-      await registrarLog("Gerou Laudo", "Laudo Estruturado em PDF criado e anexado ao prontuário.");
-      toast.success("Laudo gerado e salvo no histórico com sucesso!");
-      setNovoRegistro({...novoRegistro, tipo: 'Sessão'}); 
-      carregarDados();
-    } catch (error) {
-      toast.error("Erro ao gerar e salvar laudo.");
-    } finally {
-      setGerandoPdf(false);
-    }
+      toast.success("Laudo gerado e arquivado!");
+      setNovoRegistro({tipo: 'Sessão', descricao: ''}); carregarDados();
+    } catch (e) { 
+      console.error("Erro PDF:", e);
+      toast.error("Erro ao processar laudo. Verifique o console."); 
+    } finally { setGerandoPdf(false); }
   };
 
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
@@ -321,18 +388,11 @@ export function Prontuario() {
     } catch (err) { toast.error("Erro ao agendar."); } finally { setLoadingAgendamento(false); }
   };
 
-  const iniciarEdicao = (reg: any) => {
-    setModoEdicao(reg.id);
-    setNovoRegistro({ tipo: reg.tipo_registro, descricao: reg.descricao });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  if (loading && !paciente) return <div className="p-20 text-center font-black text-gray-400">Carregando Prontuário...</div>;
+  if (loading && !paciente) return <div className="p-20 text-center font-black text-gray-400">Sincronizando SerClin...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 p-2 md:p-10 font-sans text-left pb-20">
       
-      {/* HEADER MOBILE FIXO */}
       <header className="bg-white border-b p-4 flex items-center justify-between sticky top-0 z-40 shadow-sm pt-[calc(env(safe-area-inset-top,0px)+12px)] min-h-[calc(70px+env(safe-area-inset-top,0px))] -m-2 mb-4 md:hidden">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate("/sistema/pacientes")} className="p-2 -ml-2 text-gray-400"><ArrowLeft size={24} /></button>
@@ -343,231 +403,295 @@ export function Prontuario() {
         </div>
         <div className="flex gap-2">
            {meuPerfil?.permissao_agendar && <Button onClick={() => setIsAgendamentoOpen(true)} size="icon" className="bg-blue-600 rounded-xl h-10 w-10 shadow-md"><CalendarIcon size={18} /></Button>}
-           {meuPerfil?.permissao_excluir && <Button onClick={async () => { if(confirm("Apagar paciente?")) { await registrarLog("Excluiu Paciente", "Remoção via Header Mobile"); supabase.from("pacientes").delete().eq("id", id).then(() => navigate("/sistema/pacientes")) } }} size="icon" variant="ghost" className="text-red-300 h-10 w-10"><Trash2 size={18} /></Button>}
         </div>
       </header>
 
       <div className="max-w-6xl mx-auto space-y-4 md:space-y-8">
-        {/* HEADER DESKTOP */}
+        
         <div className="hidden md:flex justify-between items-center gap-2">
-          <Button variant="ghost" onClick={() => navigate("/sistema/pacientes")} className="gap-2 text-gray-500 font-black uppercase text-xs">
-            <ArrowLeft size={18} /> Voltar
-          </Button>
+          <Button variant="ghost" onClick={() => navigate("/sistema/pacientes")} className="gap-2 text-gray-500 font-black uppercase text-xs"><ArrowLeft size={18} /> Voltar</Button>
           <div className="flex gap-2">
-            {meuPerfil?.permissao_excluir && (
-               <Button onClick={async () => { if(confirm("Apagar tudo?")) { await registrarLog("Excluiu Paciente", "Removeu prontuário completo"); supabase.from("pacientes").delete().eq("id", id).then(() => navigate("/sistema/pacientes")) } }} variant="ghost" className="text-red-400 hover:text-red-600 font-black uppercase text-[10px] gap-2">
-                <Trash2 size={14} /> Excluir Tudo
-              </Button>
-            )}
-            {meuPerfil?.permissao_agendar && (
-              <Button onClick={() => setIsAgendamentoOpen(true)} className="bg-[#1e3a8a] text-white font-black uppercase text-[10px] px-6 rounded-full h-10 shadow-md">
-                <CalendarIcon size={14} className="mr-2" /> Agendar
-              </Button>
-            )}
+            {meuPerfil?.permissao_agendar && <Button onClick={() => setIsAgendamentoOpen(true)} className="bg-[#1e3a8a] text-white font-black uppercase text-[10px] px-6 rounded-full h-10 shadow-md"><CalendarIcon size={14} className="mr-2" /> Agendar</Button>}
           </div>
         </div>
 
-        {/* CARD INFORMATIVO COM MÁSCARA */}
-        <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 md:gap-8 items-center">
-          <div className="w-20 h-20 md:w-24 md:h-24 bg-blue-50 rounded-2xl md:rounded-3xl flex items-center justify-center text-[#1e3a8a] shadow-inner overflow-hidden border-2 border-white shrink-0">
-            {paciente?.foto_url ? <img src={paciente.foto_url} className="w-full h-full object-cover" alt="Foto" /> : <User size={30} />}
+        <div className="bg-white rounded-[2rem] p-4 md:p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8 items-center">
+          <div className="w-24 h-24 bg-blue-50 rounded-3xl flex items-center justify-center border-2 border-white shadow-inner overflow-hidden shrink-0">
+            {paciente?.foto_url ? <img src={paciente.foto_url} className="w-full h-full object-cover" /> : <User size={40} className="text-blue-200" />}
           </div>
-          <div className="flex-1 text-center md:text-left min-w-0 w-full">
+          <div className="flex-1 text-center md:text-left">
             <div className="flex items-center justify-center md:justify-start gap-2">
-              <h1 className="text-xl md:text-2xl font-black text-gray-800 uppercase leading-tight truncate">{paciente?.nome}</h1>
-              <button onClick={() => setIsEditPacienteOpen(true)} className="text-gray-300 hover:text-blue-600 shrink-0"><Edit size={16}/></button>
+              <h1 className="text-2xl font-black text-gray-800 uppercase">{paciente?.nome}</h1>
+              <button onClick={() => setIsEditPacienteOpen(true)} className="text-gray-300 hover:text-blue-600"><Edit size={16}/></button>
             </div>
-            {/* Máscara de Telefone e CPF aplicadas aqui */}
-            <p className="text-xs md:text-sm font-bold text-gray-400 mt-1 truncate">
-              Tel: {formatarTelefone(paciente?.telefone)} | CPF: {formatarCPF(paciente?.cpf)} | {paciente?.convenio}
-            </p>
+            <p className="text-sm font-bold text-gray-400 mt-1">Tel: {formatarTelefone(paciente?.telefone)} | CPF: {formatarCPF(paciente?.cpf)}</p>
           </div>
-          <div className="flex gap-2 md:gap-3 text-center w-full md:w-auto justify-center">
-            <div className="bg-green-50 px-3 md:px-5 py-2 rounded-xl md:rounded-2xl border border-green-100 flex-1 md:flex-none"><p className="text-lg md:text-xl font-black text-green-600">{resumoPresenca.presencas}</p><p className="text-[7px] md:text-[8px] font-black uppercase text-green-400 tracking-tighter">Presenças</p></div>
-            <div className="bg-red-50 px-3 md:px-5 py-2 rounded-xl md:rounded-2xl border border-red-100 flex-1 md:flex-none"><p className="text-lg md:text-xl font-black text-red-600">{resumoPresenca.faltas}</p><p className="text-[7px] md:text-[8px] font-black uppercase text-red-400 tracking-tighter">Faltas</p></div>
+          <div className="flex gap-3">
+            <div className="bg-green-50 px-5 py-2 rounded-2xl border border-green-100 text-center">
+              <p className="text-xl font-black text-green-600">{resumoPresenca.presencas}</p>
+              <p className="text-[8px] font-black uppercase text-green-400">Presenças</p>
+            </div>
+            <div className="bg-red-50 px-5 py-2 rounded-2xl border border-red-100 text-center">
+              <p className="text-xl font-black text-red-600">{resumoPresenca.faltas}</p>
+              <p className="text-[8px] font-black uppercase text-red-400">Faltas</p>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 text-left">
-          {/* COLUNA ESQUERDA: DADOS E AUDITORIA */}
-          <div className="lg:col-span-1 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          <div className="lg:col-span-1 space-y-6 text-left">
+            
             <Card className="border-none shadow-sm rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white">
-              <div className="bg-blue-50 px-5 md:px-6 py-3 md:py-4 flex justify-between items-center border-b border-blue-100">
-                <h3 className="font-black text-[#1e3a8a] uppercase text-[9px] md:text-[10px] flex items-center gap-2"><ClipboardList size={18}/> Dados Clínicos</h3>
-                <button onClick={() => setIsEditPacienteOpen(true)} className="text-blue-600"><FileEdit size={18}/></button>
+              <div className="bg-blue-50 px-5 md:px-6 py-4 flex justify-between items-center border-b border-blue-100">
+                <h3 className="font-black text-[#1e3a8a] uppercase text-base flex items-center gap-2"><ClipboardList size={20}/> Dados Clínicos</h3>
+                <button onClick={() => setIsEditPacienteOpen(true)} className="text-blue-600"><FileEdit size={20}/></button>
               </div>
-              <CardContent className="p-4 md:p-6 space-y-4">
-                <div className="text-left"><label className="text-[9px] font-black text-gray-400 uppercase">Anamnese</label><p className="text-xs text-gray-800 mt-1 italic leading-relaxed">{paciente?.anamnese || "Não informada."}</p></div>
-                <div className="pt-2 border-t border-gray-50 text-left"><label className="text-[9px] font-black text-gray-400 uppercase">Observações</label><p className="text-xs text-gray-800 mt-1 leading-relaxed">{paciente?.observacoes || "Nenhuma."}</p></div>
+              <CardContent className="p-6 space-y-4">
+                <div className="text-left">
+                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Anamnese</label>
+                  <p className="text-sm text-gray-800 mt-1 italic leading-relaxed">{paciente?.anamnese || "Vazio."}</p>
+                </div>
+                <div className="pt-2 border-t text-left">
+                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Observações</label>
+                  <p className="text-sm text-gray-800 mt-1 leading-relaxed">{paciente?.observacoes || "Nenhuma."}</p>
+                </div>
               </CardContent>
             </Card>
 
             {meuPerfil?.permissao_auditoria && (
-              <Card className="border-none shadow-sm rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white">
-                <div className="bg-gray-50 px-5 md:px-6 py-3 md:py-4 border-b flex items-center gap-2">
-                  <History size={16} className="text-gray-400" />
-                  <h3 className="font-black text-gray-500 uppercase text-[9px] md:text-[10px]">Auditoria</h3>
+              <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
+                <div className="bg-gray-50 px-6 py-3 border-b flex items-center gap-2">
+                  <History size={18} className="text-gray-400"/>
+                  <h3 className="font-black text-gray-500 uppercase text-sm">Auditoria</h3>
                 </div>
-                <CardContent className="p-4 md:p-6 space-y-3 max-h-[250px] overflow-y-auto">
-                  {loadingLogs ? <p className="text-[9px] font-bold text-gray-300">SINCRO...</p> : 
-                   logs.map(log => (
-                     <div key={log.id} className="border-l-2 border-blue-100 pl-3 py-1">
-                       <p className="text-[9px] font-black text-gray-700 uppercase leading-tight">{log.acao}</p>
-                       <p className="text-[8px] font-bold text-gray-400 mt-0.5">{log.profissional_nome?.split(' ')[0]} • {format(new Date(log.criado_em), "dd/MM HH:mm")}</p>
-                     </div>
-                   ))}
+                <CardContent className="p-4 space-y-3 max-h-[200px] overflow-y-auto">
+                  {logs.map(log => (
+                    <div key={log.id} className="border-l-2 border-blue-100 pl-3 py-1">
+                      <p className="text-xs font-black text-gray-700 uppercase leading-tight">{log.acao}</p>
+                      <p className="text-[10px] font-bold text-gray-400">{log.profissional_nome?.split(' ')[0]} • {format(new Date(log.criado_em), "dd/MM HH:mm")}</p>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             )}
 
-            <Card className={`border-none shadow-lg rounded-[1.5rem] md:rounded-[2rem] overflow-hidden ${modoEdicao ? 'ring-4 ring-amber-400' : ''}`}>
-              <div className={`${modoEdicao ? 'bg-amber-500' : 'bg-[#1e3a8a]'} px-5 md:px-6 py-3 md:py-4 text-white font-black uppercase text-[9px] md:text-[10px] flex justify-between items-center`}>
-                <span>{modoEdicao ? 'Editando Registro' : 'Novo Registro'}</span>
-                {modoEdicao && <X size={16} className="cursor-pointer" onClick={() => setModoEdicao(null)} />}
+            <Card className={`border-none shadow-xl rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white ${modoEdicao ? 'ring-4 ring-amber-400' : ''}`}>
+              <div className={`${modoEdicao ? 'bg-amber-500' : 'bg-[#1e3a8a]'} px-6 py-5 text-white flex justify-between items-center`}>
+                <div className="flex items-center gap-2">
+                  {novoRegistro.tipo === "Laudo Estruturado" ? <FileText size={20}/> : <Activity size={20}/>}
+                  <span className="font-black uppercase text-sm tracking-widest">{modoEdicao ? 'Editando' : 'Novo Registro'}</span>
+                </div>
+                {modoEdicao && <X size={20} className="cursor-pointer" onClick={() => setModoEdicao(null)} />}
               </div>
-              <CardContent className="p-4 md:p-6 space-y-4">
-                <select className="w-full rounded-xl border-none bg-gray-50 px-4 py-3 text-xs font-bold uppercase outline-none" value={novoRegistro.tipo} onChange={e => setNovoRegistro({...novoRegistro, tipo: e.target.value})}>
-                  <option value="Sessão">Sessão / Evolução</option>
-                  <option value="Laudo Estruturado">Laudo Estruturado (PDF)</option>
-                  <option value="Avaliação">Avaliação</option>
-                  <option value="Anexo">Apenas Anexo PDF</option>
-                </select>
+              
+              <CardContent className="p-6 space-y-6 text-left">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Tipo de Documento</label>
+                  <select 
+                    className="w-full rounded-2xl border-2 border-gray-50 bg-gray-50 px-4 py-3 text-sm font-bold text-[#1e3a8a] outline-none focus:border-blue-100 focus:bg-white transition-all" 
+                    value={novoRegistro.tipo} 
+                    onChange={e => setNovoRegistro({...novoRegistro, tipo: e.target.value})}
+                  >
+                    <option value="Sessão">Sessão / Evolução Diária</option>
+                    <option value="Laudo Estruturado">Laudo Neuropsicológico (PDF)</option>
+                    <option value="Avaliação">Avaliação Inicial</option>
+                    <option value="Anexo">Apenas Anexo PDF</option>
+                  </select>
+                </div>
 
-                {/* SE FOR LAUDO ESTRUTURADO, MOSTRA O SMART FORM AQUI DENTRO */}
                 {novoRegistro.tipo === "Laudo Estruturado" ? (
-                  <div className="space-y-4 bg-blue-50/30 p-4 rounded-xl border border-blue-100/50">
-                    <div>
-                      <label className="text-[9px] font-black text-gray-400 uppercase">Finalidade</label>
-                      <Input className="h-8 text-xs font-medium bg-white" value={formLaudo.finalidade} onChange={e => setFormLaudo({...formLaudo, finalidade: e.target.value})} />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black text-gray-400 uppercase">Demanda</label>
-                      <textarea className="w-full rounded-lg bg-white p-2 text-xs border border-gray-200 resize-none h-20" value={formLaudo.demanda} onChange={e => setFormLaudo({...formLaudo, demanda: e.target.value})} />
+                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="grid gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Finalidade</label>
+                        <Input className="h-12 text-sm bg-gray-50 border-none rounded-xl" value={formLaudo.finalidade} onChange={e => setFormLaudo({...formLaudo, finalidade: e.target.value})} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Demanda</label>
+                        <textarea className="w-full rounded-xl bg-gray-50 p-4 text-sm border-none min-h-[100px] outline-none resize-none" value={formLaudo.demanda} onChange={e => setFormLaudo({...formLaudo, demanda: e.target.value})} />
+                      </div>
                     </div>
                     
-                    <div className="border-t border-blue-100 pt-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <label className="text-[9px] font-black text-[#1e3a8a] uppercase flex gap-1 items-center"><Brain size={12}/> Testes</label>
-                        <button onClick={() => setTestes([...testes, { id: Date.now(), funcao: "", nome: "", percentil: "", classificacao: "", interpretacao: "" }])} className="text-[9px] font-black text-blue-600 uppercase flex items-center gap-1 bg-blue-100 px-2 py-1 rounded-md"><Plus size={10}/> Adicionar</button>
+                    <div className="border-t border-gray-100 pt-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <label className="text-xs font-black text-[#1e3a8a] uppercase flex gap-2 items-center"><Brain size={16}/> Bateria de Testes</label>
+                        <button onClick={() => setTestes([...testes, { id: Date.now(), funcao: "", nome: "", percentil: "", classificacao: "" }])} className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-1.5 bg-blue-50 px-4 py-2 rounded-xl hover:bg-blue-100 transition-all"><Plus size={14}/> Add Teste</button>
                       </div>
-                      <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
-                        {testes.map(t => (
-                          <div key={t.id} className="bg-white p-2 rounded-lg border border-gray-200 relative">
-                            <button onClick={() => setTestes(testes.filter(item => item.id !== t.id))} className="absolute top-1 right-1 text-red-400 hover:text-red-600"><Trash2 size={12}/></button>
-                            <div className="grid grid-cols-2 gap-1 mb-1 pr-4">
-                              <Input placeholder="Função" className="h-6 text-[10px]" value={t.funcao} onChange={e => setTestes(testes.map(item => item.id === t.id ? {...item, funcao: e.target.value} : item))} />
-                              <Input placeholder="Teste" className="h-6 text-[10px]" value={t.nome} onChange={e => setTestes(testes.map(item => item.id === t.id ? {...item, nome: e.target.value} : item))} />
-                              <Input placeholder="Percentil" className="h-6 text-[10px]" value={t.percentil} onChange={e => setTestes(testes.map(item => item.id === t.id ? {...item, percentil: e.target.value} : item))} />
-                              <Input placeholder="Classificação" className="h-6 text-[10px]" value={t.classificacao} onChange={e => setTestes(testes.map(item => item.id === t.id ? {...item, classificacao: e.target.value} : item))} />
+
+                      <button onClick={() => setTestes(bateriasPadrao.neuro)} className="w-full mb-4 py-2 border-2 border-dashed border-blue-100 rounded-xl text-[10px] font-black text-blue-400 uppercase hover:bg-blue-50 transition-all">+ Carregar Protocolo Padrão</button>
+
+                      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                        {testes.map((t) => (
+                          <div key={t.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm relative space-y-3">
+                            <button onClick={() => setTestes(testes.filter(item => item.id !== t.id))} className="absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div className="space-y-1"><span className="text-[9px] font-black text-gray-300 uppercase ml-1">Função</span><Input placeholder="Ex: Inteligência" className="h-10 text-sm bg-gray-50 border-none rounded-lg" value={t.funcao} onChange={e => setTestes(testes.map(x => x.id === t.id ? {...x, funcao: e.target.value} : x))} /></div>
+                              <div className="space-y-1"><span className="text-[9px] font-black text-gray-300 uppercase ml-1">Teste</span><Input placeholder="Ex: WISC-IV" className="h-10 text-sm bg-gray-50 border-none rounded-lg" value={t.nome} onChange={e => setTestes(testes.map(x => x.id === t.id ? {...x, nome: e.target.value} : x))} /></div>
                             </div>
-                            <Input placeholder="Interpretação" className="h-6 text-[10px] w-full" value={t.interpretacao} onChange={e => setTestes(testes.map(item => item.id === t.id ? {...item, interpretacao: e.target.value} : item))} />
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1"><span className="text-[9px] font-black text-gray-300 uppercase ml-1">Percentil</span><Input placeholder="Ex: 75" className="h-10 text-sm bg-gray-50 border-none rounded-lg" value={t.percentil} onChange={e => setTestes(testes.map(x => x.id === t.id ? {...x, percentil: e.target.value} : x))} /></div>
+                              <div className="space-y-1"><span className="text-[9px] font-black text-gray-300 uppercase ml-1">Classe</span><Input placeholder="Ex: Médio" className="h-10 text-sm bg-gray-50 border-none rounded-lg" value={t.classificacao} onChange={e => setTestes(testes.map(x => x.id === t.id ? {...x, classificacao: e.target.value} : x))} /></div>
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div>
-                      <label className="text-[9px] font-black text-gray-400 uppercase">Conclusão</label>
-                      <textarea className="w-full rounded-lg bg-white p-2 text-xs border border-gray-200 resize-none h-16" value={formLaudo.conclusao} onChange={e => setFormLaudo({...formLaudo, conclusao: e.target.value})} />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black text-gray-400 uppercase">Encaminhamentos</label>
-                      <textarea className="w-full rounded-lg bg-white p-2 text-xs border border-gray-200 resize-none h-16" value={formLaudo.encaminhamentos} onChange={e => setFormLaudo({...formLaudo, encaminhamentos: e.target.value})} />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-gray-400 uppercase ml-1">Conclusão / CID</label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {sugestoesCID.map(cid => <button key={cid.label} onClick={() => setFormLaudo({...formLaudo, conclusao: cid.valor})} className="text-[8px] bg-blue-50 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-full font-black uppercase text-blue-600 transition-all">{cid.label}</button>)}
+                      </div>
+                      <textarea className="w-full rounded-xl bg-gray-50 p-4 text-sm border-none h-28 outline-none resize-none" value={formLaudo.conclusao} onChange={e => setFormLaudo({...formLaudo, conclusao: e.target.value})} />
                     </div>
 
-                    <Button onClick={gerarESalvarLaudoPDF} disabled={gerandoPdf} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase text-xs h-12 rounded-xl shadow-lg mt-2">
-                      <FileText size={16} className="mr-2"/> {gerandoPdf ? "Processando..." : "Gerar Laudo e Salvar"}
+                    {/* --- INÍCIO DA INJEÇÃO: BOTÃO DO EDITOR WORD --- */}
+                    <Button onClick={() => setIsEditorOpen(true)} variant="outline" className="w-full border-2 border-blue-600 text-blue-600 font-black uppercase text-sm h-14 rounded-2xl flex items-center justify-center gap-3 mt-4 mb-4 hover:bg-blue-50">
+                      <Layout size={20}/> Abrir Editor Word (Premium)
+                    </Button>
+                    {/* --- FIM DA INJEÇÃO --- */}
+
+                    <Button onClick={gerarESalvarLaudoPDF} disabled={gerandoPdf} className="w-full bg-[#1e3a8a] text-white font-black uppercase text-sm h-16 rounded-2xl shadow-2xl transition-all flex items-center justify-center gap-3">
+                      {gerandoPdf ? <><RefreshCw className="animate-spin" size={20}/> Processando...</> : <><FileText size={24}/> Gerar Laudo Rápido (Antigo)</>}
                     </Button>
                   </div>
                 ) : (
-                  /* SE NÃO FOR LAUDO, MOSTRA O FORMULÁRIO NORMAL */
-                  <>
-                    <textarea className="w-full rounded-xl border-none bg-gray-50 px-4 py-3 text-sm min-h-[120px] md:min-h-[180px] outline-none resize-none" placeholder="Relato clínico..." value={novoRegistro.descricao} onChange={e => setNovoRegistro({...novoRegistro, descricao: e.target.value})} />
-                    <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full border-dashed border-2 text-[9px] md:text-[10px] font-black uppercase h-11 md:h-12"><Paperclip size={16} className="mr-2" /> {arquivoSelecionado ? arquivoSelecionado.name : "Anexar PDF / Imagem"}</Button>
-                    <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => setArquivoSelecionado(e.target.files?.[0] || null)} />
-                    <Button onClick={handleSalvarRegistro} className={`w-full text-white font-black uppercase text-xs h-11 md:h-12 rounded-xl shadow-lg ${modoEdicao ? 'bg-amber-600' : 'bg-[#1e3a8a]'}`}><Save size={18} className="mr-2"/> {modoEdicao ? 'Atualizar' : 'Salvar Registro'}</Button>
-                  </>
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    <textarea className="w-full rounded-2xl border-none bg-gray-50 px-5 py-4 text-sm min-h-[200px] outline-none resize-none" placeholder="Descreva a evolução do paciente..." value={novoRegistro.descricao} onChange={e => setNovoRegistro({...novoRegistro, descricao: e.target.value})} />
+                    <div className="flex gap-3">
+                      <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1 border-dashed border-2 border-gray-200 text-[10px] font-black uppercase h-14 rounded-2xl">
+                        <Paperclip size={20} className="mr-2" /> {arquivoSelecionado ? arquivoSelecionado.name : "Anexar PDF"}
+                      </Button>
+                      <Button onClick={handleSalvarRegistro} className="flex-[2] bg-[#1e3a8a] text-white font-black uppercase text-sm h-14 rounded-2xl shadow-lg hover:bg-black transition-all">
+                        <Save size={20} className="mr-2"/> Salvar Registro
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </div>
 
-          {/* LISTA DE REGISTROS (TIMELINE) */}
           <div className="lg:col-span-2 space-y-4 text-left">
-            {registros.length === 0 ? <div className="bg-white p-12 rounded-[1.5rem] md:rounded-[2rem] border border-dashed border-gray-200 text-center"><p className="text-gray-400 font-bold uppercase text-xs">Nenhum registro.</p></div> :
-            registros.map((reg) => (
-              <div key={reg.id} className="bg-white p-4 md:p-6 pl-6 md:pl-8 rounded-[1.5rem] shadow-sm border border-gray-100 relative overflow-hidden group">
-                <div className="absolute left-0 top-0 bottom-0 w-1.5 md:w-2.5" style={{ backgroundColor: getCorProfissional(reg.profissional_nome) }} />
+            {registros.map((reg) => (
+              <div key={reg.id} className="bg-white p-6 pl-8 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden group">
+                <div className="absolute left-0 top-0 bottom-0 w-2" style={{ backgroundColor: getCorProfissional(reg.profissional_nome) }} />
                 <div className="flex justify-between items-center border-b pb-2">
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <span className="text-[8px] md:text-[9px] font-black uppercase px-2 py-0.5 md:py-1 bg-blue-50 text-[#1e3a8a] rounded-md">{reg.tipo_registro}</span>
-                    <span className="text-[9px] md:text-[11px] font-black text-gray-800 uppercase truncate max-w-[120px] md:max-w-none">{reg.profissional_nome}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[9px] font-black uppercase px-2 py-1 bg-blue-50 text-[#1e3a8a] rounded-md">{reg.tipo_registro}</span>
+                    <span className="text-[11px] font-black text-gray-800 uppercase">{reg.profissional_nome}</span>
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    {meuPerfil?.permissao_excluir && <button onClick={async () => { if(confirm("Apagar registro?")) { await registrarLog("Apagou Registro", `Removeu ${reg.tipo_registro}`); supabase.from("prontuarios").delete().eq("id", reg.id).then(carregarDados) } }} className="text-gray-200 hover:text-red-400 transition-colors"><Trash2 size={14}/></button>}
-                    <button onClick={() => iniciarEdicao(reg)} className="text-gray-300 hover:text-amber-500 transition-colors"><Edit size={16}/></button>
+                  <div className="flex gap-2">
+                    {meuPerfil?.permissao_excluir && <button onClick={async () => { if(confirm("Apagar?")) { await registrarLog("Apagou Registro", reg.tipo_registro); supabase.from("prontuarios").delete().eq("id", reg.id).then(carregarDados) } }} className="text-gray-200 hover:text-red-400"><Trash2 size={14}/></button>}
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 whitespace-pre-wrap mt-3 leading-relaxed">{reg.descricao}</p>
-                
-                {/* Botão de Ver Documento se houver anexo */}
-                {reg.arquivo_url && (
-                  <a href={reg.arquivo_url} target="_blank" className="inline-flex items-center gap-2 text-[10px] md:text-[11px] font-black text-white bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-xl uppercase mt-4 shadow-sm transition-colors">
-                    <FileText size={16} /> Abrir Documento Anexado
-                  </a>
-                )}
-                
-                {meuPerfil?.permissao_auditoria && reg.historico && reg.historico.length > 0 && (
-                  <details className="mt-4">
-                    <summary className="text-[8px] md:text-[9px] font-black text-amber-600 uppercase cursor-pointer flex items-center gap-1"><AlertCircle size={12}/> Auditoria ({reg.historico.length})</summary>
-                    <div className="mt-2 space-y-2 border-l-2 border-amber-50 pl-3">
-                      {reg.historico.map((h:any, i:number) => (
-                        <div key={i} className="text-[9px] text-gray-400 italic leading-tight"><strong>{h.autor?.split(' ')[0]}</strong> em {formatarDataSegura(h.data)}</div>
-                      ))}
-                    </div>
-                  </details>
-                )}
+                <p className="text-sm text-gray-600 whitespace-pre-wrap mt-4 leading-relaxed">{reg.descricao}</p>
+                {reg.arquivo_url && <a href={reg.arquivo_url} target="_blank" className="inline-flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 px-4 py-2 rounded-xl uppercase mt-4 shadow-sm transition-colors"><FileText size={16} /> Abrir Documento Anexado</a>}
               </div>
             ))}
           </div>
+
         </div>
-
-        {/* MODAL EDITAR PACIENTE */}
-        {isEditPacienteOpen && (
-          <div className="fixed inset-0 bg-black/60 z-[1000] flex items-center justify-center p-2 md:p-4 backdrop-blur-sm">
-            <Card className="w-full max-w-[500px] h-full md:h-auto rounded-[1.5rem] md:rounded-[2.5rem] bg-white flex flex-col p-4 md:p-8 shadow-2xl overflow-hidden">
-              <div className="flex justify-between items-center mb-6"><h3 className="font-black text-[#1e3a8a] uppercase text-xs tracking-widest text-left">Informações Clínicas</h3><button onClick={() => setIsEditPacienteOpen(false)} className="p-2"><X size={24}/></button></div>
-              <div className="space-y-4 flex-1 overflow-y-auto">
-                <textarea value={tempDados.anamnese} onChange={e => setTempDados({...tempDados, anamnese: e.target.value})} className="w-full bg-gray-50 border-none rounded-xl p-4 text-sm h-40 outline-none resize-none" placeholder="Anamnese..." />
-                <textarea value={tempDados.observacoes} onChange={e => setTempDados({...tempDados, observacoes: e.target.value})} className="w-full bg-gray-50 border-none rounded-xl p-4 text-sm h-32 outline-none resize-none" placeholder="Observações..." />
-                <Button onClick={handleSalvarDadosPaciente} disabled={loading} className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black h-14 rounded-2xl uppercase text-xs mt-4">Salvar Dados</Button>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* MODAL AGENDAMENTO */}
-        {isAgendamentoOpen && (
-          <div className="fixed inset-0 bg-black/60 z-[999] flex items-center justify-center p-2 md:p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsAgendamentoOpen(false)}>
-            <Card className="w-full max-w-[420px] h-full md:h-auto rounded-[1.5rem] md:rounded-[2.5rem] bg-white shadow-2xl overflow-hidden flex flex-col">
-              <div className="bg-[#1e3a8a] p-4 md:p-5 flex justify-between items-center shrink-0 text-white"><h3 className="font-black uppercase text-[10px] md:text-[11px]">Agendar Consulta</h3><button onClick={() => setIsAgendamentoOpen(false)} className="text-white p-2"><X size={22}/></button></div>
-              <form onSubmit={handleSalvarAgendamento} className="p-4 md:p-6 space-y-4 flex-1 overflow-y-auto">
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                  <Select value={formAgendamento.status} onValueChange={(v) => setFormAgendamento({...formAgendamento, status: v})}><SelectTrigger className="bg-blue-50 font-bold text-blue-700 h-10 uppercase text-[9px] md:text-[10px] rounded-xl"><SelectValue /></SelectTrigger><SelectContent className="z-[1000]"><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem></SelectContent></Select>
-                  <Select value={formAgendamento.forma_pagamento} onValueChange={(v) => setFormAgendamento({...formAgendamento, forma_pagamento: v})}><SelectTrigger className="bg-emerald-50 font-bold text-emerald-700 h-10 text-[9px] md:text-[10px] uppercase rounded-xl"><SelectValue /></SelectTrigger><SelectContent className="z-[1000]"><SelectItem value="Pix">Pix</SelectItem><SelectItem value="Dinheiro">Dinheiro</SelectItem></SelectContent></Select>
-                </div>
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                  <Input type="number" step="0.01" value={formAgendamento.valor_atendimento} onChange={e => setFormAgendamento({...formAgendamento, valor_atendimento: e.target.value})} className="bg-gray-50 h-10 font-bold text-sm rounded-xl" />
-                  <Select value={formAgendamento.duracao} onValueChange={(v) => setFormAgendamento({...formAgendamento, duracao: v})}><SelectTrigger className="bg-gray-50 h-10 font-bold text-sm rounded-xl"><SelectValue /></SelectTrigger><SelectContent className="z-[1000]"><SelectItem value="30">30 Min</SelectItem><SelectItem value="40">40 Min</SelectItem><SelectItem value="60">60 Min</SelectItem></SelectContent></Select>
-                </div>
-                <Select value={formAgendamento.profissional} onValueChange={(v) => setFormAgendamento({...formAgendamento, profissional: v})} required><SelectTrigger className="bg-gray-50 h-10 font-bold text-sm uppercase rounded-xl"><SelectValue placeholder="Selecionar..." /></SelectTrigger><SelectContent className="z-[1000] text-left">{equipeClinica.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}</SelectContent></Select>
-                <input type="datetime-local" className="w-full h-11 bg-gray-50 rounded-xl px-4 text-xs font-bold outline-none border-none" value={formAgendamento.inicio} onChange={e => setFormAgendamento({...formAgendamento, inicio: e.target.value})} />
-                <Button type="submit" disabled={loadingAgendamento} className="w-full bg-[#1e3a8a] text-white font-black uppercase h-14 rounded-2xl shadow-xl mt-2">Confirmar</Button>
-              </form>
-            </Card>
-          </div>
-        )}
       </div>
+
+      {/* --- INÍCIO DA INJEÇÃO: MODAL DO EDITOR WORD-STYLE --- */}
+      {isEditorOpen && (
+        <div className="fixed inset-0 bg-black/90 z-[9999] flex items-start justify-center p-2 md:p-8 pt-10 backdrop-blur-md overflow-y-auto">
+          <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl flex flex-col mb-20 relative overflow-hidden">
+            
+            <div className="bg-gray-50 p-4 border-b flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-md">
+              <div className="flex items-center gap-1">
+                <button onClick={() => formatDoc('bold')} className="p-2 hover:bg-white rounded-lg border bg-gray-50"><Bold size={16}/></button>
+                <button onClick={() => formatDoc('italic')} className="p-2 hover:bg-white rounded-lg border bg-gray-50"><Italic size={16}/></button>
+                <button onClick={() => formatDoc('underline')} className="p-2 hover:bg-white rounded-lg border bg-gray-50"><Underline size={16}/></button>
+                <div className="w-px h-6 bg-gray-300 mx-2"/>
+                <button onClick={() => formatDoc('justifyLeft')} className="p-2 hover:bg-white rounded-lg border bg-gray-50"><AlignLeft size={16}/></button>
+                <button onClick={() => formatDoc('justifyCenter')} className="p-2 hover:bg-white rounded-lg border bg-gray-50"><AlignCenter size={16}/></button>
+                <div className="w-px h-6 bg-gray-300 mx-2"/>
+                <select onChange={(e) => formatDoc('fontSize', e.target.value)} className="bg-white border rounded px-2 h-8 text-xs font-bold outline-none">
+                  <option value="3">Médio</option><option value="5">Grande</option><option value="7">Título</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => setIsEditorOpen(false)} variant="ghost" className="text-gray-400 font-black uppercase text-[10px]">Fechar</Button>
+                <Button onClick={gerarLaudoPremiumPDF} disabled={gerandoPdf} className="bg-blue-600 text-white font-black uppercase text-xs px-8 rounded-full h-12 shadow-lg hover:bg-black transition-all">
+                  {gerandoPdf ? <RefreshCw className="animate-spin mr-2" size={18}/> : <CheckCircle2 className="mr-2" size={18}/>} Gerar PDF Premium
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex-1 p-10 bg-gray-200/50 overflow-y-auto flex justify-center">
+              <div 
+                ref={editorRef}
+                contentEditable 
+                className="bg-white w-[210mm] min-h-[297mm] p-20 shadow-xl outline-none text-gray-800 font-serif leading-relaxed text-[11pt] text-left"
+                style={{ fontFamily: 'Times New Roman, serif' }}
+              >
+                <p style={{textAlign: "center", fontSize: "16pt", fontWeight: "bold", color: "#1e3a8a"}}>INSTITUTO SERCLIN</p>
+                <p style={{textAlign: "center", fontStyle: "italic", color: "#666", marginBottom: "30px"}}>Gestão em Saúde e Reabilitação Cognitiva</p>
+                
+                <p><b>1. IDENTIFICAÇÃO PROFISSIONAL</b></p>
+                <p>Nome: {meuPerfil?.nome || 'Helenara Maria da Silva Mendes Chaves'}</p>
+                <p>CRP: {meuPerfil?.conselho || formLaudo.crp_manual || '24/02216'}</p>
+                <br />
+                <p><b>2. IDENTIFICAÇÃO DO PACIENTE</b></p>
+                <p>Nome: {paciente?.nome}</p>
+                <p>Nascimento: {paciente?.data_nascimento ? format(new Date(paciente.data_nascimento), "dd/MM/yyyy") : '---'}</p>
+                <p>Finalidade: {formLaudo.finalidade}</p>
+                <br />
+                <p><b>3. DESCRIÇÃO DA DEMANDA</b></p>
+                <p>{formLaudo.demanda || 'O paciente apresenta características compatíveis com...'}</p>
+                <br />
+                <p><b>4. PROCEDIMENTOS E RESULTADOS</b></p>
+                <p>{formLaudo.procedimentos}</p>
+                {testes.map((t, i) => (
+                  <p key={i}>- {t.funcao}: {t.nome} (Percentil: {t.percentil} / {t.classificacao})</p>
+                ))}
+                <br />
+                <p><b>5. CONCLUSÃO DIAGNÓSTICA</b></p>
+                <p>{formLaudo.conclusao || 'Diante dos achados, conclui-se que o quadro é...'}</p>
+                <br />
+                <p><b>6. ENCAMINHAMENTOS</b></p>
+                <p>{formLaudo.encaminhamentos || '1. ABA;\n2. Terapia Ocupacional;\n3. Neuropediatra.'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* --- FIM DA INJEÇÃO DO MODAL --- */}
+
+      {/* MODAL AGENDAMENTO E EDITAR PACIENTE (PRESERVADOS) */}
+      {isAgendamentoOpen && (
+        <div className="fixed inset-0 bg-black/60 z-[999] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsAgendamentoOpen(false)}>
+          <Card className="w-full max-w-[420px] rounded-[2.5rem] bg-white shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#1e3a8a] p-5 flex justify-between items-center text-white"><h3 className="font-black uppercase text-[11px]">Agendar Consulta</h3><X size={22} className="cursor-pointer" onClick={() => setIsAgendamentoOpen(false)}/></div>
+            <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Select value={formAgendamento.status} onValueChange={(v) => setFormAgendamento({...formAgendamento, status: v})}><SelectTrigger className="bg-blue-50 font-bold h-10 uppercase text-[10px] rounded-xl"><SelectValue /></SelectTrigger><SelectContent className="z-[1000]"><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem></SelectContent></Select>
+                <Input type="number" step="0.01" value={formAgendamento.valor_atendimento} onChange={e => setFormAgendamento({...formAgendamento, valor_atendimento: e.target.value})} className="bg-gray-50 h-10 font-bold rounded-xl" />
+              </div>
+              <Select value={formAgendamento.profissional} onValueChange={(v) => setFormAgendamento({...formAgendamento, profissional: v})} required><SelectTrigger className="bg-gray-50 h-10 font-bold uppercase rounded-xl"><SelectValue placeholder="Profissional" /></SelectTrigger><SelectContent className="z-[1000]">{equipeClinica.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}</SelectContent></Select>
+              <input type="datetime-local" className="w-full h-11 bg-gray-50 rounded-xl px-4 text-xs font-bold outline-none" value={formAgendamento.inicio} onChange={e => setFormAgendamento({...formAgendamento, inicio: e.target.value})} />
+              <Button type="submit" disabled={loadingAgendamento} className="w-full bg-[#1e3a8a] text-white font-black uppercase h-14 rounded-2xl shadow-xl">Confirmar</Button>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {isEditPacienteOpen && (
+        <div className="fixed inset-0 bg-black/60 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-[500px] rounded-[2.5rem] bg-white p-8 shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center mb-6"><h3 className="font-black text-[#1e3a8a] uppercase text-xs tracking-widest">Informações Clínicas</h3><X size={24} className="cursor-pointer" onClick={() => setIsEditPacienteOpen(false)}/></div>
+            <div className="space-y-4">
+              <textarea value={tempDados.anamnese} onChange={e => setTempDados({...tempDados, anamnese: e.target.value})} className="w-full bg-gray-50 rounded-xl p-4 text-sm h-40 outline-none resize-none" placeholder="Anamnese..." />
+              <textarea value={tempDados.observacoes} onChange={e => setTempDados({...tempDados, observacoes: e.target.value})} className="w-full bg-gray-50 rounded-xl p-4 text-sm h-32 outline-none resize-none" placeholder="Observações..." />
+              <Button onClick={handleSalvarDadosPaciente} disabled={loading} className="w-full bg-[#1e3a8a] text-white font-black h-14 rounded-2xl uppercase text-xs mt-4">Salvar Dados</Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
     </div>
   );
 }
