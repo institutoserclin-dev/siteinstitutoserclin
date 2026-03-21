@@ -87,7 +87,15 @@ export default function Home() {
                         type="tel" 
                         required 
                         className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-secondary outline-none text-black font-medium" 
-                        placeholder="(68) 99999-9999" 
+                        placeholder="(68) 99999-9999"
+                        onChange={(e) => {
+                          let v = e.target.value.replace(/\D/g, "");
+                          if (v.length > 11) v = v.slice(0, 11);
+                          if (v.length > 10) v = v.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})/, "($1) $2 $3-$4");
+                          else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+                          else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+                          e.target.value = v;
+                        }}
                       />
                     </div>
 
