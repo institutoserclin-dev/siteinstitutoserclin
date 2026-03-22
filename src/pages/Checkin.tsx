@@ -25,19 +25,36 @@ export function Checkin() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Máscara de CPF
+  // --- NOVA MÁSCARA INTELIGENTE ---
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let v = e.target.value.replace(/\D/g, "").slice(0, 11);
-    if (v.length > 9) v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
-    else if (v.length > 6) v = v.replace(/^(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
-    else if (v.length > 3) v = v.replace(/^(\d{3})(\d{1,3})/, "$1.$2");
+    let v = e.target.value.replace(/\D/g, ""); // Limpa letras e símbolos
+    if (v.length > 11) v = v.slice(0, 11); // Trava em 11 dígitos
+
+    if (v.length <= 9) {
+      // É telemóvel sem DDD (ex: 99216-1717)
+      v = v.replace(/^(\d{4,5})(\d{4})$/, "$1-$2");
+    } else if (v.length === 10) {
+      // É telefone fixo com DDD (ex: (68) 3222-2222)
+      v = v.replace(/^(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+    } else if (v.length === 11) {
+      // Tem 11 dígitos. Se o primeiro dígito NÃO for zero E o 3º for 9, formatamos como Celular.
+      // Se não, formatamos como CPF.
+      if (v[0] !== '0' && v[2] === '9') {
+        v = v.replace(/^(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+      } else {
+        v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      }
+    }
+    
     setIdentificacao(v);
   };
 
   const entrarNoPortal = async (e: React.FormEvent) => {
     e.preventDefault();
     const limpo = identificacao.replace(/\D/g, "");
-    if (limpo.length < 10) return toast.error("Digite todos os números.");
+    
+    // --- CORREÇÃO: Mínimo 8 dígitos ---
+    if (limpo.length < 8) return toast.error("Digite o número completo (mínimo de 8 dígitos).");
 
     setLoading(true);
     try {
@@ -52,11 +69,16 @@ export function Checkin() {
         const cpf = (p.cpf || "").replace(/\D/g, "");
         const resp = (p.responsavel_cpf || "").replace(/\D/g, "");
         const tel = (p.telefone || "").replace(/\D/g, "");
-        return cpf === limpo || resp === limpo || tel === limpo || tel.includes(limpo);
+        
+        // --- NOVA LÓGICA DE BUSCA INTELIGENTE ---
+        if (cpf === limpo || resp === limpo) return true;
+        if (tel && (tel === limpo || tel.endsWith(limpo))) return true;
+
+        return false;
       });
 
       if (!pEncontrado) {
-        toast.error("Cadastro não encontrado. Fale com a recepção.");
+        toast.error("Cadastro não encontrado. Verifique o número ou fale com a recepção.");
         setLoading(false);
         return;
       }
@@ -160,10 +182,10 @@ export function Checkin() {
 
             <form onSubmit={entrarNoPortal} className="space-y-6">
               <div className="space-y-2 text-left">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Telefone, CPF DO PACIENTE ou CPF DO RESPONSÁVEL CADASTRADO</label>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Telefone, CPF DO PACIENTE ou RESPONSÁVEL</label>
                 <div className="relative">
                   <Search className="absolute left-4 top-4 h-5 w-5 text-gray-300" />
-                  <Input type="tel" required placeholder="000.000.000-00" value={identificacao} onChange={handleInput} className="bg-gray-50 border-none h-14 pl-12 text-sm font-bold rounded-2xl text-gray-700 w-full" />
+                  <Input type="tel" required placeholder="Digite os números..." value={identificacao} onChange={handleInput} className="bg-gray-50 border-none h-14 pl-12 text-sm font-bold rounded-2xl text-gray-700 w-full" />
                 </div>
               </div>
               <Button type="submit" disabled={loading} className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black uppercase tracking-widest h-14 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2">

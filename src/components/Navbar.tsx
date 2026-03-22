@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
-import { Menu, X, Phone } from "lucide-react";
+import { Menu, X, Phone, UserCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Navbar() {
@@ -43,7 +43,7 @@ export function Navbar() {
         </a>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
             <a
               key={link.name}
@@ -56,8 +56,36 @@ export function Navbar() {
               {link.name}
             </a>
           ))}
+
+          {/* --- INJEÇÃO DOS PORTAIS DE ACESSO (DESKTOP) --- */}
+          <div className="flex items-center gap-4 border-l pl-6 ml-2" style={{ borderColor: isScrolled ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.3)' }}>
+            <a 
+              href="https://institutoserclin.vercel.app/checkin" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "text-[14px] font-black uppercase tracking-widest hover:text-amber-500 transition-colors flex items-center gap-1",
+                isScrolled ? "text-[#1e3a8a]" : "text-white drop-shadow-sm"
+              )}
+            >
+              <UserCircle size={24} /> Portal Do Paciente
+            </a>
+            <a 
+              href="https://institutoserclin.vercel.app/sistema" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "text-[14px] font-black uppercase tracking-widest hover:text-amber-500 transition-colors flex items-center gap-1",
+                isScrolled ? "text-[#1e3a8a]" : "text-white drop-shadow-sm"
+              )}
+            >
+              <ShieldCheck size={24} /> Colaborador
+            </a>
+          </div>
+          {/* ----------------------------------------------- */}
+
           <Button 
-            className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-bold rounded-full"
+            className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-bold rounded-full ml-2"
             asChild
           >
             <a href="https://wa.me/5568992161717" target="_blank" rel="noopener noreferrer">
@@ -92,7 +120,29 @@ export function Navbar() {
               {link.name}
             </a>
           ))}
-          <Button className="w-full bg-primary text-white" asChild>
+          
+          {/* --- INJEÇÃO DOS PORTAIS DE ACESSO (MOBILE) --- */}
+          <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
+            <a 
+              href="https://institutoserclin.vercel.app/checkin" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-blue-50 text-[#1e3a8a] text-xs font-black uppercase py-3 rounded-lg text-center flex items-center justify-center gap-2"
+            >
+              <UserCircle size={16} /> Portal do Paciente
+            </a>
+            <a 
+              href="https://institutoserclin.vercel.app/sistema" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-gray-100 text-gray-600 text-xs font-black uppercase py-3 rounded-lg text-center flex items-center justify-center gap-2"
+            >
+              <ShieldCheck size={16} /> Acesso Colaborador
+            </a>
+          </div>
+          {/* ---------------------------------------------- */}
+
+          <Button className="w-full bg-primary text-white mt-2" asChild>
             <a href="https://wa.me/5568992161717" target="_blank" rel="noopener noreferrer">
               Agendar via WhatsApp
             </a>
