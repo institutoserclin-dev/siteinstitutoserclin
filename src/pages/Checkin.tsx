@@ -376,8 +376,8 @@ export function Checkin() {
                     </p>
                     
                     <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-sm relative z-10">
-                      <p className="text-[10px] font-black text-amber-300 uppercase tracking-widest mb-2">Regras de Utilização:</p>
-                      <ul className="text-[10px] text-blue-50 space-y-2 ml-4 list-disc font-medium">
+                      <p className="text-[12px] font-black text-amber-300 uppercase tracking-widest mb-2">Regras de Utilização:</p>
+                      <ul className="text-[12px] text-blue-50 space-y-2 ml-4 list-disc font-medium">
                         <li>O benefício é pessoal e <strong>intransferível</strong>.</li>
                         <li>No plano <strong>Família Prestige</strong>, a regra aplica-se igualmente: cada membro registado no plano paga a sua própria avaliação (R$ 850,00 cada).</li>
                       </ul>
@@ -395,7 +395,7 @@ export function Checkin() {
                         )}
 
                         <h4 className="font-black text-[#1e3a8a] text-lg mb-1">{plano.nome}</h4>
-                        <p className="text-[11px] text-gray-500 font-medium mb-4 pr-10 h-8">{plano.desc}</p>
+                        <p className="text-[14px] text-gray-500 font-medium mb-4 pr-10 h-8">{plano.desc}</p>
                         
                         <div className="flex items-end gap-1 mb-5">
                           <span className="text-sm font-bold text-gray-400">R$</span>
@@ -409,7 +409,7 @@ export function Checkin() {
                               <div className="mt-0.5 bg-amber-100 rounded-full p-0.5 shrink-0">
                                 <Check size={10} className="text-amber-600 font-bold" />
                               </div>
-                              <p className="text-[11px] font-medium text-gray-700 leading-snug">{item}</p>
+                              <p className="text-[14px] font-medium text-gray-700 leading-snug">{item}</p>
                             </div>
                           ))}
                         </div>
