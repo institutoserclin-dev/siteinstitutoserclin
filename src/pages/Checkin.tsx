@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { 
   CheckCircle, Search, Clock, ArrowRight, User, 
   CalendarDays, FileText, ShoppingBag, History, Camera, LogOut,
-  Check, Brain, AlertTriangle, BookOpen, Play
+  Check, Brain, AlertTriangle, BookOpen, Play, 
+  ExternalLink 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,8 +38,26 @@ export function Checkin() {
   const [abaAtiva, setAbaAtiva] = useState<'inicio' | 'historico' | 'servicos' | 'perfil'>('inicio');
   const [paciente, setPaciente] = useState<any>(null);
   const [agendamentos, setAgendamentos] = useState<any[]>([]);
+  const [arquivos, setArquivos] = useState<any[]>([]); // INJETADO
   const [consultaHoje, setConsultaHoje] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // FUNÇÃO INJETADA
+  const carregarArquivos = async (pacienteId: any) => {
+    const { data } = await supabase
+      .from('pacientes_arquivos')
+      .select('*')
+      .eq('paciente_id', pacienteId)
+      .order('created_at', { ascending: false });
+    if (data) setArquivos(data);
+  };
+
+  // VIGIA DE ATUALIZAÇÃO
+  useEffect(() => {
+    if (paciente?.id && abaAtiva === 'perfil') {
+      carregarArquivos(paciente.id);
+    }
+  }, [abaAtiva, paciente?.id]);
 
   // --- MÁSCARA INTELIGENTE ---
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,6 +105,9 @@ export function Checkin() {
       }
 
       setPaciente(pEncontrado);
+      
+      // --- AJUSTADO: ADICIONADO AWAIT PARA GARANTIR A CARGA ---
+      await carregarArquivos(pEncontrado.id); 
 
       const { data: meusAgendamentos, error: errAg } = await supabase
         .from('agendamentos')
@@ -172,7 +194,7 @@ export function Checkin() {
   const consultasPassadas = agendamentos.filter(ag => isBefore(new Date(ag.data_inicio), startOfDay(new Date())));
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans selection:bg-blue-100 relative overflow-hidden text-left">
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans antialiased selection:bg-blue-100 relative overflow-hidden text-left">
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-blue-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-emerald-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
 
@@ -445,6 +467,46 @@ export function Checkin() {
                   </div>
                   <h2 className="text-lg font-black uppercase text-gray-800">{paciente.nome}</h2>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Clique na câmera para alterar a foto</p>
+                </div>
+
+                {/* INJETADO: LISTA DE DOCUMENTOS E LAUDOS */}
+                <div className="space-y-4">
+                  <h3 className="font-black text-gray-800 uppercase text-[12px] tracking-[0.2em] flex items-center gap-2 px-2 text-left">
+                    <FileText size={16} className="text-blue-600"/> Meus Documentos e Laudos
+                  </h3>
+                  
+                  {arquivos.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-3">
+                      {arquivos.map((doc) => (
+                        <div key={doc.id} className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3 text-left">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm">
+                              <FileText size={20} />
+                            </div>
+                            <div className="max-w-[180px]">
+                              <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">{doc.tipo_documento || "Documento"}</p>
+                              <p className="text-[11px] font-bold text-gray-700 truncate">{doc.nome_arquivo}</p>
+                            </div>
+                          </div>
+                          <a 
+                            href={doc.url_arquivo} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="p-3 bg-white text-blue-600 rounded-xl shadow-sm hover:bg-blue-600 hover:text-white transition-all"
+                          >
+                            <ExternalLink size={18} />
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-2xl p-10 text-center border-2 border-dashed border-gray-100">
+                      <FileText className="mx-auto text-gray-200 mb-2" size={32} />
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-relaxed">
+                        Nenhum documento <br/> disponível para visualização.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-gray-50 rounded-2xl p-4 text-left space-y-3">

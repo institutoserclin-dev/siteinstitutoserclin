@@ -47,6 +47,8 @@ export function Prontuario() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null); 
   
+  // ESTADOS DO PRONTUÁRIO
+  const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
   const [paciente, setPaciente] = useState<any>(null);
   const [registros, setRegistros] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]); 
@@ -54,9 +56,7 @@ export function Prontuario() {
   const [loadingLogs, setLoadingLogs] = useState(false); 
   const [resumoPresenca, setResumoPresenca] = useState({ presencas: 0, faltas: 0 });
   const [modoEdicao, setModoEdicao] = useState<string | null>(null);
-  const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
-  const [meuPerfil, setMeuPerfil] = useState<any>(null); 
-  
+  const [meuPerfil, setMeuPerfil] = useState<any>(null);
   // ESTADOS DO EDITOR 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [gerandoPdf, setGerandoPdf] = useState(false);
@@ -123,6 +123,17 @@ export function Prontuario() {
     } catch (err) { console.error("Erro Auditoria SerClin:", err); }
   };
 
+  const espelharParaPortal = async (nome: string, url: string, tipo: string) => {
+  try {
+    await supabase.from('pacientes_arquivos').insert([{
+      paciente_id: id,
+      nome_arquivo: nome,
+      url_arquivo: url,
+      tipo_documento: tipo
+    }]);
+  } catch (err) { console.error("Erro espelhamento Portal:", err); }
+};
+
   const carregarLogs = async () => {
     if (!id || !meuPerfil?.permissao_auditoria) return;
     setLoadingLogs(true);
@@ -172,8 +183,12 @@ export function Prontuario() {
     } catch (err) { toast.error("Erro."); } finally { setLoading(false); }
   };
 
-  const handleSalvarRegistro = async () => {
-    if (!novoRegistro.descricao && novoRegistro.tipo !== "Laudo Estruturado") return toast.warning("Descreva o atendimento.");
+const handleSalvarRegistro = async () => {
+    // Validação: permite salvar se tiver descrição OU se tiver arquivo anexado
+    if (!novoRegistro.descricao && novoRegistro.tipo !== "Laudo Estruturado" && !arquivoSelecionado) {
+      return toast.warning("Descreva o atendimento ou anexe um arquivo.");
+    }
+
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -182,22 +197,58 @@ export function Prontuario() {
       let arquivoNome: string | null = null;
 
       if (arquivoSelecionado) {
-        const fileName = `${id}/${Date.now()}_${arquivoSelecionado.name}`;
+        // --- INÍCIO DA LIMPEZA DO NOME (SANATIZAÇÃO) ---
+        const nomeOriginal = arquivoSelecionado.name;
+const nomeLimpo = nomeOriginal
+  .normalize("NFD")               // Decompõe caracteres acentuados
+  .replace(/[\u0300-\u036f]/g, "") // Remove os acentos
+  .replace(/[^\w.-]/g, "_");       // Substitui espaços e especiais por "_"
+
+// Agora o fileName usará o nome sem erros:
+const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
+        // -----------------------------------------------
+
         const { error: upErr } = await supabase.storage.from('documentos').upload(fileName, arquivoSelecionado);
         if (upErr) throw upErr;
+        
         const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(fileName);
-        arquivoUrl = publicUrl; arquivoNome = arquivoSelecionado.name;
+        arquivoUrl = publicUrl; 
+        arquivoNome = nomeOriginal; // No banco de dados, guardamos o nome original (com acento) para visualização
+
+        // Espelhamento para o Portal do Paciente
+        if (!novoRegistro.tipo.includes("Sessão")) {
+          await supabase.from('pacientes_arquivos').insert([{
+            paciente_id: id,
+            nome_arquivo: arquivoNome,
+            url_arquivo: arquivoUrl,
+            tipo_documento: novoRegistro.tipo
+          }]);
+        }
       }
 
+      // Salva no Prontuário Interno
       await supabase.from("prontuarios").insert([{
-        paciente_id: id, tipo_registro: novoRegistro.tipo, descricao: novoRegistro.descricao,
-        profissional_nome: nomeAutor, historico: [], arquivo_url: arquivoUrl, arquivo_nome: arquivoNome
+        paciente_id: id, 
+        tipo_registro: novoRegistro.tipo, 
+        descricao: novoRegistro.descricao || `Arquivo anexo: ${arquivoNome}`,
+        profissional_nome: nomeAutor, 
+        historico: [], 
+        arquivo_url: arquivoUrl, 
+        arquivo_nome: arquivoNome
       }]);
       
       await registrarLog("Criou Registro", `Adicionou ${novoRegistro.tipo}`);
-      setNovoRegistro({ tipo: "Sessão", descricao: "" });
-      setArquivoSelecionado(null); carregarDados();
-    } catch (error) { toast.error("Erro ao salvar."); } finally { setLoading(false); }
+      setNovoRegistro({ tipo: isSecretaria ? "Laudo" : "Sessão", descricao: "" });
+      setArquivoSelecionado(null); 
+      carregarDados();
+      toast.success("Registro salvo com sucesso!");
+
+    } catch (error) { 
+      console.error("Erro SerClin Storage:", error);
+      toast.error("Erro ao subir arquivo. Tente renomear o arquivo para algo simples.");
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   // --- INJEÇÃO: FUNÇÕES DO EDITOR WORD-STYLE ---
@@ -552,21 +603,51 @@ export function Prontuario() {
                     </Button>
                     {/* --- FIM DA INJEÇÃO --- */}
 
-                    <Button onClick={gerarESalvarLaudoPDF} disabled={gerandoPdf} className="w-full bg-[#1e3a8a] text-white font-black uppercase text-sm h-16 rounded-2xl shadow-2xl transition-all flex items-center justify-center gap-3">
+                 <Button 
+                      onClick={gerarESalvarLaudoPDF} 
+                      disabled={gerandoPdf} 
+                      className="w-full bg-[#1e3a8a] text-white font-black uppercase text-sm h-16 rounded-2xl shadow-2xl transition-all flex items-center justify-center gap-3"
+                    >
                       {gerandoPdf ? <><RefreshCw className="animate-spin" size={20}/> Processando...</> : <><FileText size={24}/> Gerar Laudo Rápido (Antigo)</>}
                     </Button>
                   </div>
                 ) : (
                   <div className="space-y-4 animate-in fade-in duration-300">
-                    <textarea className="w-full rounded-2xl border-none bg-gray-50 px-5 py-4 text-sm min-h-[200px] outline-none resize-none" placeholder="Descreva a evolução do paciente..." value={novoRegistro.descricao} onChange={e => setNovoRegistro({...novoRegistro, descricao: e.target.value})} />
-                    <div className="flex gap-3">
-                      <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1 border-dashed border-2 border-gray-200 text-[10px] font-black uppercase h-14 rounded-2xl">
-                        <Paperclip size={20} className="mr-2" /> {arquivoSelecionado ? arquivoSelecionado.name : "Anexar PDF"}
+                    <textarea 
+                      className="w-full rounded-2xl border-none bg-gray-50 px-5 py-4 text-sm min-h-[200px] outline-none resize-none" 
+                      placeholder="Descreva a evolução do paciente..." 
+                      value={novoRegistro.descricao} 
+                      onChange={e => setNovoRegistro({...novoRegistro, descricao: e.target.value})} 
+                    />
+                    
+                    <div className="flex gap-3 items-center">
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        onClick={() => fileInputRef.current?.click()} 
+                        className="flex-1 border-dashed border-2 border-gray-200 text-[10px] font-black uppercase h-14 rounded-2xl overflow-hidden"
+                      >
+                        <Paperclip size={20} className="mr-2 shrink-0" /> 
+                        <span className="truncate block max-w-full">
+                          {arquivoSelecionado ? arquivoSelecionado.name : "Anexar PDF"}
+                        </span>
                       </Button>
-                      <Button onClick={handleSalvarRegistro} className="flex-[2] bg-[#1e3a8a] text-white font-black uppercase text-sm h-14 rounded-2xl shadow-lg hover:bg-black transition-all">
-                        <Save size={20} className="mr-2"/> Salvar Registro
+                      
+                      <Button 
+                        onClick={handleSalvarRegistro} 
+                        className="flex-1 bg-[#1e3a8a] text-white font-black uppercase text-xs h-14 rounded-2xl shadow-lg hover:bg-black transition-all shrink-0"
+                      >
+                        <Save size={20} className="mr-2"/> Salvar
                       </Button>
                     </div>
+
+                    <input 
+                      type="file" 
+                      hidden 
+                      ref={fileInputRef} 
+                      accept="application/pdf,image/*"
+                      onChange={(e) => setArquivoSelecionado(e.target.files?.[0] || null)} 
+                    />
                   </div>
                 )}
               </CardContent>
@@ -583,15 +664,47 @@ export function Prontuario() {
                     <span className="text-[11px] font-black text-gray-800 uppercase">{reg.profissional_nome}</span>
                   </div>
                   <div className="flex gap-2">
-                    {meuPerfil?.permissao_excluir && <button onClick={async () => { if(confirm("Apagar?")) { await registrarLog("Apagou Registro", reg.tipo_registro); supabase.from("prontuarios").delete().eq("id", reg.id).then(carregarDados) } }} className="text-gray-200 hover:text-red-400"><Trash2 size={14}/></button>}
+                    {/* BOTÃO EXCLUIR AJUSTADO PARA LIMPAR O PORTAL TAMBÉM */}
+                    {meuPerfil?.permissao_excluir && (
+                      <button 
+                        onClick={async () => { 
+                          if(confirm("Deseja apagar este registro e remover o acesso do paciente ao documento?")) { 
+                            setLoading(true);
+                            try {
+                              // 1. Apaga do Prontuário Interno
+                              await supabase.from("prontuarios").delete().eq("id", reg.id);
+                              
+                              // 2. Apaga do Portal do Paciente (Se houver arquivo)
+                              if (reg.arquivo_url) {
+                                await supabase.from("pacientes_arquivos").delete().eq("url_arquivo", reg.arquivo_url);
+                              }
+
+                              await registrarLog("Apagou Registro", reg.tipo_registro);
+                              toast.success("Removido com sucesso!");
+                              carregarDados();
+                            } catch (err) {
+                              toast.error("Erro ao excluir.");
+                            } finally {
+                              setLoading(false);
+                            }
+                          } 
+                        }} 
+                        className="text-gray-200 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={14}/>
+                      </button>
+                    )}
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 whitespace-pre-wrap mt-4 leading-relaxed">{reg.descricao}</p>
-                {reg.arquivo_url && <a href={reg.arquivo_url} target="_blank" className="inline-flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 px-4 py-2 rounded-xl uppercase mt-4 shadow-sm transition-colors"><FileText size={16} /> Abrir Documento Anexado</a>}
+                {reg.arquivo_url && (
+                  <a href={reg.arquivo_url} target="_blank" className="inline-flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 px-4 py-2 rounded-xl uppercase mt-4 shadow-sm transition-colors">
+                    <FileText size={16} /> Abrir Documento Anexado
+                  </a>
+                )}
               </div>
             ))}
           </div>
-
         </div>
       </div>
 
@@ -662,36 +775,95 @@ export function Prontuario() {
       {/* --- FIM DA INJEÇÃO DO MODAL --- */}
 
       {/* MODAL AGENDAMENTO E EDITAR PACIENTE (PRESERVADOS) */}
+      {/* MODAL AGENDAMENTO */}
       {isAgendamentoOpen && (
-        <div className="fixed inset-0 bg-black/60 z-[999] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsAgendamentoOpen(false)}>
-          <Card className="w-full max-w-[420px] rounded-[2.5rem] bg-white shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="bg-[#1e3a8a] p-5 flex justify-between items-center text-white"><h3 className="font-black uppercase text-[11px]">Agendar Consulta</h3><X size={22} className="cursor-pointer" onClick={() => setIsAgendamentoOpen(false)}/></div>
-            <form onSubmit={handleSalvarAgendamento} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Select value={formAgendamento.status} onValueChange={(v) => setFormAgendamento({...formAgendamento, status: v})}><SelectTrigger className="bg-blue-50 font-bold h-10 uppercase text-[10px] rounded-xl"><SelectValue /></SelectTrigger><SelectContent className="z-[1000]"><SelectItem value="Agendado">Agendado</SelectItem><SelectItem value="Presença">Presença</SelectItem></SelectContent></Select>
-                <Input type="number" step="0.01" value={formAgendamento.valor_atendimento} onChange={e => setFormAgendamento({...formAgendamento, valor_atendimento: e.target.value})} className="bg-gray-50 h-10 font-bold rounded-xl" />
+        <div className="fixed inset-0 bg-black/60 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsAgendamentoOpen(false)}>
+          <Card className="w-full max-w-[420px] rounded-[2.5rem] bg-white shadow-2xl overflow-hidden border-none font-sans" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#1e3a8a] p-6 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <CalendarIcon size={20} className="text-white" />
+                <span className="font-black uppercase text-[12px] tracking-[0.2em] text-white">Agendar Consulta</span>
               </div>
-              <Select value={formAgendamento.profissional} onValueChange={(v) => setFormAgendamento({...formAgendamento, profissional: v})} required><SelectTrigger className="bg-gray-50 h-10 font-bold uppercase rounded-xl"><SelectValue placeholder="Profissional" /></SelectTrigger><SelectContent className="z-[1000]">{equipeClinica.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}</SelectContent></Select>
-              <input type="datetime-local" className="w-full h-11 bg-gray-50 rounded-xl px-4 text-xs font-bold outline-none" value={formAgendamento.inicio} onChange={e => setFormAgendamento({...formAgendamento, inicio: e.target.value})} />
-              <Button type="submit" disabled={loadingAgendamento} className="w-full bg-[#1e3a8a] text-white font-black uppercase h-14 rounded-2xl shadow-xl">Confirmar</Button>
-            </form>
-          </Card>
-        </div>
-      )}
+              <button onClick={() => setIsAgendamentoOpen(false)} className="text-white/80 hover:text-white transition-colors">
+                <X size={24} />
+              </button>
+            </div>
 
-      {isEditPacienteOpen && (
-        <div className="fixed inset-0 bg-black/60 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-[500px] rounded-[2.5rem] bg-white p-8 shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center mb-6"><h3 className="font-black text-[#1e3a8a] uppercase text-xs tracking-widest">Informações Clínicas</h3><X size={24} className="cursor-pointer" onClick={() => setIsEditPacienteOpen(false)}/></div>
-            <div className="space-y-4">
-              <textarea value={tempDados.anamnese} onChange={e => setTempDados({...tempDados, anamnese: e.target.value})} className="w-full bg-gray-50 rounded-xl p-4 text-sm h-40 outline-none resize-none" placeholder="Anamnese..." />
-              <textarea value={tempDados.observacoes} onChange={e => setTempDados({...tempDados, observacoes: e.target.value})} className="w-full bg-gray-50 rounded-xl p-4 text-sm h-32 outline-none resize-none" placeholder="Observações..." />
-              <Button onClick={handleSalvarDadosPaciente} disabled={loading} className="w-full bg-[#1e3a8a] text-white font-black h-14 rounded-2xl uppercase text-xs mt-4">Salvar Dados</Button>
+            <div className="p-8 space-y-5 text-left">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Status</label>
+                  <Select value={formAgendamento.status} onValueChange={(v) => setFormAgendamento({...formAgendamento, status: v})}>
+                    <SelectTrigger className="bg-gray-50 border-none font-bold h-12 uppercase text-[11px] rounded-2xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="z-[1001]">
+                      <SelectItem value="Agendado">Agendado</SelectItem>
+                      <SelectItem value="Presença">Presença</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Valor (R$)</label>
+                  <Input type="number" step="0.01" value={formAgendamento.valor_atendimento} onChange={e => setFormAgendamento({...formAgendamento, valor_atendimento: e.target.value})} className="bg-gray-50 border-none h-12 font-bold rounded-2xl" />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Profissional</label>
+                <Select value={formAgendamento.profissional} onValueChange={(v) => setFormAgendamento({...formAgendamento, profissional: v})} required>
+                  <SelectTrigger className="bg-gray-50 border-none h-12 font-bold uppercase text-[11px] rounded-2xl">
+                    <SelectValue placeholder="SELECIONE" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[1001]">
+                    {equipeClinica.map(p => <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Data e Hora</label>
+                <input type="datetime-local" className="w-full h-12 bg-gray-50 rounded-2xl px-4 text-sm font-bold border-none outline-none focus:ring-2 focus:ring-blue-100" value={formAgendamento.inicio} onChange={e => setFormAgendamento({...formAgendamento, inicio: e.target.value})} />
+              </div>
+
+              <Button onClick={(e: any) => handleSalvarAgendamento(e)} disabled={loadingAgendamento} className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black uppercase tracking-widest h-14 rounded-2xl shadow-xl mt-4">
+                {loadingAgendamento ? "Processando..." : "Confirmar Agendamento"}
+              </Button>
             </div>
           </Card>
         </div>
       )}
 
+      {/* MODAL INFORMAÇÕES CLÍNICAS */}
+      {isEditPacienteOpen && (
+        <div className="fixed inset-0 bg-black/60 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsEditPacienteOpen(false)}>
+          <Card className="w-full max-w-[500px] rounded-[2.5rem] bg-white shadow-2xl overflow-hidden border-none font-sans" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#1e3a8a] p-6 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <FileText size={20} className="text-white" />
+                <span className="font-black uppercase text-[12px] tracking-widest text-white">Informações Clínicas</span>
+              </div>
+              <button onClick={() => setIsEditPacienteOpen(false)} className="text-white/80 hover:text-white transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-5 text-left">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Anamnese / Histórico</label>
+                <textarea value={tempDados.anamnese} onChange={e => setTempDados({...tempDados, anamnese: e.target.value})} className="w-full bg-gray-50 rounded-2xl p-5 text-sm font-medium h-44 outline-none resize-none border-none focus:ring-2 focus:ring-blue-100" placeholder="Descreva o histórico..." />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Observações</label>
+                <textarea value={tempDados.observacoes} onChange={e => setTempDados({...tempDados, observacoes: e.target.value})} className="w-full bg-gray-50 rounded-2xl p-5 text-sm font-medium h-32 outline-none resize-none border-none focus:ring-2 focus:ring-blue-100" placeholder="Notas internas..." />
+              </div>
+              <Button onClick={handleSalvarDadosPaciente} disabled={loading} className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black h-14 rounded-2xl uppercase text-[11px] tracking-widest mt-4">
+                {loading ? "Salvando..." : "Salvar Dados Clínicos"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
