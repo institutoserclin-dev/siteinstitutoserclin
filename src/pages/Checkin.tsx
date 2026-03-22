@@ -3,7 +3,8 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { 
   CheckCircle, Search, Clock, ArrowRight, User, 
-  CalendarDays, FileText, ShoppingBag, History, Camera, LogOut
+  CalendarDays, FileText, ShoppingBag, History, Camera, LogOut,
+  Check, Brain, AlertTriangle, BookOpen, Play
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,41 +12,50 @@ import { format, startOfDay, endOfDay, isAfter, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import logoSer2 from "@/assets/ser2.png";
 
+// DADOS DOS PLANOS COM TODOS OS LINKS DE CHECKOUT INFINITEPAY CONFIGURADOS
+const planosSerClin = [
+  { nome: "Plano Essencial", preco: "99,90", desc: "A porta de entrada para o seu autocuidado.", destaque: null, link: "https://invoice.infinitepay.io/plans/instituto-serclin/wCZ4iNP4x", itens: ["Atendimento Quinzenal", "Sessões de até 40 minutos", "Acolhimento pontual", "Orientação básica"] },
+  { nome: "Plano Acolher", preco: "149,90", desc: "Manutenção emocional com suporte regular.", destaque: null, link: "https://invoice.infinitepay.io/plans/instituto-serclin/7VchlOCeiX", itens: ["Atendimento Quinzenal", "Sessões de 50 minutos", "Suporte via WhatsApp", "Horários diferenciados"] },
+  { nome: "Cuidado Premium", preco: "189,90", desc: "Para quem busca ferramentas práticas de evolução.", destaque: "MAIS PROCURADO", link: "https://invoice.infinitepay.io/plans/instituto-serclin/7Vcj15B2cN", itens: ["Atendimento Quinzenal (50 min)", "Exercícios de fixação entre sessões", "Curadoria de materiais (livros/vídeos)", "Devolutiva verbal trimestral"] },
+  { nome: "Mente Brilhante", preco: "249,90", desc: "Foco total em desempenho cognitivo e estudos.", destaque: null, link: "https://invoice.infinitepay.io/plans/instituto-serclin/7VclVHytVV", itens: ["Ideal para estudantes/concurseiros", "Treino de memória e foco", "Organização de rotina de estudos", "Material PDF exclusivo"] },
+  { nome: "Jornada Contínua", preco: "319,90", desc: "Acelere resultados com acompanhamento semanal.", destaque: null, link: "https://invoice.infinitepay.io/plans/instituto-serclin/JOrjMk9CT", itens: ["Atendimento Semanal (4 sessões/mês)", "Relatório de Evolução Semestral", "Monitoramento contínuo de metas", "1 Sessão Bônus a cada 6 meses"] },
+  { nome: "Família Prestige", preco: "1.200,00", desc: "Cuidado integral para o seu maior patrimônio.", destaque: "EXCLUSIVO FAMÍLIA", link: "https://invoice.infinitepay.io/plans/instituto-serclin/1FbTSP1Qcr", itens: ["Cobertura para até 4 pessoas", "Terapias Semanais para todos", "Reunião mensal de alinhamento familiar", "Cuidado completo", "Sessões mensais não cumulativas"] },
+];
+
+// DADOS DOS E-BOOKS (ESTILO NETFLIX)
+const ebooksSerClin = [
+  { id: 1, titulo: "Entendendo o TDAH", subtitulo: "Guia prático para pais", cor: "from-[#1e3a8a] to-blue-900" },
+  { id: 2, titulo: "Rotinas Saudáveis", subtitulo: "Autismo no dia a dia", cor: "from-amber-500 to-orange-600" },
+  { id: 3, titulo: "Regulação Emocional", subtitulo: "Exercícios em casa", cor: "from-emerald-500 to-teal-700" },
+  { id: 4, titulo: "A Magia do Brincar", subtitulo: "Ludoterapia essencial", cor: "from-purple-600 to-indigo-800" },
+];
+
 export function Checkin() {
   const [identificacao, setIdentificacao] = useState("");
   const [loading, setLoading] = useState(false);
-  
-  // 0 = Login, 1 = Portal Aberto
   const [telaAtiva, setTelaAtiva] = useState<0 | 1>(0);
   const [abaAtiva, setAbaAtiva] = useState<'inicio' | 'historico' | 'servicos' | 'perfil'>('inicio');
-  
   const [paciente, setPaciente] = useState<any>(null);
   const [agendamentos, setAgendamentos] = useState<any[]>([]);
   const [consultaHoje, setConsultaHoje] = useState<any>(null);
-  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- NOVA MÁSCARA INTELIGENTE ---
+  // --- MÁSCARA INTELIGENTE ---
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let v = e.target.value.replace(/\D/g, ""); // Limpa letras e símbolos
-    if (v.length > 11) v = v.slice(0, 11); // Trava em 11 dígitos
+    let v = e.target.value.replace(/\D/g, "");
+    if (v.length > 11) v = v.slice(0, 11);
 
     if (v.length <= 9) {
-      // É telemóvel sem DDD (ex: 99216-1717)
       v = v.replace(/^(\d{4,5})(\d{4})$/, "$1-$2");
     } else if (v.length === 10) {
-      // É telefone fixo com DDD (ex: (68) 3222-2222)
       v = v.replace(/^(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
     } else if (v.length === 11) {
-      // Tem 11 dígitos. Se o primeiro dígito NÃO for zero E o 3º for 9, formatamos como Celular.
-      // Se não, formatamos como CPF.
       if (v[0] !== '0' && v[2] === '9') {
         v = v.replace(/^(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
       } else {
         v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
       }
     }
-    
     setIdentificacao(v);
   };
 
@@ -53,27 +63,19 @@ export function Checkin() {
     e.preventDefault();
     const limpo = identificacao.replace(/\D/g, "");
     
-    // --- CORREÇÃO: Mínimo 8 dígitos ---
     if (limpo.length < 8) return toast.error("Digite o número completo (mínimo de 8 dígitos).");
 
     setLoading(true);
     try {
-      // 1. Busca o Paciente
-      const { data: todosPacientes, error: errPac } = await supabase
-        .from('pacientes')
-        .select('*');
-
+      const { data: todosPacientes, error: errPac } = await supabase.from('pacientes').select('*');
       if (errPac || !todosPacientes) throw errPac;
 
       const pEncontrado = todosPacientes.find(p => {
         const cpf = (p.cpf || "").replace(/\D/g, "");
         const resp = (p.responsavel_cpf || "").replace(/\D/g, "");
         const tel = (p.telefone || "").replace(/\D/g, "");
-        
-        // --- NOVA LÓGICA DE BUSCA INTELIGENTE ---
         if (cpf === limpo || resp === limpo) return true;
         if (tel && (tel === limpo || tel.endsWith(limpo))) return true;
-
         return false;
       });
 
@@ -85,7 +87,6 @@ export function Checkin() {
 
       setPaciente(pEncontrado);
 
-      // 2. Busca TODOS os agendamentos desse paciente
       const { data: meusAgendamentos, error: errAg } = await supabase
         .from('agendamentos')
         .select('*')
@@ -94,19 +95,14 @@ export function Checkin() {
 
       if (!errAg && meusAgendamentos) {
         setAgendamentos(meusAgendamentos);
-        
-        // Separa a consulta de HOJE para o Check-in
         const hojeInicio = startOfDay(new Date());
         const hojeFim = endOfDay(new Date());
-        
         const hoje = meusAgendamentos.find((ag: any) => {
           const d = new Date(ag.data_inicio);
           return d >= hojeInicio && d <= hojeFim;
         });
-        
         setConsultaHoje(hoje || null);
       }
-
       setTelaAtiva(1);
     } catch (error) {
       toast.error("Erro no sistema.");
@@ -120,7 +116,6 @@ export function Checkin() {
     try {
       const { error } = await supabase.from('agendamentos').update({ status: 'Presenca' }).eq('id', consultaHoje.id);
       if (error) throw error;
-      
       setConsultaHoje({ ...consultaHoje, status: 'Presenca' });
       toast.success("Recepção notificada com sucesso!");
     } catch (error) {
@@ -130,11 +125,9 @@ export function Checkin() {
     }
   };
 
-  // Upload de Foto via Base64
   const handleFotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64String = reader.result as string;
@@ -160,13 +153,26 @@ export function Checkin() {
     setAbaAtiva('inicio');
   };
 
-  // Separação de datas para as abas
+  // --- FUNÇÃO PARA COMPRAR SERVIÇO COM REDIRECIONAMENTO INTELIGENTE ---
+  const handleComprarServico = (nomeDoServico: string, linkCheckout?: string) => {
+    // Se existir um link da InfinitePay configurado, abre a página de pagamento direto
+    if (linkCheckout && linkCheckout.startsWith('http')) {
+      window.open(linkCheckout, '_blank');
+      return;
+    }
+
+    // Se não existir link (ou for plano Família/Oficina), abre o WhatsApp da clínica
+    const telefoneClinica = "5568992161717"; 
+    const mensagem = `Olá! Sou o(a) paciente *${paciente?.nome.trim()}* e tenho interesse em contratar o *${nomeDoServico}* pelo Portal SerClin. Podem me passar as orientações?`;
+    const url = `https://wa.me/${telefoneClinica}?text=${encodeURIComponent(mensagem)}`;
+    window.open(url, '_blank');
+  };
+
   const consultasFuturas = agendamentos.filter(ag => isAfter(new Date(ag.data_inicio), endOfDay(new Date())));
   const consultasPassadas = agendamentos.filter(ag => isBefore(new Date(ag.data_inicio), startOfDay(new Date())));
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans selection:bg-blue-100 relative overflow-hidden text-left">
-      {/* Decoração de Fundo */}
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-blue-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-emerald-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
 
@@ -200,7 +206,6 @@ export function Checkin() {
       {telaAtiva === 1 && paciente && (
         <div className="flex-1 flex flex-col z-10 w-full max-w-md mx-auto bg-white shadow-2xl min-h-screen relative pb-20">
           
-          {/* Cabeçalho do Portal */}
           <div className="bg-[#1e3a8a] px-6 pt-12 pb-6 text-white rounded-b-[2rem] shadow-md flex items-center justify-between shrink-0">
             <div className="flex items-center gap-4">
               <div className="relative">
@@ -218,10 +223,9 @@ export function Checkin() {
             </button>
           </div>
 
-          {/* Área de Conteúdo Scrollável */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             
-            {/* ABA: INÍCIO (Check-in e Futuro) */}
+            {/* ABA: INÍCIO */}
             {abaAtiva === 'inicio' && (
               <div className="space-y-6 animate-in fade-in">
                 <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest">Consulta de Hoje</h3>
@@ -280,7 +284,7 @@ export function Checkin() {
               </div>
             )}
 
-            {/* ABA: HISTÓRICO E LAUDOS */}
+            {/* ABA: HISTÓRICO */}
             {abaAtiva === 'historico' && (
               <div className="space-y-4 animate-in fade-in">
                 <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest mb-4">Meu Histórico Clínico</h3>
@@ -310,36 +314,121 @@ export function Checkin() {
               </div>
             )}
 
-            {/* ABA: SERVIÇOS (Vitrine SerClin) */}
+            {/* ABA: SERVIÇOS (NETFLIX + OFICINA + PLANOS) */}
             {abaAtiva === 'servicos' && (
-              <div className="space-y-6 animate-in fade-in">
-                <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest">Nossos Serviços</h3>
+              <div className="space-y-8 animate-in fade-in pb-4">
                 
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="bg-gradient-to-r from-orange-500 to-pink-500 rounded-3xl p-5 text-white shadow-lg relative overflow-hidden">
-                    <ShoppingBag size={80} className="absolute -right-4 -bottom-4 text-white/20" />
-                    <h4 className="font-black uppercase text-lg mb-1">Oficina das Emoções</h4>
-                    <p className="text-[10px] font-bold text-orange-100 uppercase mb-4 w-3/4">Desenvolvimento infantil através da ludoterapia.</p>
-                    <Button className="bg-white text-orange-600 font-black text-[10px] uppercase h-8 rounded-full">Saber Mais</Button>
+                {/* SECÇÃO 1: E-BOOKS (Estilo Netflix) */}
+                <div className="space-y-3">
+                  <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest flex items-center gap-2">
+                    <BookOpen size={18} className="text-amber-500"/> E-books SerClin
+                  </h3>
+                  
+                  <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    {ebooksSerClin.map((ebook) => (
+                      <div key={ebook.id} className={`min-w-[140px] h-[200px] rounded-2xl bg-gradient-to-br ${ebook.cor} p-4 flex flex-col justify-end relative shadow-lg snap-center shrink-0 group cursor-pointer hover:scale-105 transition-transform`} onClick={() => toast.info("Em breve: Visualizador de PDF")}>
+                        <div className="absolute inset-0 bg-black/20 rounded-2xl group-hover:bg-transparent transition-colors"></div>
+                        <div className="relative z-10 text-left">
+                          <p className="text-[9px] font-black text-white/80 uppercase tracking-widest mb-1">{ebook.subtitulo}</p>
+                          <h4 className="text-sm font-black text-white leading-tight mb-3">{ebook.titulo}</h4>
+                          <button className="bg-white text-gray-900 text-[10px] font-black uppercase px-3 py-1.5 rounded-full flex items-center gap-1 shadow-md">
+                            <Play size={10} fill="currentColor" /> Ler
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SECÇÃO 2: OFICINA DAS EMOÇÕES (Destaque) */}
+                <div className="space-y-3">
+                  <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest">Serviços Especiais</h3>
+                  <div className="bg-gradient-to-r from-orange-400 to-amber-500 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
+                    <div className="absolute -right-4 -bottom-4 opacity-20">
+                      <User size={100} />
+                    </div>
+                    <h4 className="font-black uppercase text-xl mb-1 relative z-10">Oficina das Emoções</h4>
+                    <p className="text-xs font-bold text-orange-50 uppercase mb-4 w-4/5 relative z-10">
+                      Desenvolvimento infantil através da ludoterapia em grupo. Em breve novas turmas!
+                    </p>
+                    <Button 
+                      onClick={() => handleComprarServico("Oficina das Emoções (Lista de Espera)")}
+                      className="bg-white text-orange-600 hover:bg-orange-50 font-black text-[10px] uppercase h-10 rounded-xl relative z-10 shadow-sm"
+                    >
+                      Entrar na Lista
+                    </Button>
+                  </div>
+                </div>
+
+                {/* SECÇÃO 3: PLANOS DE CUIDADOS */}
+                <div className="space-y-4 pt-2">
+                  <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest">Planos de Cuidados</h3>
+                  
+                  <div className="bg-gradient-to-br from-[#1e3a8a] to-blue-900 border border-blue-800 rounded-3xl p-6 shadow-md relative overflow-hidden">
+                    <div className="absolute -right-4 -top-4 opacity-10">
+                      <Brain size={120} className="text-white" />
+                    </div>
+                    <h4 className="font-black text-amber-400 uppercase text-sm mb-3 flex items-center gap-2">
+                      <AlertTriangle size={18} /> Benefício Exclusivo
+                    </h4>
+                    <p className="text-xs font-medium text-blue-100 leading-relaxed mb-5">
+                      A partir do <strong>3º mês</strong> de plano ativo, adquire o direito de realizar a <strong>Avaliação Neuropsicológica</strong> por um valor especial de <strong>R$ 850,00</strong>.
+                    </p>
+                    
+                    <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-sm relative z-10">
+                      <p className="text-[10px] font-black text-amber-300 uppercase tracking-widest mb-2">Regras de Utilização:</p>
+                      <ul className="text-[10px] text-blue-50 space-y-2 ml-4 list-disc font-medium">
+                        <li>O benefício é pessoal e <strong>intransferível</strong>.</li>
+                        <li>No plano <strong>Família Prestige</strong>, a regra aplica-se igualmente: cada membro registado no plano paga a sua própria avaliação (R$ 850,00 cada).</li>
+                      </ul>
+                    </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-5 text-white shadow-lg relative overflow-hidden">
-                    <FileText size={80} className="absolute -right-4 -bottom-4 text-white/20" />
-                    <h4 className="font-black uppercase text-lg mb-1">E-books SerClin</h4>
-                    <p className="text-[10px] font-bold text-blue-100 uppercase mb-4 w-3/4">Materiais exclusivos criados pela nossa equipe.</p>
-                    <Button className="bg-white text-blue-600 font-black text-[10px] uppercase h-8 rounded-full">Acessar Loja</Button>
-                  </div>
+                  <div className="grid grid-cols-1 gap-5">
+                    {planosSerClin.map((plano, idx) => (
+                      <div key={idx} className={`bg-white rounded-3xl shadow-sm border ${plano.destaque ? 'border-amber-400 ring-2 ring-amber-400/20' : 'border-gray-100'} p-6 relative overflow-hidden`}>
+                        
+                        {plano.destaque && (
+                          <div className="absolute top-0 right-0 bg-amber-400 text-amber-950 text-[9px] font-black uppercase tracking-widest px-4 py-1.5 rounded-bl-xl shadow-sm">
+                            {plano.destaque}
+                          </div>
+                        )}
 
-                  <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm">
-                    <h4 className="font-black text-gray-800 uppercase text-md mb-1">Planos de Cuidados</h4>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-4">Informações sobre convênios e planos de longo prazo.</p>
-                    <Button variant="outline" className="w-full border-gray-200 text-gray-600 font-black text-[10px] uppercase h-10 rounded-xl">Ver Tabela de Valores</Button>
+                        <h4 className="font-black text-[#1e3a8a] text-lg mb-1">{plano.nome}</h4>
+                        <p className="text-[11px] text-gray-500 font-medium mb-4 pr-10 h-8">{plano.desc}</p>
+                        
+                        <div className="flex items-end gap-1 mb-5">
+                          <span className="text-sm font-bold text-gray-400">R$</span>
+                          <span className="text-3xl font-black text-[#1e3a8a] leading-none">{plano.preco}</span>
+                          <span className="text-xs font-bold text-gray-400 mb-1">/mês</span>
+                        </div>
+
+                        <div className="space-y-3 mb-6">
+                          {plano.itens.map((item, i) => (
+                            <div key={i} className="flex items-start gap-2">
+                              <div className="mt-0.5 bg-amber-100 rounded-full p-0.5 shrink-0">
+                                <Check size={10} className="text-amber-600 font-bold" />
+                              </div>
+                              <p className="text-[11px] font-medium text-gray-700 leading-snug">{item}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* BOTÃO ATUALIZADO QUE CHAMA A INFINITEPAY OU WHATSAPP */}
+                        <Button 
+                          onClick={() => handleComprarServico(plano.nome, plano.link)}
+                          className={`w-full h-12 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${plano.destaque ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-[#1e3a8a]'}`}
+                        >
+                          {plano.destaque === 'EXCLUSIVO FAMÍLIA' ? 'Quero este Plano' : 'Quero este Plano'}
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* ABA: PERFIL (Upload de Foto) */}
+            {/* ABA: PERFIL */}
             {abaAtiva === 'perfil' && (
               <div className="space-y-6 animate-in fade-in text-center">
                 <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest text-left mb-6">Meu Cadastro</h3>
@@ -349,7 +438,6 @@ export function Checkin() {
                     <div className="w-28 h-28 rounded-full bg-gray-100 border-4 border-white shadow-lg overflow-hidden flex items-center justify-center">
                       {paciente.foto_url ? <img src={paciente.foto_url} alt="Perfil" className="w-full h-full object-cover" /> : <User size={40} className="text-gray-300" />}
                     </div>
-                    {/* Input de arquivo invisível */}
                     <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFotoUpload} className="hidden" />
                     <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-black transition-colors">
                       <Camera size={18} />
@@ -380,21 +468,20 @@ export function Checkin() {
 
           </div>
 
-          {/* Menu Fixo na Base (Bottom Navigation) */}
           <div className="absolute bottom-0 left-0 w-full bg-white border-t border-gray-100 pb-[calc(env(safe-area-inset-bottom,0px)+8px)] pt-2 px-4 flex justify-between z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
-            <button onClick={() => setAbaAtiva('inicio')} className={`flex flex-col items-center p-2 w-16 transition-colors ${abaAtiva === 'inicio' ? 'text-blue-600' : 'text-gray-400'}`}>
+            <button onClick={() => setAbaAtiva('inicio')} className={`flex flex-col items-center p-2 w-16 transition-colors ${abaAtiva === 'inicio' ? 'text-[#1e3a8a]' : 'text-gray-400'}`}>
               <CalendarDays size={22} className="mb-1" />
               <span className="text-[9px] font-black uppercase tracking-widest">Início</span>
             </button>
-            <button onClick={() => setAbaAtiva('historico')} className={`flex flex-col items-center p-2 w-16 transition-colors ${abaAtiva === 'historico' ? 'text-blue-600' : 'text-gray-400'}`}>
+            <button onClick={() => setAbaAtiva('historico')} className={`flex flex-col items-center p-2 w-16 transition-colors ${abaAtiva === 'historico' ? 'text-[#1e3a8a]' : 'text-gray-400'}`}>
               <History size={22} className="mb-1" />
               <span className="text-[9px] font-black uppercase tracking-widest">Histórico</span>
             </button>
-            <button onClick={() => setAbaAtiva('servicos')} className={`flex flex-col items-center p-2 w-16 transition-colors ${abaAtiva === 'servicos' ? 'text-blue-600' : 'text-gray-400'}`}>
+            <button onClick={() => setAbaAtiva('servicos')} className={`flex flex-col items-center p-2 w-16 transition-colors ${abaAtiva === 'servicos' ? 'text-[#1e3a8a]' : 'text-gray-400'}`}>
               <ShoppingBag size={22} className="mb-1" />
-              <span className="text-[9px] font-black uppercase tracking-widest">Serviços</span>
+              <span className="text-[9px] font-black uppercase tracking-widest">Planos e Serviços</span>
             </button>
-            <button onClick={() => setAbaAtiva('perfil')} className={`flex flex-col items-center p-2 w-16 transition-colors ${abaAtiva === 'perfil' ? 'text-blue-600' : 'text-gray-400'}`}>
+            <button onClick={() => setAbaAtiva('perfil')} className={`flex flex-col items-center p-2 w-16 transition-colors ${abaAtiva === 'perfil' ? 'text-[#1e3a8a]' : 'text-gray-400'}`}>
               <User size={22} className="mb-1" />
               <span className="text-[9px] font-black uppercase tracking-widest">Perfil</span>
             </button>
