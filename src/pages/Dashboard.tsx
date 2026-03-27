@@ -95,7 +95,7 @@ export function Dashboard() {
   // Modais e UI
   const [isAgendamentoOpen, setIsAgendamentoOpen] = useState(false);
   const [isConfirmacaoAmanhaOpen, setIsConfirmacaoAmanhaOpen] = useState(false);
-  const [isMenuMobileOpen, setIsMenuMobileOpen] = useState(false); // NOVO: Controle do Menu Lateral
+  const [isMenuMobileOpen, setIsMenuMobileOpen] = useState(false);
   
   const [eventoSelecionadoId, setEventoSelecionadoId] = useState<number | null>(null);
   const [filtroProfissional, setFiltroProfissional] = useState<string>("geral");
@@ -292,7 +292,7 @@ export function Dashboard() {
   const maxTime = new Date(2024, 0, 1, 20, 0, 0); 
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
+    <div className="h-[100dvh] w-full bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
       <style>{`
         .rbc-agenda-view table.rbc-agenda-table tbody > tr > td { color: #1f2937 !important; font-weight: 800 !important; font-size: 14px !important; }
         .rbc-agenda-view { background-color: #ffffff; border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
@@ -312,7 +312,7 @@ export function Dashboard() {
       `}</style>
 
       {/* HEADER PRINCIPAL */}
-      <header className="bg-white border-b px-4 md:px-6 pb-2 md:pb-3 flex justify-between items-center shadow-sm z-20 gap-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] min-h-[calc(80px+env(safe-area-inset-top,0px))]">
+      <header className="bg-white border-b px-4 md:px-6 pb-2 md:pb-3 flex justify-between items-center shadow-sm z-50 gap-4 pt-[env(safe-area-inset-top,32px)] md:pt-4 min-h-[80px]">
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <img src={logoSer2} className="w-10 h-10 md:w-12 md:h-12 object-contain" alt="SerClin" />
           <div className="hidden lg:block text-left">
@@ -387,9 +387,7 @@ export function Dashboard() {
       {/* OVERLAY E MENU LATERAL (GAVETA) NO MOBILE */}
       {isMenuMobileOpen && (
         <div className="md:hidden fixed inset-0 z-[100] bg-black/60 flex justify-end backdrop-blur-sm transition-opacity" onClick={() => setIsMenuMobileOpen(false)}>
-          {/* O Menu (Gaveta) desliza da direita para a esquerda */}
           <div className="w-[80%] max-w-[300px] bg-white h-full shadow-2xl flex flex-col pt-[calc(env(safe-area-inset-top,0px)+16px)] animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
-            
             <div className="flex justify-between items-center px-6 pb-6 border-b border-gray-100">
               <div>
                 <span className="font-black text-[#1e3a8a] uppercase text-lg tracking-tighter block">Menu</span>
@@ -399,7 +397,6 @@ export function Dashboard() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-2 text-left hide-scrollbar flex flex-col">
-              
               <div className="mb-2 px-2">
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Ações Diárias</span>
               </div>
@@ -448,7 +445,6 @@ export function Dashboard() {
                   <Shield size={18} /> Chaves de Segurança
                 </Button>
               )}
-
             </div>
 
             <div className="p-4 border-t border-gray-100 pb-[calc(env(safe-area-inset-bottom,0px)+16px)]">
@@ -456,14 +452,12 @@ export function Dashboard() {
                 <LogOut size={18} /> Sair do Sistema
               </Button>
             </div>
-
           </div>
         </div>
       )}
 
       {/* CALENDÁRIO */}
       <main className="flex-1 p-2 md:p-4 overflow-hidden text-left flex flex-col relative">
-       {/* FILTRO DE PROFISSIONAIS (Aparece só para Rômulo, Renata e Instituto) */}
         {isGestorSeguro && (
           <div className="mb-3 flex justify-end z-10 shrink-0">
             <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
@@ -508,7 +502,6 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* FAB MOBILE - BOTÃO FLUTUANTE DE AGENDAR */}
         {meuPerfil?.permissao_agendar && (
           <button 
             onClick={() => { 
@@ -525,7 +518,6 @@ export function Dashboard() {
         )}
       </main>
 
-      {/* MODAIS (CONFIRMAR AMANHÃ E NOVO AGENDAMENTO) MANTIDOS INTACTOS AQUI... */}
       {/* MODAL DE CONFIRMAÇÃO DE AMANHÃ */}
       {isConfirmacaoAmanhaOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
