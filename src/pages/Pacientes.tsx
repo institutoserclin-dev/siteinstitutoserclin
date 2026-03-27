@@ -159,6 +159,13 @@ export function Pacientes() {
       const { ultimaConsulta, agendamentos, ...newPayload } = form as any;
       const payload = { ...newPayload, foto_url: urlDaFoto };
 
+      // --- FILTRO SALVA-VIDAS DA DATA ---
+      // Se a data estiver vazia, enviamos null para o banco aceitar
+      if (payload.data_nascimento === "") {
+        payload.data_nascimento = null;
+      }
+      // ----------------------------------
+
       if (form.id) { 
         const { error } = await supabase.from("pacientes").update(payload).eq("id", form.id); 
         if (error) throw error;
@@ -170,7 +177,11 @@ export function Pacientes() {
         toast.success("Cadastrado!"); 
       }
       limparModal(); fetchPacientes();
-    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
+    } catch (error: any) { 
+      toast.error(error.message); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const limparModal = () => {
