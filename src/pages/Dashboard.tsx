@@ -221,30 +221,65 @@ export function Dashboard() {
     window.open(`https://wa.me/55${foneLimpo}?text=${encodeURIComponent(mensagem)}`, '_blank');
   };
 
-  const gerarComprovante = async () => {
+ const gerarComprovante = async () => {
     setLoading(true);
     try {
-      const { data: val, error } = await supabase.from('validacoes').insert([{ paciente_nome: form.paciente_nome, profissional_nome: form.profissional }]).select('id').single();
-      if (error) throw error;
+      // 1. Grava no banco de dados para gerar o código validador
+      const { data: val, error } = await supabase
+        .from('validacoes')
+        .insert([{ paciente_nome: form.paciente_nome, profissional_nome: form.profissional }])
+        .select('id')
+        .single();
+        
+      if (error) {
+        toast.error(`Erro no Banco: A tabela 'validacoes' existe? Detalhe: ${error.message}`);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Gera a imagem do QR Code
       const urlValidacao = `https://institutoserclin.vercel.app/validar/${val.id}`;
       const qrCodeDataUrl = await QRCode.toDataURL(urlValidacao);
       
       const doc = new jsPDF();
-      doc.addImage("/ser2.png", 'PNG', 75, 10, 60, 40);
+      
+      // 3. INJETANDO O LOGO
+      doc.addImage(logoSer2, 'PNG', 75, 10, 60, 40);
+      
+      // 4. TEXTOS DO ATESTADO
       doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
       doc.text("ATESTADO DE COMPARECIMENTO", 105, 60, { align: "center" });
+      
       const textoCorpo = `Declaramos para os devidos fins de comprovação que o(a) paciente ${form.paciente_nome.toUpperCase()} esteve presente no INSTITUTO SERCLIN para atendimento especializado no dia ${format(new Date(form.inicio), "dd/MM/yyyy")}. O atendimento teve início às ${format(new Date(form.inicio), "HH:mm")} sob a responsabilidade do(a) profissional ${form.profissional.toUpperCase()}.`;
+      
       doc.setFontSize(12); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
       doc.text(textoCorpo, 20, 85, { maxWidth: 170, align: "justify", lineHeightFactor: 1.5 });
       
+      // 5. ASSINATURA DIGITAL (Se houver)
       if (form.assinatura_url) {
         doc.addImage(form.assinatura_url, 'PNG', 20, 140, 50, 20);
       }
       
+      // 6. QR CODE E TEXTO DE VALIDAÇÃO NO RODAPÉ
       doc.addImage(qrCodeDataUrl, 'PNG', 87, 195, 30, 30);
+      doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(100, 100, 100);
+      doc.text("Escaneie o QR Code acima ou acesse o link abaixo para validar a autenticidade:", 105, 230, { align: "center" });
+      
+      // NOVO: LINK DE VALIDAÇÃO ESCRITO NO PDF
+      doc.setFont("helvetica", "bold"); 
+      doc.setTextColor(37, 99, 235); // Azul vibrante para indicar que é um link
+      doc.text(urlValidacao, 105, 235, { align: "center" });
+      // Se a pessoa estiver no computador e clicar nessa região, o PDF abre a URL
+      doc.link(20, 231, 170, 6, { url: urlValidacao }); 
+      
       doc.save(`Atestado_${form.paciente_nome.replace(/\s+/g, '_')}.pdf`);
-      toast.success("Atestado Gerado!");
-    } catch (err) { toast.error("Erro ao gerar PDF."); } finally { setLoading(false); }
+      toast.success("Atestado Gerado com Sucesso!");
+      
+    } catch (err: any) { 
+      toast.error(`Erro PDF: ${err.message || "Falha na construção do arquivo"}`); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const handleExcluirAgendamento = async () => {
