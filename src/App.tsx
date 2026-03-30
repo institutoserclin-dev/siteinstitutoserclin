@@ -14,6 +14,7 @@ import { Relatorios } from './pages/Relatorios';
 import { Horarios } from './pages/Horarios';
 import { Checkin } from './pages/Checkin';
 import { Prontuario } from './pages/Prontuario';
+import { Validar } from './pages/Validar'; // <--- NOVA PÁGINA IMPORTADA AQUI
 
 // --- COMPONENTE DE SEGURANÇA (ROTA PRIVADA) ---
 function PrivateRoute({ children }: { children: ReactNode }) {
@@ -66,6 +67,9 @@ function App() {
         
         {/* Portal do Paciente */}
         <Route path="/checkin" element={<Checkin />} />
+
+        {/* PÁGINA DE VALIDAÇÃO DE DOCUMENTOS (PÚBLICA) */}
+        <Route path="/validar/:id" element={<Validar />} />
 
         {/* ==========================================
             ROTAS PRIVADAS (Gestão SerClin) 
