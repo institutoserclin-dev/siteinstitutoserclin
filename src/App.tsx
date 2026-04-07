@@ -5,7 +5,7 @@ import { Toaster } from 'sonner';
 import { supabase } from './lib/supabase';
 
 // --- IMPORTAÇÃO DAS PÁGINAS ---
-import Home from './pages/Home'; // <--- IMPORTAÇÃO CORRETA DO SEU SITE (PÁGINA INICIAL)
+import Home from './pages/Home';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Pacientes } from './pages/Pacientes';
@@ -14,7 +14,8 @@ import { Relatorios } from './pages/Relatorios';
 import { Horarios } from './pages/Horarios';
 import { Checkin } from './pages/Checkin';
 import { Prontuario } from './pages/Prontuario';
-import { Validar } from './pages/Validar'; // <--- NOVA PÁGINA IMPORTADA AQUI
+import { Validar } from './pages/Validar'; 
+import { Encaminhamentos } from './pages/Encaminhamentos'; // <--- 1. PÁGINA NOVA IMPORTADA AQUI
 
 // --- COMPONENTE DE SEGURANÇA (ROTA PRIVADA) ---
 function PrivateRoute({ children }: { children: ReactNode }) {
@@ -58,17 +59,9 @@ function App() {
         {/* ==========================================
             ROTAS PÚBLICAS (Abertas para todos) 
             ========================================== */}
-        
-        {/* AGORA O SITE VOLTA A SER A PÁGINA INICIAL */}
         <Route path="/" element={<Home />} /> 
-        
-        {/* O Login fica no /login */}
         <Route path="/login" element={<Login />} />
-        
-        {/* Portal do Paciente */}
         <Route path="/checkin" element={<Checkin />} />
-
-        {/* PÁGINA DE VALIDAÇÃO DE DOCUMENTOS (PÚBLICA) */}
         <Route path="/validar/:id" element={<Validar />} />
 
         {/* ==========================================
@@ -80,6 +73,9 @@ function App() {
         <Route path="/sistema/relatorios" element={ <PrivateRoute><Relatorios /></PrivateRoute> } />
         <Route path="/sistema/horarios" element={ <PrivateRoute><Horarios /></PrivateRoute> } />
         <Route path="/sistema/pacientes/:id" element={ <PrivateRoute><Prontuario /></PrivateRoute> } />
+        
+        {/* 2. NOVA ROTA DO ENCAMINHAMENTO UNIMETA AQUI 👇 */}
+        <Route path="/sistema/encaminhamentos" element={ <PrivateRoute><Encaminhamentos /></PrivateRoute> } />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

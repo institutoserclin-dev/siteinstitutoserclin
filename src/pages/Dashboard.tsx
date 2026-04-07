@@ -7,7 +7,7 @@ import { format, parse, startOfWeek, getDay, addMinutes, addDays, isSameDay } fr
 import { ptBR } from 'date-fns/locale';
 import { 
   LogOut, Calendar as CalendarIcon, Plus, X, Trash2, 
-  FileText, BarChart3, Shield, Clock, Users, 
+  FileText, BarChart3, Shield, Clock, Users, GraduationCap,  
   CheckCircle, RefreshCw, Wallet, Receipt, Calculator, Scale, MessageCircle, Send, User, Menu, Filter
 } from "lucide-react";
 import { toast } from "sonner";
@@ -395,7 +395,11 @@ export function Dashboard() {
           )}
 
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 shrink-0"><Users size={20}/></Button>
-          
+          {/* 👇 COLOQUE O NOVO BOTÃO AQUI 👇 */}
+<Button variant="ghost" size="icon" onClick={() => navigate('/sistema/encaminhamentos')} className="text-emerald-600 shrink-0" title="Triagem Unimeta">
+  <GraduationCap size={20}/>
+</Button>
+
           {meuPerfil?.permissao_agendar && (
             <Button onClick={() => { 
               setEventoSelecionadoId(null); setBuscaPaciente(""); 
@@ -447,6 +451,11 @@ export function Dashboard() {
                 <Users size={18} /> Pacientes / Prontuários
               </Button>
 
+              {/* 👇 COLOQUE O NOVO BOTÃO DA UNIMETA AQUI 👇 */}
+              <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-700 h-12 rounded-xl font-bold uppercase text-[11px] bg-emerald-50/50" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/encaminhamentos'); }}>
+                <GraduationCap size={18} /> Triagem Unimeta
+              </Button>
+              
               {meuPerfil?.permissao_financeiro && (
                 <>
                   <div className="mt-6 mb-2 px-2 border-t pt-4">
