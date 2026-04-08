@@ -7,6 +7,7 @@ import { supabase } from './lib/supabase';
 // --- IMPORTAÇÃO DAS PÁGINAS ---
 import Home from './pages/Home';
 import { Login } from './pages/Login';
+import { CadastroUnimeta } from './pages/CadastroUnimeta'; // <--- NOVA PÁGINA DE CADASTRO
 import { Dashboard } from './pages/Dashboard';
 import { Pacientes } from './pages/Pacientes';
 import { Permissoes } from './pages/Permissoes';
@@ -15,7 +16,7 @@ import { Horarios } from './pages/Horarios';
 import { Checkin } from './pages/Checkin';
 import { Prontuario } from './pages/Prontuario';
 import { Validar } from './pages/Validar'; 
-import { Encaminhamentos } from './pages/Encaminhamentos'; // <--- 1. PÁGINA NOVA IMPORTADA AQUI
+import { Encaminhamentos } from './pages/Encaminhamentos'; 
 
 // --- COMPONENTE DE SEGURANÇA (ROTA PRIVADA) ---
 function PrivateRoute({ children }: { children: ReactNode }) {
@@ -61,6 +62,7 @@ function App() {
             ========================================== */}
         <Route path="/" element={<Home />} /> 
         <Route path="/login" element={<Login />} />
+        <Route path="/cadastro" element={<CadastroUnimeta />} /> {/* <--- ROTA DE CADASTRO AQUI */}
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/validar/:id" element={<Validar />} />
 
@@ -73,8 +75,6 @@ function App() {
         <Route path="/sistema/relatorios" element={ <PrivateRoute><Relatorios /></PrivateRoute> } />
         <Route path="/sistema/horarios" element={ <PrivateRoute><Horarios /></PrivateRoute> } />
         <Route path="/sistema/pacientes/:id" element={ <PrivateRoute><Prontuario /></PrivateRoute> } />
-        
-        {/* 2. NOVA ROTA DO ENCAMINHAMENTO UNIMETA AQUI 👇 */}
         <Route path="/sistema/encaminhamentos" element={ <PrivateRoute><Encaminhamentos /></PrivateRoute> } />
 
         <Route path="*" element={<Navigate to="/" replace />} />

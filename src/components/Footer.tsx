@@ -1,133 +1,121 @@
-import { Instagram, MapPin, Mail, Phone, MessageCircle } from "lucide-react";
+import { Instagram, MapPin, Mail, Phone, MessageCircle, ShieldCheck, Award } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer id="contato" className="bg-primary text-white py-8 border-t border-white/10">
-      <div className="container mx-auto px-4">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+    <footer id="contato" className="bg-primary text-white pt-24 pb-12 border-t border-white/10 relative overflow-hidden">
+      
+      {/* 1. Marca d'água de Prestígio (Sutil e Coesa) */}
+      <div className="absolute top-0 right-0 text-[18rem] font-black text-white/[0.02] italic pointer-events-none select-none tracking-tighter uppercase">
+        SerClin
+      </div>
+
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-16 mb-24">
           
-          {/* Coluna 1: Sobre */}
-          <div>
-            <h3 className="font-serif text-xl font-bold mb-4">Instituto SerClin</h3>
-            <p className="text-white/80 mb-4 leading-relaxed text-sm">
-              Dedicados ao desenvolvimento humano através de uma abordagem multidisciplinar e acolhedora.
+          {/* Coluna 1: Identidade Signature */}
+          <div className="space-y-8">
+            <h3 className="font-serif text-3xl font-black tracking-tighter italic text-secondary uppercase leading-[0.8]">
+              Instituto <br /> <span className="not-italic text-white font-sans tracking-tight uppercase text-2xl">SerClin</span>
+            </h3>
+            <p className="text-white/60 leading-relaxed text-sm font-medium italic max-w-xs font-sans">
+              Onde a excelência clínica e o acolhimento humano de elite convergem para o desenvolvimento pleno.
             </p>
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               <a 
                 href="https://www.instagram.com/institutoserclin/" 
                 target="_blank" 
-                rel="noopener noreferrer"
-                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-colors"
-                title="Instagram"
+                className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-secondary hover:text-primary transition-all border border-white/10 group shadow-2xl"
               >
-                <Instagram className="w-4 h-4" />
+                <Instagram className="w-5 h-5 group-hover:scale-110 transition-transform" />
               </a>
               <a 
                 href="https://wa.me/5568992161717" 
                 target="_blank" 
-                rel="noopener noreferrer"
-                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-colors"
-                title="WhatsApp"
+                className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-secondary hover:text-primary transition-all border border-white/10 group shadow-2xl"
               >
-                <MessageCircle className="w-4 h-4" />
+                <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
               </a>
             </div>
           </div>
 
-          {/* Coluna 2: Links */}
+          {/* Coluna 2: Navegação (Sans Black para Autoridade) */}
           <div>
-            <h4 className="font-bold text-base mb-4 text-secondary">Links Rápidos</h4>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="text-white/80 hover:text-secondary block py-1 transition-colors">Início</a></li>
-              <li><a href="#sobre" className="text-white/80 hover:text-secondary block py-1 transition-colors">Sobre Nós</a></li>
-              <li><a href="#servicos" className="text-white/80 hover:text-secondary block py-1 transition-colors">Serviços</a></li>
-              <li><a href="#planos" className="text-white/80 hover:text-secondary block py-1 transition-colors">Planos</a></li>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] mb-10 text-secondary">Navegação</h4>
+            <ul className="space-y-5 text-[12px] font-bold uppercase tracking-[0.2em] font-sans">
+              <li><a href="#" className="text-white/40 hover:text-white transition-colors block">Experience Início</a></li>
+              <li><a href="#sobre" className="text-white/40 hover:text-white transition-colors block">O Instituto</a></li>
+              <li><a href="#servicos" className="text-white/40 hover:text-white transition-colors block">Especialidades</a></li>
+              <li><a href="#planos" className="text-white/40 hover:text-white transition-colors block">Investimento</a></li>
             </ul>
           </div>
 
-          {/* Coluna 3: Contato (COM WHATSAPP ADICIONADO) */}
+          {/* Coluna 3: Concierge (Foco em Precisão Visual) */}
           <div>
-            <h4 className="font-bold text-base mb-4 text-secondary">Contato</h4>
-            <ul className="space-y-4 text-sm">
-              
-              {/* Endereço */}
-              <li>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] mb-10 text-secondary">Concierge</h4>
+            <ul className="space-y-8 text-[12px] font-bold uppercase tracking-widest font-sans">
+              <li className="flex items-start gap-4 group text-white/50 transition-colors hover:text-white">
+                <MapPin className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
                 <a 
                   href="https://www.google.com/maps/search/?api=1&query=Rua+Sorocaba+140+Doca+Furtado+Rio+Branco+AC" 
                   target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-start gap-3 text-white/80 hover:text-secondary transition-colors group cursor-pointer"
+                  className="leading-relaxed tracking-[0.1em]"
                 >
-                  <MapPin className="w-4 h-4 text-secondary shrink-0 mt-1 group-hover:text-white transition-colors" />
-                  <span>
-                    Rua Sorocaba, 140<br />
-                    Doca Furtado, Rio Branco - AC
-                  </span>
+                  Rua Sorocaba, 140<br />
+                  Doca Furtado, Rio Branco - AC
                 </a>
               </li>
-
-              {/* Telefone (Ligar) */}
-              <li>
-                <a 
-                  href="tel:+5568992161717" 
-                  className="flex items-center gap-3 text-white/80 hover:text-secondary transition-colors group cursor-pointer"
-                  title="Ligar para clínica"
-                >
-                  <Phone className="w-4 h-4 text-secondary shrink-0 group-hover:text-white transition-colors" />
-                  <span>(68) 99216-1717</span>
+              <li className="flex items-center gap-4 group text-white/50 transition-colors hover:text-white">
+                <Phone className="w-5 h-5 text-secondary shrink-0" />
+                <a href="tel:+5568992161717" className="tracking-tighter text-base font-black">
+                  (68) 99216-1717
                 </a>
               </li>
-
-              {/* WhatsApp (Nova Linha) */}
-              <li>
-                <a 
-                  href="https://wa.me/5568992161717" 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 text-white/80 hover:text-secondary transition-colors group cursor-pointer"
-                  title="Chamar no WhatsApp"
-                >
-                  <MessageCircle className="w-4 h-4 text-secondary shrink-0 group-hover:text-white transition-colors" />
-                  <span>WhatsApp: (68) 99216-1717</span>
+              <li className="flex items-center gap-4 group text-white/50 transition-colors hover:text-white">
+                <Mail className="w-5 h-5 text-secondary shrink-0" />
+                <a href="mailto:institutoserclin@gmail.com" className="lowercase italic font-medium tracking-normal">
+                  institutoserclin@gmail.com
                 </a>
               </li>
-
-              {/* E-mail */}
-              <li>
-                <a 
-                  href="mailto:institutoserclin@gmail.com" 
-                  className="flex items-center gap-3 text-white/80 hover:text-secondary transition-colors group cursor-pointer"
-                >
-                  <Mail className="w-4 h-4 text-secondary shrink-0 group-hover:text-white transition-colors" />
-                  <span className="break-all">institutoserclin@gmail.com</span>
-                </a>
-              </li>
-
             </ul>
           </div>
 
-          {/* Coluna 4: Horário */}
-          <div>
-            <h4 className="font-bold text-base mb-4 text-secondary">Horário de Atendimento</h4>
-            <ul className="space-y-2 text-white/80 text-sm">
-              <li className="flex justify-between gap-4">
-                <span>Segunda - Sexta</span>
-                <span className="font-bold text-white">08:00 - 18:00</span>
+          {/* Coluna 4: Disponibilidade (Tabela de Elite) */}
+          <div className="space-y-8">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] mb-10 text-secondary">Disponibilidade</h4>
+            <ul className="space-y-5 text-[11px] font-black uppercase tracking-widest font-sans">
+              <li className="flex justify-between border-b border-white/5 pb-3">
+                <span className="text-white/30 italic font-medium">Segunda - Sexta</span>
+                <span className="text-white/80">08:00 — 18:00</span>
               </li>
-              <li className="flex justify-between gap-4">
-                <span>Sábado</span>
-                <span className="font-bold text-white">08:00 - 12:00</span>
+              <li className="flex justify-between border-b border-white/5 pb-3">
+                <span className="text-white/30 italic font-medium">Sábado</span>
+                <span className="text-white/80">08:00 — 12:00</span>
               </li>
-              <li className="flex justify-between gap-4">
-                <span>Domingo</span>
-                <span className="text-white/50">Fechado</span>
+              <li className="flex justify-between border-b border-white/5 pb-3">
+                <span className="text-white/30 italic font-medium">Domingo</span>
+                <span className="text-secondary font-black italic">Private Access</span>
               </li>
             </ul>
+            <div className="pt-4 flex items-center gap-2 text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">
+              <ShieldCheck size={14} className="text-secondary/40" /> Protocolos Signature
+            </div>
           </div>
         </div>
 
-        <div className="border-t border-white/10 pt-4 text-center text-white/50 text-xs">
-          <p>© {new Date().getFullYear()} Instituto SerClin. Todos os direitos reservados.</p>
+        {/* 2. Rodapé Final (Minimalismo de Luxo) */}
+        <div className="border-t border-white/5 pt-12 flex flex-col md:flex-row justify-between items-center gap-8 font-sans">
+          <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.4em]">
+            © {new Date().getFullYear()} Instituto SerClin Signature. All rights reserved.
+          </p>
+          <div className="flex items-center gap-8 opacity-40">
+             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em]">
+                <Award size={16} className="text-secondary" /> Padrão de Excelência
+             </div>
+             <div className="h-4 w-px bg-white/20" />
+             <div className="text-[10px] font-black uppercase tracking-[0.2em]">
+                Rio Branco - AC
+             </div>
+          </div>
         </div>
       </div>
     </footer>

@@ -1,215 +1,100 @@
 import { motion } from "framer-motion";
-import { Check, Star, Users, Zap, Briefcase, Brain, Crown, Heart, Sparkles } from "lucide-react";
+import { Check, Star, Zap, Brain, Crown, Heart, Sparkles, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 const plans = [
-  // --- NÍVEL 1: ENTRADA ---
-  {
-    name: "Plano Essencial",
-    price: "99,90",
-    description: "A porta de entrada para o seu autocuidado.",
-    features: [
-      "Atendimento Quinzenal",
-      "Sessões de até 40 minutos",
-      "Acolhimento pontual",
-      "Orientação básica"
-    ],
-    highlight: false,
-    icon: Heart
-  },
-  {
-    name: "Plano Acolher",
-    price: "149,90",
-    description: "Manutenção emocional com suporte regular.",
-    features: [
-      "Atendimento Quinzenal",
-      "Sessões de 50 minutos",
-      "Suporte via WhatsApp",
-      "Horários diferenciados"
-    ],
-    highlight: false,
-    icon: Star
-  },
-  {
-    name: "Cuidado Premium",
-    price: "189,90",
-    description: "Para quem busca ferramentas práticas de evolução.",
-    features: [
-      "Atendimento Quinzenal (50 min)",
-      "Exercícios de fixação entre sessões",
-      "Curadoria de materiais (livros/vídeos)",
-      "Devolutiva verbal trimestral"
-    ],
-    highlight: true,
-    popular: true,
-    icon: Zap
-  },
-
-  // --- NÍVEL 2: ESPECÍFICOS E INTENSIVOS ---
-  {
-    name: "Mente Brilhante",
-    price: "249,90",
-    description: "Foco total em desempenho cognitivo e estudos.",
-    features: [
-      "Ideal para estudantes/concurseiros",
-      "Treino de memória e foco",
-      "Organização de rotina de estudos",
-      "Material PDF exclusivo"
-    ],
-    highlight: false,
-    icon: Brain
-  },
-  {
-    name: "Jornada Contínua",
-    price: "319,90",
-    description: "Acelere resultados com acompanhamento semanal.",
-    features: [
-      "Atendimento Semanal (4 sessões/mês)",
-      "Relatório de Evolução Semestral",
-      "Monitoramento contínuo de metas",
-      "1 Sessão Bônus a cada 6 meses"
-    ],
-    highlight: true,
-    icon: Sparkles
-  },
-  {
-    name: "Família Prestige",
-    price: "Sob Consulta",
-    description: "Cuidado integral para o seu maior patrimônio.",
-    features: [
-      "Cobertura para até 4 pessoas",
-      "Terapias Semanais para todos",
-      "Reunião mensal de alinhamento familiar",
-      "Cuidado completo"
-    ],
-    highlight: true,
-    gold: true, // Visual Dourado
-    warning: "Sessões mensais não cumulativas.",
-    icon: Crown
-  },
-
-  // --- NÍVEL 3: CORPORATIVO ---
-  {
-    name: "Empresarial",
-    price: "Sob Consulta",
-    description: "Saúde mental para colaboradores e instituições.",
-    features: [
-      "Convênios (SINPROAC e outros)",
-      "Palestras e Workshops",
-      "Plantão Psicológico",
-      "Consultoria em RH"
-    ],
-    highlight: false,
-    icon: Briefcase
-  }
+  { name: "Plano Essencial", price: "99,90", description: "A porta de entrada para o seu autocuidado.", features: ["Atendimento Quinzenal", "Sessões de 40 min", "Orientação básica"], icon: Heart },
+  { name: "Plano Acolher", price: "149,90", description: "Manutenção emocional com suporte regular.", features: ["Atendimento Quinzenal", "Sessões de 50 min", "Suporte via WhatsApp"], icon: Star },
+  { name: "Cuidado Premium", price: "189,90", description: "Ferramentas práticas de evolução.", features: ["Exercícios de fixação", "Curadoria de materiais", "Devolutiva trimestral"], highlight: true, popular: true, icon: Zap },
+  { name: "Mente Brilhante", price: "249,90", description: "Foco total em desempenho cognitivo.", features: ["Treino de memória e foco", "Organização de rotina", "Material PDF exclusivo"], icon: Brain },
+  { name: "Jornada Contínua", price: "319,90", description: "Acelere resultados com foco semanal.", features: ["4 sessões mensais", "Relatório Semestral", "Monitoramento de metas"], highlight: true, icon: Sparkles },
+  { name: "Família Prestige", price: "Sob Consulta", description: "O cuidado integral para seu patrimônio.", features: ["Até 4 pessoas", "Terapias Semanais", "Alinhamento familiar"], gold: true, icon: Crown, warning: "Sessões não cumulativas" },
+  { name: "Empresarial", price: "Sob Consulta", description: "Saúde mental corporativa.", features: ["Recrutamento e Seleção (R&S)", "Orientação Profissional e Transição de Carreira", "Saúde Mental e Qualidade de Vida no Trabalho (QVT", "Treinamento e Desenvolvimento (T&D", "Clima e Cultura Organizacional"], icon: Briefcase }
 ];
 
 export function Plans() {
   return (
-    <section id="planos" className="py-24 bg-primary text-white relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-10 pointer-events-none">
-        <div className="absolute top-10 left-10 w-64 h-64 bg-secondary rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
-      </div>
+    <div className="flex flex-wrap justify-center gap-8 max-w-7xl mx-auto">
+      {plans.map((plan, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.05, duration: 0.6 }}
+          viewport={{ once: true }}
+          className={`w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.33%-1.5rem)] max-w-sm flex group`}
+        >
+          <div className={`flex flex-col w-full p-10 rounded-[3.5rem] border transition-all duration-500 relative
+            ${plan.gold 
+              ? "bg-[#05070a] border-amber-500/30 shadow-[0_30px_60px_-15px_rgba(212,143,22,0.3)] text-white" 
+              : plan.popular 
+                ? "bg-white border-secondary/50 shadow-2xl scale-105 z-10" 
+                : "bg-slate-50 border-slate-100 hover:bg-white hover:shadow-xl"
+            }`}
+          >
+            {/* Badges de Status */}
+            {plan.popular && !plan.gold && (
+              <div className="absolute top-6 right-8 bg-secondary text-primary text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
+                Popular
+              </div>
+            )}
+            {plan.gold && (
+              <div className="absolute top-6 right-8 bg-amber-500 text-black text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
+                Exclusive
+              </div>
+            )}
 
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-secondary font-sans font-bold tracking-widest uppercase mb-2 text-sm">Investimento</h2>
-          <h3 className="font-serif text-3xl md:text-4xl font-bold mb-4">Planos de Acompanhamento</h3>
-          <p className="text-white/80 text-lg">
-            Escolha o nível de suporte ideal para o seu momento de vida.
-          </p>
-        </div>
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 
+              ${plan.gold ? "bg-amber-500/10 text-amber-500" : "bg-primary/5 text-primary"}`}>
+              <plan.icon size={28} />
+            </div>
 
-        {/* Layout Flexbox Centralizado */}
-        <div className="flex flex-wrap justify-center gap-6">
-          {plans.map((plan, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
-              viewport={{ once: true }}
-              className="w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.33%-1rem)] max-w-sm flex"
-            >
-              <Card className={`flex flex-col w-full border-none shadow-xl relative overflow-hidden transition-all duration-300 hover:-translate-y-2 
+            <div className="mb-8">
+              <h4 className={`text-2xl font-black uppercase tracking-tighter leading-tight ${plan.gold ? "text-white" : "text-primary"}`}>
+                {plan.name}
+              </h4>
+              <p className={`text-sm font-medium mt-2 ${plan.gold ? "text-white/40" : "text-slate-400"}`}>
+                {plan.description}
+              </p>
+            </div>
+
+            <div className="mb-10 flex items-baseline gap-1">
+              <span className="text-xs font-bold opacity-40 uppercase">R$</span>
+              <span className={`text-5xl font-black tracking-tighter ${plan.gold ? "text-amber-500" : "text-primary"}`}>
+                {plan.price}
+              </span>
+              {plan.price !== "Sob Consulta" && <span className="text-[10px] font-bold opacity-30 uppercase ml-1">/mês</span>}
+            </div>
+
+            <ul className="space-y-4 mb-10 flex-grow">
+              {plan.features.map((feature, i) => (
+                <li key={i} className="flex items-center gap-3 text-sm font-bold">
+                  <Check size={18} className={plan.gold ? "text-amber-500" : "text-secondary"} />
+                  <span className={plan.gold ? "text-white/70" : "text-slate-600"}>{feature}</span>
+                </li>
+              ))}
+            </ul>
+
+            {plan.warning && (
+              <p className="mb-6 text-[9px] font-black uppercase tracking-widest text-amber-500/60 text-center italic">
+                {plan.warning}
+              </p>
+            )}
+
+            <Button 
+              className={`w-full py-8 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all
                 ${plan.gold 
-                  ? "bg-gradient-to-b from-white to-amber-50 border-2 border-amber-400 ring-4 ring-amber-400/20" 
-                  : plan.popular 
-                    ? "bg-white scale-105 z-10 border-2 border-secondary/50 shadow-2xl" 
-                    : "bg-white/95"
-                }`}
-              >
-                {/* Etiquetas de Destaque */}
-                {plan.popular && !plan.gold && (
-                  <div className="absolute top-0 right-0 bg-secondary text-primary text-xs font-bold px-3 py-1 rounded-bl-lg">
-                    MAIS PROCURADO
-                  </div>
-                )}
-                {plan.gold && (
-                  <div className="absolute top-0 inset-x-0 bg-gradient-to-r from-amber-400 to-yellow-600 text-white text-xs font-bold px-3 py-1 text-center uppercase tracking-wider shadow-sm">
-                    Exclusivo Família
-                  </div>
-                )}
-
-                <CardHeader className="pb-4">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 
-                    ${plan.gold ? "bg-amber-100 text-amber-600" : "bg-primary/10 text-primary"}`}>
-                    <plan.icon className="w-6 h-6" />
-                  </div>
-                  <CardTitle className="text-xl font-bold text-gray-900">{plan.name}</CardTitle>
-                  <CardDescription className="text-gray-600 min-h-[40px] leading-snug">{plan.description}</CardDescription>
-                </CardHeader>
-                
-                <CardContent className="flex-grow">
-                  <div className="mb-6">
-                    <span className="text-sm text-gray-500 font-medium align-top">R$</span>
-                    <span className={`text-4xl font-bold ${plan.gold ? "text-amber-600" : "text-primary"}`}>
-                      {plan.price}
-                    </span>
-                    {plan.price !== "Sob Consulta" && <span className="text-gray-500 font-medium">/mês</span>}
-                  </div>
-                  
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                        <Check className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.gold ? "text-amber-500" : "text-secondary"}`} />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* Aviso de Não Cumulativo */}
-                  {plan.warning && (
-                    <div className="mt-4 p-2 bg-red-50 border border-red-100 rounded text-xs text-red-600 font-bold text-center uppercase tracking-wide">
-                      ⚠️ {plan.warning}
-                    </div>
-                  )}
-                </CardContent>
-                
-                <CardFooter className="pt-4">
-                  <Button 
-                    className={`w-full font-bold text-lg h-12 rounded-full shadow-md transition-all 
-                      ${plan.gold 
-                        ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white" 
-                        : "bg-secondary hover:bg-secondary/90 text-primary"}`} 
-                    asChild
-                  >
-                    <a 
-                      href={`https://wa.me/5568992161717?text=Olá, tenho interesse no ${plan.name}`} 
-                      target="_blank"
-                    >
-                      {plan.price === "Sob Consulta" ? "Falar com Consultor" : "Quero este Plano"}
-                    </a>
-                  </Button>
-                </CardFooter>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
+                  ? "bg-amber-500 text-black hover:bg-white" 
+                  : "bg-primary text-white hover:bg-secondary hover:text-primary shadow-lg"}`}
+              asChild
+            >
+              <a href={`https://wa.me/5568992161717?text=Interesse no ${plan.name}`} target="_blank">
+                Selecionar Protocolo
+              </a>
+            </Button>
+          </div>
+        </motion.div>
+      ))}
+    </div>
   );
 }

@@ -110,6 +110,13 @@ export function Dashboard() {
     forma_pagamento: "Pix"
   });
 
+  // --- REGRA DE ACESSO DA ESTÁCIO ---
+  const isEstacio = userEmail ? (
+    userEmail.endsWith('@alunos.estacio.br') || 
+    userEmail.endsWith('@professores.estacio.br') || 
+    userEmail.endsWith('@estacio.br')
+  ) : false;
+
   const fetchData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -221,10 +228,9 @@ export function Dashboard() {
     window.open(`https://wa.me/55${foneLimpo}?text=${encodeURIComponent(mensagem)}`, '_blank');
   };
 
- const gerarComprovante = async () => {
+  const gerarComprovante = async () => {
     setLoading(true);
     try {
-      // 1. Grava no banco de dados para gerar o código validador
       const { data: val, error } = await supabase
         .from('validacoes')
         .insert([{ paciente_nome: form.paciente_nome, profissional_nome: form.profissional }])
@@ -237,16 +243,12 @@ export function Dashboard() {
         return;
       }
 
-      // 2. Gera a imagem do QR Code
       const urlValidacao = `https://institutoserclin.vercel.app/validar/${val.id}`;
       const qrCodeDataUrl = await QRCode.toDataURL(urlValidacao);
-      
       const doc = new jsPDF();
       
-      // 3. INJETANDO O LOGO
       doc.addImage(logoSer2, 'PNG', 75, 10, 60, 40);
       
-      // 4. TEXTOS DO ATESTADO
       doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
       doc.text("ATESTADO DE COMPARECIMENTO", 105, 60, { align: "center" });
       
@@ -255,21 +257,16 @@ export function Dashboard() {
       doc.setFontSize(12); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
       doc.text(textoCorpo, 20, 85, { maxWidth: 170, align: "justify", lineHeightFactor: 1.5 });
       
-      // 5. ASSINATURA DIGITAL (Se houver)
       if (form.assinatura_url) {
         doc.addImage(form.assinatura_url, 'PNG', 20, 140, 50, 20);
       }
       
-      // 6. QR CODE E TEXTO DE VALIDAÇÃO NO RODAPÉ
       doc.addImage(qrCodeDataUrl, 'PNG', 87, 195, 30, 30);
       doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(100, 100, 100);
       doc.text("Escaneie o QR Code acima ou acesse o link abaixo para validar a autenticidade:", 105, 230, { align: "center" });
       
-      // NOVO: LINK DE VALIDAÇÃO ESCRITO NO PDF
-      doc.setFont("helvetica", "bold"); 
-      doc.setTextColor(37, 99, 235); // Azul vibrante para indicar que é um link
+      doc.setFont("helvetica", "bold"); doc.setTextColor(37, 99, 235);
       doc.text(urlValidacao, 105, 235, { align: "center" });
-      // Se a pessoa estiver no computador e clicar nessa região, o PDF abre a URL
       doc.link(20, 231, 170, 6, { url: urlValidacao }); 
       
       doc.save(`Atestado_${form.paciente_nome.replace(/\s+/g, '_')}.pdf`);
@@ -356,66 +353,74 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* CONTAINER DESKTOP (SOME NO MOBILE) */}
+        {/* CONTAINER DESKTOP */}
         <div className="hidden md:flex gap-2 items-center py-1">
           <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 mr-2">
             <User size={16} className="text-blue-600" />
-            <span className="text-[11px] font-black text-blue-700 uppercase tracking-tight">Olá, {nomeLogado || 'Colaborador'}</span>
+            <span className="text-[11px] font-black text-blue-700 uppercase tracking-tight">
+              Olá, {nomeLogado || (isEstacio ? 'Unimeta' : 'Colaborador')}
+            </span>
           </div>
 
-          {userEmail === 'romulochaves77@gmail.com' && (
-            <Button variant="outline" size="icon" onClick={() => navigate('/sistema/permissoes')} className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-full h-9 w-9 shrink-0" title="Chaves">
-              <Shield size={18}/>
-            </Button>
-          )}
-
-          {meuPerfil?.permissao_confirmacao_amanha && (
-            <Button onClick={() => setIsConfirmacaoAmanhaOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-4 h-9 shadow-sm shrink-0 transition-all">
-              <Send size={14} /> Amanhã
-              {agendamentosAmanha.length > 0 && <span className="ml-1 bg-white text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px] font-black">{agendamentosAmanha.length}</span>}
-            </Button>
-          )}
-
-          {meuPerfil?.permissao_financeiro && (
+          {/* BOTÕES ESCONDIDOS PARA A ESTÁCIO */}
+          {!isEstacio && (
             <>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600 shrink-0"><Wallet size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500 shrink-0"><Receipt size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600 shrink-0"><Calculator size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600 shrink-0"><Scale size={20}/></Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600 shrink-0"><Clock size={20}/></Button>
+              {userEmail === 'romulochaves77@gmail.com' && (
+                <Button variant="outline" size="icon" onClick={() => navigate('/sistema/permissoes')} className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-full h-9 w-9 shrink-0" title="Chaves">
+                  <Shield size={18}/>
+                </Button>
+              )}
+
+              {meuPerfil?.permissao_confirmacao_amanha && (
+                <Button onClick={() => setIsConfirmacaoAmanhaOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-4 h-9 shadow-sm shrink-0 transition-all">
+                  <Send size={14} /> Amanhã
+                  {agendamentosAmanha.length > 0 && <span className="ml-1 bg-white text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px] font-black">{agendamentosAmanha.length}</span>}
+                </Button>
+              )}
+
+              {meuPerfil?.permissao_financeiro && (
+                <>
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600 shrink-0"><Wallet size={20}/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500 shrink-0"><Receipt size={20}/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600 shrink-0"><Calculator size={20}/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600 shrink-0"><Scale size={20}/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600 shrink-0"><Clock size={20}/></Button>
+                </>
+              )}
+
+              {meuPerfil?.permissao_acessos && (
+                <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600 shrink-0"><Users size={20}/></Button>
+              )}
+
+              {meuPerfil?.permissao_relatorios && (
+                <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500 shrink-0"><BarChart3 size={20}/></Button>
+              )}
+
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 shrink-0" title="Pacientes"><Users size={20}/></Button>
+              
+              {meuPerfil?.permissao_agendar && (
+                <Button onClick={() => { 
+                  setEventoSelecionadoId(null); setBuscaPaciente(""); 
+                  setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
+                  setIsAgendamentoOpen(true); 
+                }} className="bg-blue-600 hover:bg-black text-white rounded-full h-9 px-4 text-xs font-black shadow-lg ml-2">
+                  <Plus size={16} className="mr-1" /> AGENDAR
+                </Button>
+              )}
             </>
           )}
 
-          {meuPerfil?.permissao_acessos && (
-            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600 shrink-0"><Users size={20}/></Button>
-          )}
+          {/* BOTÃO DA UNIMETA (Todos veem) */}
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/encaminhamentos')} className="text-emerald-600 shrink-0" title="Triagem Unimeta">
+            <GraduationCap size={20}/>
+          </Button>
 
-          {meuPerfil?.permissao_relatorios && (
-            <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500 shrink-0"><BarChart3 size={20}/></Button>
-          )}
-
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 shrink-0"><Users size={20}/></Button>
-          {/* 👇 COLOQUE O NOVO BOTÃO AQUI 👇 */}
-<Button variant="ghost" size="icon" onClick={() => navigate('/sistema/encaminhamentos')} className="text-emerald-600 shrink-0" title="Triagem Unimeta">
-  <GraduationCap size={20}/>
-</Button>
-
-          {meuPerfil?.permissao_agendar && (
-            <Button onClick={() => { 
-              setEventoSelecionadoId(null); setBuscaPaciente(""); 
-              setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
-              setIsAgendamentoOpen(true); 
-            }} className="bg-blue-600 hover:bg-black text-white rounded-full h-9 px-4 text-xs font-black shadow-lg ml-2">
-              <Plus size={16} className="mr-1" /> AGENDAR
-            </Button>
-          )}
-
-          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="shrink-0 text-gray-500 ml-2">
+          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="shrink-0 text-gray-500 ml-2" title="Sair">
             <LogOut size={18} />
           </Button>
         </div>
 
-        {/* BOTÃO MENU MOBILE (SÓ APARECE NO CELULAR) */}
+        {/* BOTÃO MENU MOBILE */}
         <div className="md:hidden flex items-center">
           <Button variant="ghost" size="icon" onClick={() => setIsMenuMobileOpen(true)} className="text-[#1e3a8a]">
             <Menu size={28} />
@@ -423,71 +428,83 @@ export function Dashboard() {
         </div>
       </header>
 
-      {/* OVERLAY E MENU LATERAL (GAVETA) NO MOBILE */}
+      {/* MENU MOBILE (GAVETA) */}
       {isMenuMobileOpen && (
         <div className="md:hidden fixed inset-0 z-[100] bg-black/60 flex justify-end backdrop-blur-sm transition-opacity" onClick={() => setIsMenuMobileOpen(false)}>
           <div className="w-[80%] max-w-[300px] bg-white h-full shadow-2xl flex flex-col pt-[calc(env(safe-area-inset-top,0px)+16px)] animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center px-6 pb-6 border-b border-gray-100">
               <div>
                 <span className="font-black text-[#1e3a8a] uppercase text-lg tracking-tighter block">Menu</span>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{nomeLogado || 'Colaborador'}</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{nomeLogado || (isEstacio ? 'Unimeta' : 'Colaborador')}</span>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setIsMenuMobileOpen(false)} className="text-gray-400 -mr-2"><X size={24} /></Button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-2 text-left hide-scrollbar flex flex-col">
-              <div className="mb-2 px-2">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Ações Diárias</span>
-              </div>
+              
+              {!isEstacio && (
+                <>
+                  <div className="mb-2 px-2">
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Ações Diárias</span>
+                  </div>
 
-              {meuPerfil?.permissao_confirmacao_amanha && (
-                <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-700 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); setIsConfirmacaoAmanhaOpen(true); }}>
-                  <Send size={18} /> Confirmar Amanhã
-                  {agendamentosAmanha.length > 0 && <span className="ml-auto bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px]">{agendamentosAmanha.length}</span>}
-                </Button>
+                  {meuPerfil?.permissao_confirmacao_amanha && (
+                    <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-700 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); setIsConfirmacaoAmanhaOpen(true); }}>
+                      <Send size={18} /> Confirmar Amanhã
+                      {agendamentosAmanha.length > 0 && <span className="ml-auto bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px]">{agendamentosAmanha.length}</span>}
+                    </Button>
+                  )}
+
+                  <Button variant="ghost" className="w-full justify-start gap-4 text-blue-700 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/pacientes'); }}>
+                    <Users size={18} /> Pacientes / Prontuários
+                  </Button>
+                </>
               )}
 
-              <Button variant="ghost" className="w-full justify-start gap-4 text-blue-700 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/pacientes'); }}>
-                <Users size={18} /> Pacientes / Prontuários
-              </Button>
-
-              {/* 👇 COLOQUE O NOVO BOTÃO DA UNIMETA AQUI 👇 */}
+              {/* BOTÃO DA UNIMETA */}
+              <div className={!isEstacio ? "mt-4 mb-2 px-2 border-t pt-4" : "mb-2 px-2"}>
+                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Institucional</span>
+              </div>
               <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-700 h-12 rounded-xl font-bold uppercase text-[11px] bg-emerald-50/50" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/encaminhamentos'); }}>
                 <GraduationCap size={18} /> Triagem Unimeta
               </Button>
               
-              {meuPerfil?.permissao_financeiro && (
+              {!isEstacio && (
                 <>
+                  {meuPerfil?.permissao_financeiro && (
+                    <>
+                      <div className="mt-6 mb-2 px-2 border-t pt-4">
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Financeiro & Caixa</span>
+                      </div>
+                      <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/planos'); }}><Wallet size={18} /> Controle de Planos</Button>
+                      <Button variant="ghost" className="w-full justify-start gap-4 text-red-500 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/despesas'); }}><Receipt size={18} /> Despesas e Custos</Button>
+                      <Button variant="ghost" className="w-full justify-start gap-4 text-blue-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/repasses'); }}><Calculator size={18} /> Repasses Médicos</Button>
+                      <Button variant="ghost" className="w-full justify-start gap-4 text-indigo-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/fechamento'); }}><Scale size={18} /> Fechamento de Caixa</Button>
+                    </>
+                  )}
+
                   <div className="mt-6 mb-2 px-2 border-t pt-4">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Financeiro & Caixa</span>
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gestão da Clínica</span>
                   </div>
-                  <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/planos'); }}><Wallet size={18} /> Controle de Planos</Button>
-                  <Button variant="ghost" className="w-full justify-start gap-4 text-red-500 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/despesas'); }}><Receipt size={18} /> Despesas e Custos</Button>
-                  <Button variant="ghost" className="w-full justify-start gap-4 text-blue-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/repasses'); }}><Calculator size={18} /> Repasses Médicos</Button>
-                  <Button variant="ghost" className="w-full justify-start gap-4 text-indigo-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/fechamento'); }}><Scale size={18} /> Fechamento de Caixa</Button>
+
+                  {meuPerfil?.permissao_financeiro && (
+                    <Button variant="ghost" className="w-full justify-start gap-4 text-green-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/horarios'); }}><Clock size={18} /> Grade de Horários</Button>
+                  )}
+
+                  {meuPerfil?.permissao_relatorios && (
+                    <Button variant="ghost" className="w-full justify-start gap-4 text-orange-500 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/relatorios'); }}><BarChart3 size={18} /> Relatórios Gerenciais</Button>
+                  )}
+
+                  {meuPerfil?.permissao_acessos && (
+                    <Button variant="ghost" className="w-full justify-start gap-4 text-purple-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/acessos'); }}><Users size={18} /> Gestão de Acessos</Button>
+                  )}
+
+                  {userEmail === 'romulochaves77@gmail.com' && (
+                    <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-600 h-12 rounded-xl font-bold uppercase text-[11px] bg-emerald-50" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/permissoes'); }}>
+                      <Shield size={18} /> Chaves de Segurança
+                    </Button>
+                  )}
                 </>
-              )}
-
-              <div className="mt-6 mb-2 px-2 border-t pt-4">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gestão da Clínica</span>
-              </div>
-
-              {meuPerfil?.permissao_financeiro && (
-                <Button variant="ghost" className="w-full justify-start gap-4 text-green-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/horarios'); }}><Clock size={18} /> Grade de Horários</Button>
-              )}
-
-              {meuPerfil?.permissao_relatorios && (
-                <Button variant="ghost" className="w-full justify-start gap-4 text-orange-500 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/relatorios'); }}><BarChart3 size={18} /> Relatórios Gerenciais</Button>
-              )}
-
-              {meuPerfil?.permissao_acessos && (
-                <Button variant="ghost" className="w-full justify-start gap-4 text-purple-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/acessos'); }}><Users size={18} /> Gestão de Acessos</Button>
-              )}
-
-              {userEmail === 'romulochaves77@gmail.com' && (
-                <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-600 h-12 rounded-xl font-bold uppercase text-[11px] bg-emerald-50" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/permissoes'); }}>
-                  <Shield size={18} /> Chaves de Segurança
-                </Button>
               )}
             </div>
 
@@ -500,67 +517,82 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* CALENDÁRIO */}
-      <main className="flex-1 p-2 md:p-4 overflow-hidden text-left flex flex-col relative">
-        {isGestorSeguro && (
-          <div className="mb-3 flex justify-end z-10 shrink-0">
-            <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
-              <SelectTrigger className="bg-white border border-gray-100 text-[#1e3a8a] font-black h-11 text-xs rounded-2xl px-4 shadow-sm w-full md:w-[250px]">
-                <div className="flex items-center gap-2 uppercase tracking-widest">
-                  <Filter size={16} className="text-emerald-500" />
-                  <SelectValue placeholder="Filtrar Agenda" />
-                </div>
-              </SelectTrigger>
-              <SelectContent className="z-[100]">
-                <SelectItem value="geral" className="font-black uppercase text-xs text-blue-700">Visão Geral (Todos)</SelectItem>
-                {equipe.map((p: any) => (
-                  <SelectItem key={p.id} value={p.nome} className="font-bold uppercase text-xs text-gray-600">
-                    {p.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+      {/* ÁREA PRINCIPAL DO DASHBOARD */}
+      {!isEstacio ? (
+        <main className="flex-1 p-2 md:p-4 overflow-hidden text-left flex flex-col relative">
+          {isGestorSeguro && (
+            <div className="mb-3 flex justify-end z-10 shrink-0">
+              <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
+                <SelectTrigger className="bg-white border border-gray-100 text-[#1e3a8a] font-black h-11 text-xs rounded-2xl px-4 shadow-sm w-full md:w-[250px]">
+                  <div className="flex items-center gap-2 uppercase tracking-widest">
+                    <Filter size={16} className="text-emerald-500" />
+                    <SelectValue placeholder="Filtrar Agenda" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="z-[100]">
+                  <SelectItem value="geral" className="font-black uppercase text-xs text-blue-700">Visão Geral (Todos)</SelectItem>
+                  {equipe.map((p: any) => (
+                    <SelectItem key={p.id} value={p.nome} className="font-bold uppercase text-xs text-gray-600">
+                      {p.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-        <Card className="flex-1 border-none shadow-sm bg-white rounded-[2rem] overflow-hidden flex flex-col">
-          <CardContent className="p-0 flex-1 min-h-[500px]">
-            <Calendar 
-              style={{ height: '100%', minHeight: '65vh' }}
-              localizer={localizer} culture='pt-BR' messages={mensagensPortugues}
-              events={filtroProfissional === "geral" ? events : events.filter((e: any) => e.original?.profissional_nome === filtroProfissional)} 
-              view={view} onView={setView} date={date} onNavigate={setDate} 
-              views={['day', 'week', 'month', 'agenda']} 
-              min={minTime} 
-              max={maxTime} 
-              components={{ event: EventoCustomizado }} 
-              eventPropGetter={(event: any) => ({ style: { backgroundColor: event.color, color: 'white', border: 'none', borderRadius: '6px', opacity: event.original?.status === 'Falta' ? 0.5 : 1 } })}
-              onSelectEvent={(e) => { 
-                const evt = e.original; 
-                setEventoSelecionadoId(evt.id); 
-                setBuscaPaciente(evt.paciente_nome); 
-                setForm({ ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), sala: evt.sala_id?.toString() || '1', inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), duracao: evt.original?.duracao || '40', assinatura_url: evt.assinatura_url || null, valor_atendimento: aplicarMascaraMoeda(evt.valor_atendimento?.toString() || "0"), forma_pagamento: evt.forma_pagamento || "Pix" }); 
+          <Card className="flex-1 border-none shadow-sm bg-white rounded-[2rem] overflow-hidden flex flex-col">
+            <CardContent className="p-0 flex-1 min-h-[500px]">
+              <Calendar 
+                style={{ height: '100%', minHeight: '65vh' }}
+                localizer={localizer} culture='pt-BR' messages={mensagensPortugues}
+                events={filtroProfissional === "geral" ? events : events.filter((e: any) => e.original?.profissional_nome === filtroProfissional)} 
+                view={view} onView={setView} date={date} onNavigate={setDate} 
+                views={['day', 'week', 'month', 'agenda']} 
+                min={minTime} 
+                max={maxTime} 
+                components={{ event: EventoCustomizado }} 
+                eventPropGetter={(event: any) => ({ style: { backgroundColor: event.color, color: 'white', border: 'none', borderRadius: '6px', opacity: event.original?.status === 'Falta' ? 0.5 : 1 } })}
+                onSelectEvent={(e) => { 
+                  const evt = e.original; 
+                  setEventoSelecionadoId(evt.id); 
+                  setBuscaPaciente(evt.paciente_nome); 
+                  setForm({ ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), sala: evt.sala_id?.toString() || '1', inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), duracao: evt.original?.duracao || '40', assinatura_url: evt.assinatura_url || null, valor_atendimento: aplicarMascaraMoeda(evt.valor_atendimento?.toString() || "0"), forma_pagamento: evt.forma_pagamento || "Pix" }); 
+                  setIsAgendamentoOpen(true); 
+                }} 
+              />
+            </CardContent>
+          </Card>
+
+          {meuPerfil?.permissao_agendar && (
+            <button 
+              onClick={() => { 
+                setEventoSelecionadoId(null); 
+                setBuscaPaciente(""); 
+                setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
                 setIsAgendamentoOpen(true); 
               }} 
-            />
-          </CardContent>
-        </Card>
-
-        {meuPerfil?.permissao_agendar && (
-          <button 
-            onClick={() => { 
-              setEventoSelecionadoId(null); 
-              setBuscaPaciente(""); 
-              setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
-              setIsAgendamentoOpen(true); 
-            }} 
-            className="md:hidden fixed bottom-6 right-6 z-[45] bg-blue-600 hover:bg-blue-700 text-white rounded-full h-14 px-6 flex items-center justify-center shadow-[0_8px_30px_rgb(37,99,235,0.4)] active:scale-95 transition-transform"
-          >
-            <Plus size={20} className="mr-1.5" />
-            <span className="font-black text-[13px] uppercase tracking-widest">Agendar</span>
-          </button>
-        )}
-      </main>
+              className="md:hidden fixed bottom-6 right-6 z-[45] bg-blue-600 hover:bg-blue-700 text-white rounded-full h-14 px-6 flex items-center justify-center shadow-[0_8px_30px_rgb(37,99,235,0.4)] active:scale-95 transition-transform"
+            >
+              <Plus size={20} className="mr-1.5" />
+              <span className="font-black text-[13px] uppercase tracking-widest">Agendar</span>
+            </button>
+          )}
+        </main>
+      ) : (
+        /* TELA EXCLUSIVA PARA QUEM LOGA COM E-MAIL DA ESTÁCIO */
+        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <GraduationCap size={64} className="text-emerald-500 mb-4 opacity-50" />
+          <h2 className="text-2xl font-black text-[#1e3a8a] uppercase tracking-tighter mb-2">Portal Institucional</h2>
+          <p className="text-sm font-bold text-gray-500 mb-8 max-w-md">
+            Bem-vindo(a)! O seu acesso é exclusivo para emissão de encaminhamentos para a clínica-escola.
+          </p>
+          <Button onClick={() => navigate('/sistema/encaminhamentos')} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black h-14 px-8 rounded-full uppercase tracking-widest text-xs shadow-lg">
+            <FileText size={16} className="mr-2" />
+            Acessar Triagem Unimeta
+          </Button>
+        </main>
+      )}
 
       {/* MODAL DE CONFIRMAÇÃO DE AMANHÃ */}
       {isConfirmacaoAmanhaOpen && (
