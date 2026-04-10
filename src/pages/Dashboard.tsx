@@ -353,114 +353,84 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* CONTAINER DESKTOP COM ATALHOS INTEGRADOS */}
-        <div className="hidden md:flex gap-2 items-center py-1">
-          <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 mr-2">
-            <User size={16} className="text-blue-600" />
-            <span className="text-[11px] font-black text-blue-700 uppercase tracking-tight">
-              Olá, {nomeLogado || (isEstacio ? 'Unimeta' : 'Colaborador')}
-            </span>
-          </div>
+        {/* CONTAINER DESKTOP COM ATALHOS INTEGRADOS (Linha ~235) */}
+<div className="hidden md:flex gap-2 items-center py-1">
+  <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 mr-2">
+    <User size={16} className="text-blue-600" />
+    <span className="text-[11px] font-black text-blue-700 uppercase tracking-tight">
+      Olá, {nomeLogado || (isEstacio ? 'Unimeta' : 'Colaborador')}
+    </span>
+  </div>
 
-          {!isEstacio && (
-            <>
-              {/* ATALHOS DE NAVEGAÇÃO - COM TYPE BUTTON PARA NÃO VOLTAR À HOME */}
-              <button 
-                type="button" 
-                onClick={(e) => { e.stopPropagation(); navigate("/sistema/pacientes"); }} 
-                className="p-2 text-slate-400 hover:text-blue-600 transition-colors" 
-                title="Pacientes"
-              >
-                <Users size={20} />
-              </button>
+  {!isEstacio && (
+    <>
+      {/* PACIENTES */}
+      <button 
+        type="button" 
+        onClick={() => navigate("/sistema/pacientes")} 
+        className="p-2 text-slate-400 hover:text-blue-600 transition-colors" 
+        title="Pacientes"
+      >
+        <Users size={20} />
+      </button>
 
-              {meuPerfil?.permissao_relatorios && (
-                <button 
-                  type="button" 
-                  onClick={(e) => { e.stopPropagation(); navigate("/sistema/relatorios"); }} 
-                  className="p-2 text-slate-400 hover:text-orange-500 transition-colors" 
-                  title="Relatórios"
-                >
-                  <BarChart3 size={20} />
-                </button>
-              )}
+      {/* RELATÓRIOS */}
+      {meuPerfil?.permissao_relatorios && (
+        <button 
+          type="button" 
+          onClick={() => navigate("/sistema/relatorios")} 
+          className="p-2 text-slate-400 hover:text-orange-500 transition-colors" 
+          title="Relatórios"
+        >
+          <BarChart3 size={20} />
+        </button>
+      )}
 
-              {userEmail === 'romulochaves77@gmail.com' && (
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={(e) => { e.stopPropagation(); navigate('/sistema/permissoes'); }} 
-                  className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-full h-9 w-9 shrink-0" 
-                  title="Chaves"
-                >
-                  <Shield size={18}/>
-                </Button>
-              )}
+      {/* PERMISSÕES (CHAVES) */}
+      {userEmail === 'romulochaves77@gmail.com' && (
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="icon" 
+          onClick={() => navigate('/sistema/permissoes')} 
+          className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-full h-9 w-9 shrink-0" 
+          title="Segurança"
+        >
+          <Shield size={18}/>
+        </Button>
+      )}
 
-              {meuPerfil?.permissao_confirmacao_amanha && (
-                <Button 
-                  type="button" 
-                  onClick={(e) => { e.stopPropagation(); setIsConfirmacaoAmanhaOpen(true); }} 
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-4 h-9 shadow-sm shrink-0 transition-all"
-                >
-                  <Send size={14} /> Amanhã
-                  {agendamentosAmanha.length > 0 && <span className="ml-1 bg-white text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px] font-black">{agendamentosAmanha.length}</span>}
-                </Button>
-              )}
+      {/* FINANCEIRO / AGENDA */}
+      {meuPerfil?.permissao_financeiro && (
+        <>
+          <Button type="button" variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600 shrink-0" title="Agenda"><Clock size={20}/></Button>
+        </>
+      )}
+    </>
+  )}
 
-              {meuPerfil?.permissao_financeiro && (
-                <>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600 shrink-0"><Wallet size={20}/></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500 shrink-0"><Receipt size={20}/></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600 shrink-0"><Calculator size={20}/></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600 shrink-0"><Scale size={20}/></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600 shrink-0"><Clock size={20}/></Button>
-                </>
-              )}
+  {/* BOTÃO DA UNIMETA (TRIAGEM) */}
+  <button 
+    type="button" 
+    onClick={() => navigate('/sistema/encaminhamentos')} 
+    className="p-2 text-slate-400 hover:text-emerald-600 transition-colors" 
+    title="Triagem Unimeta"
+  >
+    <ClipboardList size={22}/>
+  </button>
 
-              {meuPerfil?.permissao_acessos && (
-                <Button type="button" variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600 shrink-0"><Users size={20}/></Button>
-              )}
-              
-              {meuPerfil?.permissao_agendar && (
-                <Button 
-                  type="button" 
-                  onClick={(e) => { 
-                    e.stopPropagation();
-                    setEventoSelecionadoId(null); setBuscaPaciente(""); 
-                    setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
-                    setIsAgendamentoOpen(true); 
-                  }} 
-                  className="bg-blue-600 hover:bg-black text-white rounded-full h-9 px-4 text-xs font-black shadow-lg ml-2"
-                >
-                  <Plus size={16} className="mr-1" /> AGENDAR
-                </Button>
-              )}
-            </>
-          )}
-
-          {/* BOTÃO DA UNIMETA */}
-          <button 
-            type="button" 
-            onClick={(e) => { e.stopPropagation(); navigate('/sistema/encaminhamentos'); }} 
-            className="p-2 text-slate-400 hover:text-emerald-600 transition-colors" 
-            title="Triagem Unimeta"
-          >
-            <ClipboardList size={22}/>
-          </button>
-
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => { supabase.auth.signOut(); navigate('/login'); }} 
-            className="shrink-0 text-gray-500 ml-2" 
-            title="Sair"
-          >
-            <LogOut size={18} />
-          </Button>
-        </div>
+  {/* SAIR */}
+  <Button 
+    type="button" 
+    variant="ghost" 
+    size="icon" 
+    onClick={() => { supabase.auth.signOut(); navigate('/login'); }} 
+    className="shrink-0 text-gray-500 ml-2" 
+    title="Sair"
+  >
+    <LogOut size={18} />
+  </Button>
+</div>
 
         {/* BOTÃO MENU MOBILE */}
         <div className="md:hidden flex items-center">
