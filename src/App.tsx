@@ -7,7 +7,7 @@ import { supabase } from './lib/supabase';
 // --- IMPORTAÇÃO DAS PÁGINAS ---
 import Home from './pages/Home';
 import { Login } from './pages/Login';
-import { CadastroUnimeta } from './pages/CadastroUnimeta'; // <--- NOVA PÁGINA DE CADASTRO
+import { CadastroUnimeta } from './pages/CadastroUnimeta'; 
 import { Dashboard } from './pages/Dashboard';
 import { Pacientes } from './pages/Pacientes';
 import { Permissoes } from './pages/Permissoes';
@@ -62,21 +62,27 @@ function App() {
             ========================================== */}
         <Route path="/" element={<Home />} /> 
         <Route path="/login" element={<Login />} />
-        <Route path="/cadastro" element={<CadastroUnimeta />} /> {/* <--- ROTA DE CADASTRO AQUI */}
+        <Route path="/cadastro" element={<CadastroUnimeta />} />
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/validar/:id" element={<Validar />} />
 
         {/* ==========================================
             ROTAS PRIVADAS (Gestão SerClin) 
+            Hierarquia corrigida: Específicas antes da Raiz
             ========================================== */}
-        <Route path="/sistema" element={ <PrivateRoute><Dashboard /></PrivateRoute> } />
+        
+        {/* 1. Rotas de Subnível (Mais longas) */}
+        <Route path="/sistema/pacientes/:id" element={ <PrivateRoute><Prontuario /></PrivateRoute> } />
         <Route path="/sistema/pacientes" element={ <PrivateRoute><Pacientes /></PrivateRoute> } />
         <Route path="/sistema/permissoes" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
         <Route path="/sistema/relatorios" element={ <PrivateRoute><Relatorios /></PrivateRoute> } />
         <Route path="/sistema/horarios" element={ <PrivateRoute><Horarios /></PrivateRoute> } />
-        <Route path="/sistema/pacientes/:id" element={ <PrivateRoute><Prontuario /></PrivateRoute> } />
         <Route path="/sistema/encaminhamentos" element={ <PrivateRoute><Encaminhamentos /></PrivateRoute> } />
 
+        {/* 2. Rota Raiz do Sistema (Mais curta) */}
+        <Route path="/sistema" element={ <PrivateRoute><Dashboard /></PrivateRoute> } />
+
+        {/* Rota Coringa (Catch-all) */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

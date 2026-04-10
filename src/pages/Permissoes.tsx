@@ -25,7 +25,7 @@ export function Permissoes() {
   const togglePermissao = async (id: string, campo: string, valorAtual: boolean) => {
     const novoValor = !valorAtual;
     
-    // Atualização otimista na tela (fica rápido para o usuário)
+    // Atualização otimista na tela
     setEquipe(equipe.map(p => p.id === id ? { ...p, [campo]: novoValor } : p));
     
     // Atualiza no banco de dados
@@ -33,7 +33,7 @@ export function Permissoes() {
     
     if (error) {
       toast.error("Erro ao atualizar chave.");
-      carregarEquipe(); // Reverte a tela em caso de erro
+      carregarEquipe(); 
     } else {
       toast.success("Chave atualizada com sucesso!");
     }
@@ -74,11 +74,17 @@ export function Permissoes() {
               <div key={prof.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col">
                 <div className="p-6 bg-gray-900 flex items-center gap-4">
                   <div className="w-12 h-12 bg-gray-800 text-white rounded-full flex items-center justify-center font-black text-lg shadow-inner border border-gray-700">
-                    {prof.nome.charAt(0)}
+                    {/* CORREÇÃO AQUI: Proteção contra nome nulo */}
+                    {prof.nome?.charAt(0).toUpperCase() || "?"}
                   </div>
                   <div>
-                    <h3 className="font-black text-white uppercase tracking-tight text-sm">{prof.nome}</h3>
-                    <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">{prof.role === 'admin' ? 'Acesso Gestor' : prof.role}</p>
+                    {/* CORREÇÃO AQUI: Fallback caso nome não exista */}
+                    <h3 className="font-black text-white uppercase tracking-tight text-sm">
+                      {prof.nome || "Usuário sem nome"}
+                    </h3>
+                    <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
+                      {prof.role === 'admin' ? 'Acesso Gestor' : (prof.role || 'Colaborador')}
+                    </p>
                   </div>
                 </div>
                 
