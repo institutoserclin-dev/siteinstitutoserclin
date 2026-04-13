@@ -21,7 +21,7 @@ export function LoginSystem() {
     if (error) {
       alert('Erro ao entrar: ' + error.message)
     } else {
-      alert('Bem-vindo, Doutor(a)!')
+      alert('Bem-vindo, Doutor (a)!')
       window.location.href = '/sistema' // Redireciona para o painel (vamos criar depois)
     }
     setLoading(false)

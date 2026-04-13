@@ -13,14 +13,13 @@ import { format, startOfDay, endOfDay, isAfter, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import logoSer2 from "@/assets/ser2.png";
 
-// DADOS DOS PLANOS COM TODOS OS LINKS DE CHECKOUT INFINITEPAY CONFIGURADOS
 const planosSerClin = [
-  { nome: "Plano Essencial", preco: "99,90", desc: "A porta de entrada para o seu autocuidado.", destaque: null, link: "https://invoice.infinitepay.io/plans/instituto-serclin/wCZ4iNP4x", itens: ["Atendimento Quinzenal", "Sessões de até 40 minutos", "Acolhimento pontual", "Orientação básica"] },
-  { nome: "Plano Acolher", preco: "149,90", desc: "Manutenção emocional com suporte regular.", destaque: null, link: "https://invoice.infinitepay.io/plans/instituto-serclin/7VchlOCeiX", itens: ["Atendimento Quinzenal", "Sessões de 50 minutos", "Suporte via WhatsApp", "Horários diferenciados"] },
-  { nome: "Cuidado Premium", preco: "189,90", desc: "Para quem busca ferramentas práticas de evolução.", destaque: "MAIS PROCURADO", link: "https://invoice.infinitepay.io/plans/instituto-serclin/7Vcj15B2cN", itens: ["Atendimento Quinzenal (50 min)", "Exercícios de fixação entre sessões", "Curadoria de materiais (livros/vídeos)", "Devolutiva verbal trimestral"] },
-  { nome: "Mente Brilhante", preco: "249,90", desc: "Foco total em desempenho cognitivo e estudos.", destaque: null, link: "https://invoice.infinitepay.io/plans/instituto-serclin/7VclVHytVV", itens: ["Ideal para estudantes/concurseiros", "Treino de memória e foco", "Organização de rotina de estudos", "Material PDF exclusivo"] },
-  { nome: "Jornada Contínua", preco: "319,90", desc: "Acelere resultados com acompanhamento semanal.", destaque: null, link: "https://invoice.infinitepay.io/plans/instituto-serclin/JOrjMk9CT", itens: ["Atendimento Semanal (4 sessões/mês)", "Relatório de Evolução Semestral", "Monitoramento contínuo de metas", "1 Sessão Bônus a cada 6 meses"] },
-  { nome: "Família Prestige", preco: "1.200,00", desc: "Cuidado integral para o seu maior patrimônio.", destaque: "EXCLUSIVO FAMÍLIA", link: "https://invoice.infinitepay.io/plans/instituto-serclin/1FbTSP1Qcr", itens: ["Cobertura para até 4 pessoas", "Terapias Semanais para todos", "Reunião mensal de alinhamento familiar", "Cuidado completo", "Sessões mensais não cumulativas"] },
+  { nome: "Protocolo Essencial", preco: "99,90", desc: "A porta de entrada para o seu autocuidado.", destaque: null, link: "https://invoice.infinitepay.io/plans/instituto-serclin/wCZ4iNP4x", itens: ["Atendimento Quinzenal", "Sessões de até 40 minutos", "Acolhimento pontual", "Orientação básica"] },
+  { nome: "Protocolo Acolher", preco: "149,90", desc: "Manutenção emocional com suporte regular.", destaque: null, link: "https://invoice.infinitepay.io/plans/instituto-serclin/7VchlOCeiX", itens: ["Atendimento Quinzenal", "Sessões de 50 minutos", "Suporte via WhatsApp", "Horários diferenciados"] },
+  { nome: "Protocolo Cuidado Premium", preco: "189,90", desc: "Para quem busca ferramentas práticas de evolução.", destaque: "MAIS PROCURADO", link: "https://invoice.infinitepay.io/plans/instituto-serclin/7Vcj15B2cN", itens: ["Atendimento Quinzenal (50 min)", "Exercícios de fixação entre sessões", "Curadoria de materiais (livros/vídeos)", "Devolutiva verbal trimestral"] },
+  { nome: "Protocolo Mente Brilhante", preco: "249,90", desc: "Foco total em desempenho cognitivo e estudos.", destaque: null, link: "https://invoice.infinitepay.io/plans/instituto-serclin/7VclVHytVV", itens: ["Ideal para estudantes/concurseiros", "Treino de memória e foco", "Organização de rotina de estudos", "Material PDF exclusivo"] },
+  { nome: "Protocolo Jornada Contínua", preco: "319,90", desc: "Acelere resultados com acompanhamento semanal.", destaque: null, link: "https://invoice.infinitepay.io/plans/instituto-serclin/JOrjMk9CT", itens: ["Atendimento Semanal (4 sessões/mês)", "Relatório de Evolução Semestral", "Monitoramento contínuo de metas", "1 Sessão Bônus a cada 6 meses"] },
+  { nome: "Protocolo Família Prestige", preco: "1.200,00", desc: "Cuidado integral para o seu maior patrimônio.", destaque: "EXCLUSIVO FAMÍLIA", link: "https://invoice.infinitepay.io/plans/instituto-serclin/1FbTSP1Qcr", itens: ["Cobertura para até 4 pessoas", "Terapias Semanais para todos", "Reunião mensal de alinhamento familiar", "Cuidado completo", "Sessões mensais não cumulativas"] },
 ];
 
 // DADOS DOS E-BOOKS (ESTILO NETFLIX)
@@ -236,7 +235,7 @@ export function Checkin() {
                 </div>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest">Bem-vindo(a),</p>
+                <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest">Bem-vindo (a),</p>
                 <h2 className="text-lg font-black uppercase leading-tight text-white">{paciente.nome.split(' ')[0]}</h2>
               </div>
             </div>
@@ -336,7 +335,7 @@ export function Checkin() {
               </div>
             )}
 
-            {/* ABA: SERVIÇOS (NETFLIX + OFICINA + PLANOS) */}
+            {/* ABA: SERVIÇOS (NETFLIX + OFICINA + PROTOCOLOS) */}
             {abaAtiva === 'servicos' && (
               <div className="space-y-8 animate-in fade-in pb-4">
                 
@@ -382,9 +381,9 @@ export function Checkin() {
                   </div>
                 </div>
 
-                {/* SECÇÃO 3: PLANOS DE CUIDADOS */}
+                {/* SECÇÃO 3: PROTOCOLOS DE CUIDADOS */}
                 <div className="space-y-4 pt-2">
-                  <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest">Planos de Cuidados</h3>
+                  <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest">Protocolos de Cuidados</h3>
                   
                   <div className="bg-gradient-to-br from-[#1e3a8a] to-blue-900 border border-blue-800 rounded-3xl p-6 shadow-md relative overflow-hidden">
                     <div className="absolute -right-4 -top-4 opacity-10">
@@ -394,14 +393,14 @@ export function Checkin() {
                       <AlertTriangle size={18} /> Benefício Exclusivo
                     </h4>
                     <p className="text-xs font-medium text-blue-100 leading-relaxed mb-5">
-                      A partir do <strong>3º mês</strong> de plano ativo, adquire o direito de realizar a <strong>Avaliação Neuropsicológica</strong> por um valor especial de <strong>R$ 850,00</strong>.
+                      A partir do <strong>3º mês</strong> de protocolo ativo, adquire o direito de realizar a <strong>Avaliação Neuropsicológica</strong> por um valor especial de <strong>R$ 850,00</strong>.
                     </p>
                     
                     <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-sm relative z-10">
                       <p className="text-[12px] font-black text-amber-300 uppercase tracking-widest mb-2">Regras de Utilização:</p>
                       <ul className="text-[12px] text-blue-50 space-y-2 ml-4 list-disc font-medium">
                         <li>O benefício é pessoal e <strong>intransferível</strong>.</li>
-                        <li>No plano <strong>Família Prestige</strong>, a regra aplica-se igualmente: cada membro registado no plano paga a sua própria avaliação (R$ 850,00 cada).</li>
+                        <li>No protocolo <strong>Família Prestige</strong>, a regra aplica-se igualmente: cada membro registado no protocolo paga a sua própria avaliação (R$ 850,00 cada).</li>
                       </ul>
                     </div>
                   </div>
@@ -441,7 +440,7 @@ export function Checkin() {
                           onClick={() => handleComprarServico(plano.nome, plano.link)}
                           className={`w-full h-12 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${plano.destaque ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-[#1e3a8a]'}`}
                         >
-                          {plano.destaque === 'EXCLUSIVO FAMÍLIA' ? 'Quero este Plano' : 'Quero este Plano'}
+                          {plano.destaque === 'EXCLUSIVO FAMÍLIA' ? 'Quero este Protocolo' : 'Quero este Protocolo'}
                         </Button>
                       </div>
                     ))}
@@ -541,7 +540,7 @@ export function Checkin() {
             </button>
             <button onClick={() => setAbaAtiva('servicos')} className={`flex flex-col items-center p-2 w-16 transition-colors ${abaAtiva === 'servicos' ? 'text-[#1e3a8a]' : 'text-gray-400'}`}>
               <ShoppingBag size={22} className="mb-1" />
-              <span className="text-[9px] font-black uppercase tracking-widest">Planos e Serviços</span>
+              <span className="text-[9px] font-black uppercase tracking-widest">Protocolos e Serviços</span>
             </button>
             <button onClick={() => setAbaAtiva('perfil')} className={`flex flex-col items-center p-2 w-16 transition-colors ${abaAtiva === 'perfil' ? 'text-[#1e3a8a]' : 'text-gray-400'}`}>
               <User size={22} className="mb-1" />

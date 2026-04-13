@@ -138,7 +138,7 @@ export function Navbar() {
             </a>
             <button 
               onClick={() => { navigate('/login'); setIsMobileMenuOpen(false); }}
-              className="bg-slate-50 text-slate-500 text-xs font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2"
+              className="bg-slate-50 text-slate-800 text-xs font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2"
             >
               <ShieldCheck size={20} /> Acesso Colaborador
             </button>
