@@ -4,66 +4,78 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Reseta o comportamento padrão do Vite que centraliza tudo */
+/* Reseta o comportamento padrão do Vite */
 #root {
   width: 100%;
   margin: 0;
   padding: 0;
-  text-align: left; /* Garante que o texto da clínica comece na esquerda */
+  text-align: left;
 }
 
 body {
   margin: 0;
   padding: 0;
-  /* Garante que o conteúdo comece após a barra de status do iPhone */
-  padding-top: var(--safe-top);
+  /* Garante que o fundo cubra a área do notch mas o conteúdo não */
   padding-bottom: var(--safe-bottom);
-  background-color: #f9fafb; /* Cinza bem clarinho padrão da SerClin */
-  overscroll-behavior-y: none; /* Melhora a sensação de App no mobile */
+  background-color: #f9fafb;
+  overscroll-behavior-y: none;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
 }
 
 /* --- AJUSTE AUTOMÁTICO PARA TODOS OS HEADERS --- */
 header {
-  /* O header agora preenche o espaço do relógio com a cor de fundo (branco) */
-  /* Mas empurra o conteúdo (logo/botões) para baixo do Notch */
-  padding-top: calc(var(--safe-top) + 12px) !important;
-  min-height: calc(70px + var(--safe-top)) !important;
+  /* O header agora "abraça" o notch e empurra o logo/links para baixo */
+  padding-top: var(--safe-top) !important;
+  padding-bottom: 12px; 
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 100;
   background-color: white;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
 }
 
-/* --- AJUSTE PARA MODAIS --- */
+/* --- AJUSTE PARA MODAIS E SOBREPOSIÇÕES --- */
 .fixed.inset-0 {
-  /* Garante que modais em tela cheia não fiquem atrás do Notch */
+  /* Garante que modais não fiquem atrás do Notch */
   padding-top: var(--safe-top);
-}
-
-/* Mantém suas animações caso queira usar em algum ícone */
-@keyframes logo-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  padding-bottom: var(--safe-bottom);
 }
 
 /* --- MENU DE ÍCONES ROLÁVEL NO MOBILE --- */
 @media (max-width: 768px) {
   .menu-icones-mobile {
     display: flex !important;
-    overflow-x: auto !important; /* Ativa o scroll horizontal */
-    white-space: nowrap !important; /* Impede que os ícones pulem linha */
+    overflow-x: auto !important;
+    white-space: nowrap !important;
     gap: 8px !important;
-    padding: 5px 10px !important;
-    -webkit-overflow-scrolling: touch; /* Deixa a rolagem suave no iPhone */
-    scrollbar-width: none; /* Esconde a barrinha de scroll no Firefox */
+    padding: 10px 15px !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
 
-  /* Esconde a barrinha de scroll no Chrome/Safari para ficar mais limpo */
   .menu-icones-mobile::-webkit-scrollbar {
     display: none;
   }
 
-  .menu-icones-mobile button {
-    flex-shrink: 0 !important; /* Impede que os botões "esmaguem" */
+  .menu-icones-mobile button, 
+  .menu-icones-mobile a {
+    flex-shrink: 0 !important;
   }
+  
+  /* Ajuste para o conteúdo principal não grudar nas bordas do iPhone */
+  main {
+    padding-top: 10px !important;
+    padding-left: max(1rem, env(safe-area-inset-left)) !important;
+    padding-right: max(1rem, env(safe-area-inset-right)) !important;
+  }
+}
+
+/* Animações */
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

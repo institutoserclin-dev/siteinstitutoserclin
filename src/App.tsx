@@ -16,7 +16,14 @@ import { Horarios } from './pages/Horarios';
 import { Checkin } from './pages/Checkin';
 import { Prontuario } from './pages/Prontuario';
 import { Validar } from './pages/Validar'; 
-import { Encaminhamentos } from './pages/Encaminhamentos'; 
+import { Encaminhamentos } from './pages/Encaminhamentos';
+
+// --- NOVAS IMPORTAÇÕES DO FINANCEIRO (Ajuste os nomes se forem diferentes nos seus arquivos) ---
+import { Planos } from './pages/Planos';
+import { Despesas } from './pages/Despesas';
+import { Repasses } from './pages/Repasses';
+import { Fechamento } from './pages/Fechamento';
+import { Acessos } from './pages/Acessos'; // Caso a página de equipe se chame Acessos.tsx
 
 // --- COMPONENTE DE SEGURANÇA (ROTA PRIVADA) ---
 function PrivateRoute({ children }: { children: ReactNode }) {
@@ -58,7 +65,7 @@ function App() {
       
       <Routes>
         {/* ==========================================
-            ROTAS PÚBLICAS (Abertas para todos) 
+            ROTAS PÚBLICAS
             ========================================== */}
         <Route path="/" element={<Home />} /> 
         <Route path="/login" element={<Login />} />
@@ -68,10 +75,9 @@ function App() {
 
         {/* ==========================================
             ROTAS PRIVADAS (Gestão SerClin) 
-            Hierarquia corrigida: Específicas antes da Raiz
             ========================================== */}
         
-        {/* 1. Rotas de Subnível (Mais longas) */}
+        {/* 1. Rotas de Subnível */}
         <Route path="/sistema/pacientes/:id" element={ <PrivateRoute><Prontuario /></PrivateRoute> } />
         <Route path="/sistema/pacientes" element={ <PrivateRoute><Pacientes /></PrivateRoute> } />
         <Route path="/sistema/permissoes" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
@@ -79,10 +85,17 @@ function App() {
         <Route path="/sistema/horarios" element={ <PrivateRoute><Horarios /></PrivateRoute> } />
         <Route path="/sistema/encaminhamentos" element={ <PrivateRoute><Encaminhamentos /></PrivateRoute> } />
 
-        {/* 2. Rota Raiz do Sistema (Mais curta) */}
+        {/* 2. Rotas do Módulo Financeiro (ADICIONADAS AGORA) */}
+        <Route path="/sistema/planos" element={ <PrivateRoute><Planos /></PrivateRoute> } />
+        <Route path="/sistema/despesas" element={ <PrivateRoute><Despesas /></PrivateRoute> } />
+        <Route path="/sistema/repasses" element={ <PrivateRoute><Repasses /></PrivateRoute> } />
+        <Route path="/sistema/fechamento" element={ <PrivateRoute><Fechamento /></PrivateRoute> } />
+        <Route path="/sistema/acessos" element={ <PrivateRoute><Acessos /></PrivateRoute> } />
+
+        {/* 3. Rota Raiz do Sistema */}
         <Route path="/sistema" element={ <PrivateRoute><Dashboard /></PrivateRoute> } />
 
-        {/* Rota Coringa (Catch-all) */}
+        {/* Rota Coringa */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

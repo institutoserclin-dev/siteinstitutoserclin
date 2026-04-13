@@ -343,87 +343,69 @@ export function Dashboard() {
         }
       `}</style>
 
-      {/* HEADER PRINCIPAL */}
-      <header className="bg-white border-b px-4 md:px-6 pb-2 md:pb-3 flex justify-between items-center shadow-sm z-50 gap-4 pt-[env(safe-area-inset-top,32px)] md:pt-4 min-h-[80px]">
+     {/* HEADER PRINCIPAL - AJUSTADO PARA IPHONE E LINKS FIXADOS */}
+      <header className="bg-white border-b px-4 md:px-6 shadow-sm z-50 flex justify-between items-center min-h-[70px]">
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
-          <img src={logoSer2} className="w-10 h-10 md:w-12 md:h-12 object-contain" alt="SerClin" />
+          <img 
+            src={logoSer2} 
+            className="w-10 h-10 md:w-12 md:h-12 object-contain cursor-pointer" 
+            alt="SerClin" 
+            onClick={() => navigate('/')} 
+          />
           <div className="hidden lg:block text-left">
             <h1 className="text-md font-black text-gray-800 uppercase leading-none">SerClin</h1>
             <p className="text-[9px] text-gray-500 font-bold uppercase mt-1 tracking-widest">Gestão Integrada</p>
           </div>
+
+          {/* NAVEGAÇÃO ENTRE PÁGINAS DO SITE */}
+          <nav className="hidden xl:flex items-center gap-4 ml-4 border-l pl-4 border-gray-100">
+            <button onClick={() => navigate('/')} className="text-[10px] font-black uppercase text-gray-400 hover:text-blue-600 transition-colors">Início</button>
+            <button onClick={() => navigate('/#sobre')} className="text-[10px] font-black uppercase text-gray-400 hover:text-blue-600 transition-colors">Sobre</button>
+            <button onClick={() => navigate('/#servicos')} className="text-[10px] font-black uppercase text-gray-400 hover:text-blue-600 transition-colors">Serviços</button>
+          </nav>
         </div>
 
-        {/* CONTAINER DESKTOP */}
-        <div className="hidden md:flex gap-2 items-center py-1">
-          <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 mr-2">
+        {/* CONTAINER DIREITO (USUÁRIO E BOTÕES) */}
+        <div className="flex gap-2 items-center py-1">
+          <div className="hidden md:flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 mr-2">
             <User size={16} className="text-blue-600" />
             <span className="text-[11px] font-black text-blue-700 uppercase tracking-tight">
               Olá, {nomeLogado || (isEstacio ? 'Unimeta' : 'Colaborador')}
             </span>
           </div>
 
-          {/* BOTÕES ESCONDIDOS PARA A ESTÁCIO */}
           {!isEstacio && (
-            <>
+            <div className="hidden md:flex items-center gap-2">
               {userEmail === 'romulochaves77@gmail.com' && (
                 <Button variant="outline" size="icon" onClick={() => navigate('/sistema/permissoes')} className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-full h-9 w-9 shrink-0" title="Chaves">
                   <Shield size={18}/>
                 </Button>
               )}
 
-              {meuPerfil?.permissao_confirmacao_amanha && (
-                <Button onClick={() => setIsConfirmacaoAmanhaOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase gap-2 rounded-full px-4 h-9 shadow-sm shrink-0 transition-all">
-                  <Send size={14} /> Amanhã
-                  {agendamentosAmanha.length > 0 && <span className="ml-1 bg-white text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px] font-black">{agendamentosAmanha.length}</span>}
-                </Button>
-              )}
-
               {meuPerfil?.permissao_financeiro && (
                 <>
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600 shrink-0"><Wallet size={20}/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500 shrink-0"><Receipt size={20}/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600 shrink-0"><Calculator size={20}/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600 shrink-0"><Scale size={20}/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/horarios')} className="text-green-600 shrink-0"><Clock size={20}/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600 shrink-0" title="Planos"><Wallet size={20}/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500 shrink-0" title="Despesas"><Receipt size={20}/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600 shrink-0" title="Repasses"><Calculator size={20}/></Button>
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600 shrink-0" title="Fechamento"><Scale size={20}/></Button>
                 </>
               )}
-
-              {meuPerfil?.permissao_acessos && (
-                <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/acessos')} className="text-purple-600 shrink-0"><Users size={20}/></Button>
-              )}
-
-              {meuPerfil?.permissao_relatorios && (
-                <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/relatorios')} className="text-orange-500 shrink-0"><BarChart3 size={20}/></Button>
-              )}
-
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/pacientes')} className="text-blue-600 shrink-0" title="Pacientes"><Users size={20}/></Button>
-              
-              {meuPerfil?.permissao_agendar && (
-                <Button onClick={() => { 
-                  setEventoSelecionadoId(null); setBuscaPaciente(""); 
-                  setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
-                  setIsAgendamentoOpen(true); 
-                }} className="bg-blue-600 hover:bg-black text-white rounded-full h-9 px-4 text-xs font-black shadow-lg ml-2">
-                  <Plus size={16} className="mr-1" /> AGENDAR
-                </Button>
-              )}
-            </>
+            </div>
           )}
 
-          {/* BOTÃO DA UNIMETA (Todos veem) */}
           <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/encaminhamentos')} className="text-emerald-600 shrink-0" title="Triagem Unimeta">
             <GraduationCap size={20}/>
           </Button>
 
-          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="shrink-0 text-gray-500 ml-2" title="Sair">
-            <LogOut size={18} />
-          </Button>
-        </div>
+          {/* BOTÃO MENU MOBILE (Aparece apenas no celular) */}
+          <div className="md:hidden flex items-center">
+            <Button variant="ghost" size="icon" onClick={() => setIsMenuMobileOpen(true)} className="text-[#1e3a8a]">
+              <Menu size={28} />
+            </Button>
+          </div>
 
-        {/* BOTÃO MENU MOBILE */}
-        <div className="md:hidden flex items-center">
-          <Button variant="ghost" size="icon" onClick={() => setIsMenuMobileOpen(true)} className="text-[#1e3a8a]">
-            <Menu size={28} />
+          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="shrink-0 text-gray-500 ml-2 hidden md:flex" title="Sair">
+            <LogOut size={18} />
           </Button>
         </div>
       </header>
@@ -461,7 +443,7 @@ export function Dashboard() {
                 </>
               )}
 
-              {/* BOTÃO DA UNIMETA */}
+              {/* BOTÃO DA UNIMETA MOBILE */}
               <div className={!isEstacio ? "mt-4 mb-2 px-2 border-t pt-4" : "mb-2 px-2"}>
                 <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Institucional</span>
               </div>
@@ -768,7 +750,7 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="pt-4 flex flex-col gap-2 shrink-0">
+              <div className="pt-4 flex flex-col gap-2 shrink-0 pb-8">
                 {form.telefone && (
                   <Button type="button" onClick={() => enviarWhatsApp(form.paciente_nome, form.telefone, form.profissional, form.inicio)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black h-11 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] shadow-md transition-all">
                     <MessageCircle size={16} /> Confirmar WhatsApp
