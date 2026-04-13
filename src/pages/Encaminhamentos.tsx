@@ -12,7 +12,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import logoSer2 from '@/assets/ser2.png';
 import logoUnimeta from '@/assets/unimeta.png';
 
-// Função auxiliar para evitar erro de assinatura de imagem no PDF
 const carregarImagem = (src: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -41,7 +40,9 @@ export function Encaminhamentos() {
   useEffect(() => {
     const checkAdmin = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.email === 'romulochaves@gmail.com') {
+      const email = session?.user?.email?.toLowerCase().trim();
+      // Verificação para o seu email de admin
+      if (email === 'romulochaves77@gmail.com' || email === 'romulochaves@gmail.com') {
         setIsAdmin(true);
       }
     };
@@ -84,7 +85,6 @@ export function Encaminhamentos() {
       const qrCodeDataUrl = await QRCode.toDataURL(urlValidacao);
       const doc = new jsPDF();
       
-      // Carrega a imagem de forma segura antes de adicionar ao PDF
       const imgSer = await carregarImagem(logoSer2);
       doc.addImage(imgSer, 'PNG', 75, 15, 60, 40);
 
@@ -120,18 +120,31 @@ export function Encaminhamentos() {
     }
   };
 
-  const handleExcluir = async (id: string) => {
+  const handleExcluir = async (id: any) => {
     if (!isAdmin) {
       toast.error("Acesso negado.");
       return;
     }
-    if (!window.confirm("Excluir permanentemente?")) return;
+
+    if (!window.confirm("Excluir este registro permanentemente?")) return;
+
     try {
-      const { error } = await supabase.from('encaminhamentos_unimeta').delete().eq('id', id);
+      // 1. Deletar no Supabase
+      const { error } = await supabase
+        .from('encaminhamentos_unimeta')
+        .delete()
+        .eq('id', id);
+
       if (error) throw error;
-      toast.success("Excluído!");
-      fetchEncaminhamentos();
-    } catch (error: any) { toast.error(error.message); }
+
+      // 2. Atualização Otimista: Remove da tela imediatamente
+      setEncaminhamentos(prev => prev.filter(enc => enc.id !== id));
+      
+      toast.success("Excluído com sucesso!");
+    } catch (error: any) { 
+      toast.error("Erro ao excluir: " + error.message); 
+      fetchEncaminhamentos(); // Recarrega se der erro
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,7 +170,6 @@ export function Encaminhamentos() {
     <div className="min-h-screen bg-gray-50 p-2 md:p-8 font-sans">
       <div className="max-w-6xl mx-auto space-y-6 text-left">
         
-        {/* CABEÇALHO RECORRIGIDO PARA MOBILE */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-gray-100">
           <div className="flex items-center gap-3 md:gap-4 justify-center w-full md:w-auto">
             <img src={logoSer2} alt="SerClin" className="h-14 md:h-20 object-contain max-w-[40%]" />
@@ -246,8 +258,8 @@ export function Encaminhamentos() {
                       </td>
                       {isAdmin && (
                         <td className="p-4 text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleExcluir(enc.id)} className="text-red-500 hover:bg-red-50">
-                            <Trash2 size={16} />
+                          <Button variant="ghost" size="icon" onClick={() => handleExcluir(enc.id)} className="text-red-500 hover:bg-red-50 transition-all">
+                            <Trash2 size={18} />
                           </Button>
                         </td>
                       )}
