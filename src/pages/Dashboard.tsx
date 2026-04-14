@@ -413,7 +413,7 @@ export function Dashboard() {
               <h1 className="text-sm md:text-lg font-black text-[#1e3a8a] uppercase leading-none tracking-tighter">
                 SerClin
               </h1>
-              <p className="text-[7px] md:text-[9px] text-gray-400 font-bold uppercase mt-1 tracking-[0.15em]">
+              <p className="text-[7px] md:text-[11px] text-gray-1000 font-bold uppercase mt-1 tracking-[0.15em]">
                 Gestão Integrada
               </p>
             </div>
@@ -427,28 +427,28 @@ export function Dashboard() {
                   <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600 hover:bg-emerald-50 h-10 w-10">
                     <Wallet size={22}/>
                   </Button>
-                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-emerald-600 transition-colors">Planos</span>
+                  <span className="text-[9px] font-black uppercase text-gray-600 group-hover:text-emerald-600 transition-colors">Planos</span>
                 </div>
 
                 <div className="flex flex-col items-center gap-1 shrink-0 group">
                   <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500 hover:bg-red-50 h-10 w-10">
                     <Receipt size={22}/>
                   </Button>
-                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-red-500 transition-colors">Despesas</span>
+                  <span className="text-[9px] font-black uppercase text-gray-600 group-hover:text-red-500 transition-colors">Despesas</span>
                 </div>
 
                 <div className="flex flex-col items-center gap-1 shrink-0 group">
                   <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600 hover:bg-blue-50 h-10 w-10">
                     <Calculator size={22}/>
                   </Button>
-                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-blue-600 transition-colors">Repasses</span>
+                  <span className="text-[9px] font-black uppercase text-gray-600 group-hover:text-blue-600 transition-colors">Repasses</span>
                 </div>
 
                 <div className="flex flex-col items-center gap-1 shrink-0 group">
                   <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600 hover:bg-indigo-50 h-10 w-10">
                     <Scale size={22}/>
                   </Button>
-                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-indigo-600 transition-colors">Caixa</span>
+                  <span className="text-[9px] font-black uppercase text-gray-600 group-hover:text-indigo-600 transition-colors">Caixa</span>
                 </div>
               </>
             )}
@@ -457,7 +457,7 @@ export function Dashboard() {
               <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/encaminhamentos')} className="text-emerald-600 hover:bg-emerald-50 h-10 w-10">
                 <GraduationCap size={22}/>
               </Button>
-              <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-emerald-600 transition-colors">Docs</span>
+              <span className="text-[9px] font-black uppercase text-gray-600 group-hover:text-emerald-600 transition-colors">Docs</span>
             </div>
 
             {/* BOTÃO AGENDAR - ÚNICO E DESTACADO (REMOVIDO NOME DUPLICADO) */}
