@@ -291,37 +291,92 @@ export function Dashboard() {
 
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.profissional || !form.inicio) return toast.error("Preencha profissional.");
+    
+    // Validações de segurança
+    if (!form.profissional || !form.inicio) return toast.error("Preencha o profissional e o horário.");
+    if (!buscaPaciente && !form.paciente_id) return toast.error("Informe o nome do paciente.");
+    
     setLoading(true);
     try {
       const dInicio = new Date(form.inicio);
       const dFim = addMinutes(dInicio, parseInt(form.duracao));
+      
       let idDoPaciente = form.paciente_id;
+
+      // 1. Lógica de Auto-cadastro de Paciente (Neuropsicologia costuma ter muitos novos)
       if (!idDoPaciente) {
-        const { data: novoPac } = await supabase.from("pacientes").insert([{ nome: buscaPaciente, telefone: form.telefone, convenio: "Particular" }]).select('id').single();
+        const { data: novoPac, error: pacErr } = await supabase
+          .from("pacientes")
+          .insert([{ 
+            nome: buscaPaciente.toUpperCase(), 
+            telefone: form.telefone, 
+            convenio: "Particular" 
+          }])
+          .select('id')
+          .single();
+        
+        if (pacErr) throw new Error("Erro ao cadastrar novo paciente.");
         if (novoPac) idDoPaciente = novoPac.id;
       }
+
+      // 2. Processamento da Assinatura (Digitalização SerClin)
       let assinaturaBase64 = form.assinatura_url;
-      if (sigCanvas.current && !sigCanvas.current.isEmpty()) assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
-      const valorLimpo = parseFloat(form.valor_atendimento.replace(/\./g, "").replace(",", "."));
+      if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
+        assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
+      }
+
+      // 3. Sanitização Financeira (Trata 1.200,50 ou 1200.50)
+      const valorLimpo = parseFloat(
+        form.valor_atendimento
+          .toString()
+          .replace(/\./g, "")
+          .replace(",", ".")
+      ) || 0;
+
       const payload = {
-        sala_id: parseInt(form.sala), profissional_nome: form.profissional, paciente_nome: buscaPaciente,
-        paciente_id: idDoPaciente, paciente_telefone: form.telefone, data_inicio: dInicio.toISOString(), data_fim: dFim.toISOString(),
-        status: mapearStatusParaBanco(form.status), assinatura_url: assinaturaBase64, valor_atendimento: valorLimpo, forma_pagamento: form.forma_pagamento
+        sala_id: parseInt(form.sala),
+        profissional_nome: form.profissional,
+        paciente_nome: buscaPaciente.toUpperCase(),
+        paciente_id: idDoPaciente,
+        paciente_telefone: form.telefone,
+        data_inicio: dInicio.toISOString(),
+        data_fim: dFim.toISOString(),
+        status: mapearStatusParaBanco(form.status),
+        assinatura_url: assinaturaBase64,
+        valor_atendimento: valorLimpo,
+        forma_pagamento: form.forma_pagamento
       };
-      const { error } = eventoSelecionadoId ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId) : await supabase.from('agendamentos').insert([payload]);
+
+      // 4. Update ou Insert
+      const { error } = eventoSelecionadoId 
+        ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId) 
+        : await supabase.from('agendamentos').insert([payload]);
+
       if (error) throw error;
-      setIsAgendamentoOpen(false); fetchData(); toast.success("Agenda salva!");
-    } catch (err) { toast.error("Erro ao salvar."); } finally { setLoading(false); }
+
+      // 5. Feedback e Refresh
+      setIsAgendamentoOpen(false);
+      setEventoSelecionadoId(null);
+      fetchData(); // Certifique-se que sua função de carregar se chama fetchData
+      toast.success(eventoSelecionadoId ? "Agendamento atualizado!" : "Paciente agendado com sucesso!");
+
+    } catch (err: any) {
+      console.error("Erro SerClin Save:", err);
+      toast.error(err.message || "Erro ao salvar na agenda.");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Filtro de Agendamentos de Amanhã (Para o botão do Header)
   const agendamentosAmanha = events
     .filter((e: any) => isSameDay(new Date(e.start), addDays(new Date(), 1)))
-    .map((e: any) => e.original)
+    .map((e: any) => e.original || e) // Garante compatibilidade com o formato do BigCalendar
     .sort((a: any, b: any) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime());
 
+  // Limites do Calendário (7h às 20h)
   const minTime = new Date(2024, 0, 1, 7, 0, 0); 
-  const maxTime = new Date(2024, 0, 1, 20, 0, 0); 
+  const maxTime = new Date(2024, 0, 1, 20, 0, 0);
 
   return (
     <div className="h-[100dvh] w-full bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
@@ -343,70 +398,99 @@ export function Dashboard() {
         }
       `}</style>
 
-     {/* HEADER PRINCIPAL - AJUSTADO PARA IPHONE E LINKS FIXADOS */}
-      <header className="bg-white border-b px-4 md:px-6 shadow-sm z-50 flex justify-between items-center min-h-[70px]">
-        <div className="flex items-center gap-2 md:gap-3 shrink-0">
-          <img 
-            src={logoSer2} 
-            className="w-10 h-10 md:w-12 md:h-12 object-contain cursor-pointer" 
-            alt="SerClin" 
-            onClick={() => navigate('/')} 
-          />
-          <div className="hidden lg:block text-left">
-            <h1 className="text-md font-black text-gray-800 uppercase leading-none">SerClin</h1>
-            <p className="text-[9px] text-gray-500 font-bold uppercase mt-1 tracking-widest">Gestão Integrada</p>
-          </div>
-
-          {/* NAVEGAÇÃO ENTRE PÁGINAS DO SITE */}
-          <nav className="hidden xl:flex items-center gap-4 ml-4 border-l pl-4 border-gray-100">
-            <button onClick={() => navigate('/')} className="text-[10px] font-black uppercase text-gray-400 hover:text-blue-600 transition-colors">Início</button>
-            <button onClick={() => navigate('/#sobre')} className="text-[10px] font-black uppercase text-gray-400 hover:text-blue-600 transition-colors">Sobre</button>
-            <button onClick={() => navigate('/#servicos')} className="text-[10px] font-black uppercase text-gray-400 hover:text-blue-600 transition-colors">Serviços</button>
-          </nav>
-        </div>
-
-        {/* CONTAINER DIREITO (USUÁRIO E BOTÕES) */}
-        <div className="flex gap-2 items-center py-1">
-          <div className="hidden md:flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 mr-2">
-            <User size={16} className="text-blue-600" />
-            <span className="text-[11px] font-black text-blue-700 uppercase tracking-tight">
-              Olá, {nomeLogado || (isEstacio ? 'Unimeta' : 'Colaborador')}
-            </span>
-          </div>
-
-          {!isEstacio && (
-            <div className="hidden md:flex items-center gap-2">
-              {userEmail === 'romulochaves77@gmail.com' && (
-                <Button variant="outline" size="icon" onClick={() => navigate('/sistema/permissoes')} className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-full h-9 w-9 shrink-0" title="Chaves">
-                  <Shield size={18}/>
-                </Button>
-              )}
-
-              {meuPerfil?.permissao_financeiro && (
-                <>
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600 shrink-0" title="Planos"><Wallet size={20}/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500 shrink-0" title="Despesas"><Receipt size={20}/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600 shrink-0" title="Repasses"><Calculator size={20}/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600 shrink-0" title="Fechamento"><Scale size={20}/></Button>
-                </>
-              )}
+     {/* HEADER SERCLIN - LOGO AMPLIADO E VISUAL LIMPO */}
+      <header className="bg-white border-b px-4 md:px-8 shadow-sm z-50 sticky top-0 w-full pt-[var(--safe-top)]">
+        <div className="flex justify-between items-center h-[90px] max-w-[1800px] mx-auto">
+          
+          {/* ESQUERDA: LOGO MAIOR COM NOME EM AZUL */}
+          <div className="flex items-center gap-3 shrink-0 cursor-pointer" onClick={() => navigate('/')}>
+            <img 
+              src={logoSer2} 
+              className="w-12 h-12 md:w-16 md:h-16 object-contain" 
+              alt="SerClin" 
+            />
+            <div className="hidden sm:flex flex-col">
+              <h1 className="text-sm md:text-lg font-black text-[#1e3a8a] uppercase leading-none tracking-tighter">
+                SerClin
+              </h1>
+              <p className="text-[7px] md:text-[9px] text-gray-400 font-bold uppercase mt-1 tracking-[0.15em]">
+                Gestão Integrada
+              </p>
             </div>
-          )}
+          </div>
 
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/encaminhamentos')} className="text-emerald-600 shrink-0" title="Triagem Unimeta">
-            <GraduationCap size={20}/>
-          </Button>
+          {/* CENTRO: BOTÕES COM LABELS (SEM DUPLICIDADE) */}
+          <div className="flex items-center gap-3 md:gap-6 overflow-x-auto no-scrollbar flex-1 justify-center px-4">
+            {meuPerfil?.permissao_financeiro && (
+              <>
+                <div className="flex flex-col items-center gap-1 shrink-0 group">
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600 hover:bg-emerald-50 h-10 w-10">
+                    <Wallet size={22}/>
+                  </Button>
+                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-emerald-600 transition-colors">Planos</span>
+                </div>
 
-          {/* BOTÃO MENU MOBILE (Aparece apenas no celular) */}
-          <div className="md:hidden flex items-center">
-            <Button variant="ghost" size="icon" onClick={() => setIsMenuMobileOpen(true)} className="text-[#1e3a8a]">
-              <Menu size={28} />
+                <div className="flex flex-col items-center gap-1 shrink-0 group">
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500 hover:bg-red-50 h-10 w-10">
+                    <Receipt size={22}/>
+                  </Button>
+                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-red-500 transition-colors">Despesas</span>
+                </div>
+
+                <div className="flex flex-col items-center gap-1 shrink-0 group">
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600 hover:bg-blue-50 h-10 w-10">
+                    <Calculator size={22}/>
+                  </Button>
+                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-blue-600 transition-colors">Repasses</span>
+                </div>
+
+                <div className="flex flex-col items-center gap-1 shrink-0 group">
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600 hover:bg-indigo-50 h-10 w-10">
+                    <Scale size={22}/>
+                  </Button>
+                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-indigo-600 transition-colors">Caixa</span>
+                </div>
+              </>
+            )}
+
+            <div className="flex flex-col items-center gap-1 shrink-0 group">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/encaminhamentos')} className="text-emerald-600 hover:bg-emerald-50 h-10 w-10">
+                <GraduationCap size={22}/>
+              </Button>
+              <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-emerald-600 transition-colors">Docs</span>
+            </div>
+
+            {/* BOTÃO AGENDAR - ÚNICO E DESTACADO (REMOVIDO NOME DUPLICADO) */}
+            <div className="shrink-0 ml-2">
+              <Button 
+                onClick={() => { setEventoSelecionadoId(null); setIsAgendamentoOpen(true); }}
+                className="bg-[#1e3a8a] hover:bg-black text-white rounded-xl h-11 md:h-12 px-5 md:px-7 shadow-lg flex items-center gap-2 transition-all active:scale-95"
+              >
+                <Plus size={20} strokeWidth={3} />
+                <span className="text-[11px] md:text-xs font-black uppercase tracking-widest">AGENDAR</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* DIREITA: PERFIL STATUS ONLINE */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="hidden lg:flex flex-col items-end">
+              <span className="text-[13px] font-black text-gray-800 uppercase leading-none">
+                {nomeLogado?.split(' ')[0] || 'Rômulo'}
+              </span>
+              <span className="text-[11px] text-green-600 font-bold uppercase tracking-tighter animate-pulse">Online</span>
+            </div>
+            
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => { supabase.auth.signOut(); navigate('/login'); }} 
+              className="text-gray-300 hover:text-red-500 transition-colors"
+            >
+              <LogOut size={24} />
             </Button>
           </div>
 
-          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="shrink-0 text-gray-500 ml-2 hidden md:flex" title="Sair">
-            <LogOut size={18} />
-          </Button>
         </div>
       </header>
 
@@ -567,7 +651,7 @@ export function Dashboard() {
           <GraduationCap size={64} className="text-emerald-500 mb-4 opacity-50" />
           <h2 className="text-2xl font-black text-[#1e3a8a] uppercase tracking-tighter mb-2">Portal Institucional</h2>
           <p className="text-sm font-bold text-gray-500 mb-8 max-w-md">
-            Bem-vindo(a)! O seu acesso é exclusivo para emissão de encaminhamentos para a clínica-escola.
+            Bem-vindo (a)! O seu acesso é exclusivo para emissão de encaminhamentos para a clínica-escola.
           </p>
           <Button onClick={() => navigate('/sistema/encaminhamentos')} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black h-14 px-8 rounded-full uppercase tracking-widest text-xs shadow-lg">
             <FileText size={16} className="mr-2" />
