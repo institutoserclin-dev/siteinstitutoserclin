@@ -1,3 +1,4 @@
+
 import SignatureCanvas from 'react-signature-canvas';
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -6,9 +7,10 @@ import type { View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, addMinutes, addDays, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
-  LogOut, Calendar as CalendarIcon, Plus, X, Trash2, 
+  LogOut, Layout, Calendar as CalendarIcon, Plus, X, Trash2, 
   FileText, BarChart3, Shield, Clock, Users, GraduationCap,  
-  CheckCircle, RefreshCw, Wallet, Receipt, Calculator, Scale, MessageCircle, Send, User, Menu, Filter
+  CheckCircle, RefreshCw, Wallet, Receipt, Calculator, Scale, Search, 
+  MessageCircle, Send, User, Menu, Filter
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -398,186 +400,241 @@ export function Dashboard() {
         }
       `}</style>
 
-     {/* HEADER SERCLIN - LOGO AMPLIADO E VISUAL LIMPO */}
+     {/* HEADER INTEGRAL SERCLIN - AJUSTADO PARA MOBILE LIMPO */}
       <header className="bg-white border-b px-4 md:px-8 shadow-sm z-50 sticky top-0 w-full pt-[var(--safe-top)]">
-        <div className="flex justify-between items-center h-[90px] max-w-[1800px] mx-auto">
+        <div className="flex justify-between items-center h-[95px] max-w-[1800px] mx-auto">
           
-          {/* ESQUERDA: LOGO MAIOR COM NOME EM AZUL */}
+          {/* ESQUERDA: LOGO AMPLIADO (PC E MOBILE) */}
           <div className="flex items-center gap-3 shrink-0 cursor-pointer" onClick={() => navigate('/')}>
-            <img 
-              src={logoSer2} 
-              className="w-12 h-12 md:w-16 md:h-16 object-contain" 
-              alt="SerClin" 
-            />
-            <div className="hidden sm:flex flex-col">
-              <h1 className="text-sm md:text-lg font-black text-[#1e3a8a] uppercase leading-none tracking-tighter">
+            <img src={logoSer2} className="w-12 h-12 md:w-16 md:h-16 object-contain" alt="SerClin" />
+            <div className="hidden sm:flex flex-col text-left">
+              <h1 className="text-sm md:text-xl font-black text-[#1e3a8a] uppercase leading-none tracking-tighter">
                 SerClin
               </h1>
-              <p className="text-[7px] md:text-[11px] text-gray-1000 font-bold uppercase mt-1 tracking-[0.15em]">
+              <p className="text-[7px] md:text-[11px] text-gray-500 font-bold uppercase mt-1 tracking-[0.2em]">
                 Gestão Integrada
               </p>
             </div>
           </div>
 
-          {/* CENTRO: BOTÕES COM LABELS (SEM DUPLICIDADE) */}
-          <div className="flex items-center gap-3 md:gap-6 overflow-x-auto no-scrollbar flex-1 justify-center px-4">
+          {/* CENTRO: GRADE COMPLETA DE BOTÕES (SÓ NO PC) */}
+          <div className="hidden md:flex items-center gap-5 flex-1 justify-center px-4 overflow-x-auto no-scrollbar">
+            
+            {/* 1. PACIENTES */}
+            <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/pacientes')}>
+              <Button variant="ghost" size="icon" className="text-blue-700 hover:bg-blue-50 h-10 w-10">
+                <Users size={24}/>
+              </Button>
+              <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-blue-700">Pacientes</span>
+            </div>
+
             {meuPerfil?.permissao_financeiro && (
               <>
-                <div className="flex flex-col items-center gap-1 shrink-0 group">
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/planos')} className="text-emerald-600 hover:bg-emerald-50 h-10 w-10">
-                    <Wallet size={22}/>
+                <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/planos')}>
+                  <Button variant="ghost" size="icon" className="text-emerald-600 hover:bg-emerald-50 h-10 w-10">
+                    <Wallet size={24}/>
                   </Button>
-                  <span className="text-[9px] font-black uppercase text-gray-600 group-hover:text-emerald-600 transition-colors">Planos</span>
+                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-emerald-600">Planos</span>
                 </div>
 
-                <div className="flex flex-col items-center gap-1 shrink-0 group">
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/despesas')} className="text-red-500 hover:bg-red-50 h-10 w-10">
-                    <Receipt size={22}/>
+                <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/despesas')}>
+                  <Button variant="ghost" size="icon" className="text-red-500 hover:bg-red-50 h-10 w-10">
+                    <Receipt size={24}/>
                   </Button>
-                  <span className="text-[9px] font-black uppercase text-gray-600 group-hover:text-red-500 transition-colors">Despesas</span>
+                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-red-500">Despesas</span>
                 </div>
 
-                <div className="flex flex-col items-center gap-1 shrink-0 group">
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/repasses')} className="text-blue-600 hover:bg-blue-50 h-10 w-10">
-                    <Calculator size={22}/>
+                <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/repasses')}>
+                  <Button variant="ghost" size="icon" className="text-blue-600 hover:bg-blue-50 h-10 w-10">
+                    <Calculator size={24}/>
                   </Button>
-                  <span className="text-[9px] font-black uppercase text-gray-600 group-hover:text-blue-600 transition-colors">Repasses</span>
+                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-blue-600">Repasses</span>
                 </div>
 
-                <div className="flex flex-col items-center gap-1 shrink-0 group">
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/fechamento')} className="text-indigo-600 hover:bg-indigo-50 h-10 w-10">
-                    <Scale size={22}/>
+                <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/fechamento')}>
+                  <Button variant="ghost" size="icon" className="text-indigo-600 hover:bg-indigo-50 h-10 w-10">
+                    <Scale size={24}/>
                   </Button>
-                  <span className="text-[9px] font-black uppercase text-gray-600 group-hover:text-indigo-600 transition-colors">Caixa</span>
+                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-indigo-600">Caixa</span>
                 </div>
               </>
             )}
 
-            <div className="flex flex-col items-center gap-1 shrink-0 group">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/sistema/encaminhamentos')} className="text-emerald-600 hover:bg-emerald-50 h-10 w-10">
-                <GraduationCap size={22}/>
+            <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/relatorios')}>
+              <Button variant="ghost" size="icon" className="text-amber-600 hover:bg-amber-50 h-10 w-10">
+                <Search size={24}/>
               </Button>
-              <span className="text-[9px] font-black uppercase text-gray-600 group-hover:text-emerald-600 transition-colors">Docs</span>
+              <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-amber-600">Relatórios</span>
             </div>
 
-            {/* BOTÃO AGENDAR - ÚNICO E DESTACADO (REMOVIDO NOME DUPLICADO) */}
-            <div className="shrink-0 ml-2">
-              <Button 
-                onClick={() => { setEventoSelecionadoId(null); setIsAgendamentoOpen(true); }}
-                className="bg-[#1e3a8a] hover:bg-black text-white rounded-xl h-11 md:h-12 px-5 md:px-7 shadow-lg flex items-center gap-2 transition-all active:scale-95"
-              >
-                <Plus size={20} strokeWidth={3} />
-                <span className="text-[11px] md:text-xs font-black uppercase tracking-widest">AGENDAR</span>
+            {(isAdmin || isGestorSeguro) && (
+              <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/usuarios')}>
+                <Button variant="ghost" size="icon" className="text-purple-600 hover:bg-purple-50 h-10 w-10">
+                  <User size={24}/>
+                </Button>
+                <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-purple-600">Acessos</span>
+              </div>
+            )}
+
+            <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/encaminhamentos')}>
+              <Button variant="ghost" size="icon" className="text-emerald-600 hover:bg-emerald-50 h-10 w-10">
+                <GraduationCap size={24}/>
               </Button>
+              <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-emerald-600">Unimeta</span>
             </div>
           </div>
 
-          {/* DIREITA: PERFIL STATUS ONLINE */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="hidden lg:flex flex-col items-end">
-              <span className="text-[13px] font-black text-gray-800 uppercase leading-none">
-                {nomeLogado?.split(' ')[0] || 'Rômulo'}
-              </span>
-              <span className="text-[11px] text-green-600 font-bold uppercase tracking-tighter animate-pulse">Online</span>
-            </div>
+          {/* DIREITA: STATUS, AGENDAR (PC) E MENU (MOBILE) */}
+          <div className="flex items-center gap-4 shrink-0">
             
+            {/* Online Status: Só PC */}
+            <div className="hidden md:flex flex-col items-end mr-1">
+              <span className="text-[12px] font-black text-gray-800 uppercase leading-none">{nomeLogado?.split(' ')[0]}</span>
+              <div className="flex items-center gap-1 mt-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                <span className="text-[9px] text-green-600 font-bold uppercase">Online</span>
+              </div>
+            </div>
+
+            {/* Botão Agendar: Só PC */}
+            <Button 
+              onClick={() => { setEventoSelecionadoId(null); setIsAgendamentoOpen(true); }}
+              className="hidden md:flex bg-[#1e3a8a] hover:bg-black text-white rounded-xl h-11 px-6 shadow-lg items-center gap-2 transition-all active:scale-95"
+            >
+              <Plus size={20} strokeWidth={3} />
+              <span className="text-[10px] font-black uppercase">AGENDAR</span>
+            </Button>
+
+            {/* MENU HAMBÚRGUER: AGORA NA DIREITA E SÓ NO MOBILE */}
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => { supabase.auth.signOut(); navigate('/login'); }} 
-              className="text-gray-300 hover:text-red-500 transition-colors"
+              onClick={() => setIsMenuMobileOpen(true)} 
+              className="md:hidden text-[#1e3a8a] h-12 w-12"
             >
-              <LogOut size={24} />
+              <Layout size={32} />
             </Button>
           </div>
-
         </div>
+
+        {/* GAVETA MOBILE (DRAWER) - ABRINDO DA DIREITA PARA A ESQUERDA */}
+        {isMenuMobileOpen && (
+          <div className="md:hidden fixed inset-0 z-[100] bg-black/60 flex justify-end backdrop-blur-sm" onClick={() => setIsMenuMobileOpen(false)}>
+            <div className="w-[85%] max-w-[310px] bg-white h-full shadow-2xl flex flex-col pt-[calc(env(safe-area-inset-top,0px)+16px)] animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center px-6 pb-6 border-b">
+                <span className="font-black text-[#1e3a8a] uppercase text-lg">Menu SerClin</span>
+                <X size={26} onClick={() => setIsMenuMobileOpen(false)} className="text-gray-400" />
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-1 flex flex-col">
+                <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/pacientes'); setIsMenuMobileOpen(false); }}>
+                  <Users size={20} className="text-blue-700"/> Prontuários
+                </Button>
+                
+                {meuPerfil?.permissao_financeiro && (
+                  <>
+                    <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/planos'); setIsMenuMobileOpen(false); }}>
+                      <Wallet size={20} className="text-emerald-600"/> Planos
+                    </Button>
+                    <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/despesas'); setIsMenuMobileOpen(false); }}>
+                      <Receipt size={20} className="text-red-600"/> Despesas
+                    </Button>
+                    <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/repasses'); setIsMenuMobileOpen(false); }}>
+                      <Calculator size={20} className="text-blue-600"/> Repasses
+                    </Button>
+                    <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/fechamento'); setIsMenuMobileOpen(false); }}>
+                      <Scale size={20} className="text-indigo-600"/> Caixa
+                    </Button>
+                  </>
+                )}
+
+                <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/relatorios'); setIsMenuMobileOpen(false); }}>
+                  <Search size={20} className="text-amber-600"/> Relatórios
+                </Button>
+
+                <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/encaminhamentos'); setIsMenuMobileOpen(false); }}>
+                  <GraduationCap size={20} className="text-emerald-600"/> Unimeta
+                </Button>
+
+                {(isAdmin || isGestorSeguro) && (
+                  <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/usuarios'); setIsMenuMobileOpen(false); }}>
+                    <User size={20} className="text-purple-600"/> Gerenciar Acesso
+                  </Button>
+                )}
+                
+                <div className="mt-auto border-t pt-4">
+                  <Button variant="ghost" className="w-full justify-start gap-4 h-12 font-bold uppercase text-[11px] text-red-500" onClick={() => { supabase.auth.signOut(); navigate('/login'); }}>
+                    <LogOut size={20} /> Sair do Sistema
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* MENU MOBILE (GAVETA) */}
+      {/* MENU MOBILE (GAVETA) - VERSÃO DEFINITIVA SERCLIN */}
       {isMenuMobileOpen && (
-        <div className="md:hidden fixed inset-0 z-[100] bg-black/60 flex justify-end backdrop-blur-sm transition-opacity" onClick={() => setIsMenuMobileOpen(false)}>
-          <div className="w-[80%] max-w-[300px] bg-white h-full shadow-2xl flex flex-col pt-[calc(env(safe-area-inset-top,0px)+16px)] animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
+        <div className="md:hidden fixed inset-0 z-[100] bg-black/60 flex justify-start backdrop-blur-sm transition-opacity" onClick={() => setIsMenuMobileOpen(false)}>
+          <div className="w-[85%] max-w-[310px] bg-white h-full shadow-2xl flex flex-col pt-[calc(env(safe-area-inset-top,0px)+16px)] animate-in slide-in-from-left duration-300" onClick={(e) => e.stopPropagation()}>
+            
             <div className="flex justify-between items-center px-6 pb-6 border-b border-gray-100">
               <div>
-                <span className="font-black text-[#1e3a8a] uppercase text-lg tracking-tighter block">Menu</span>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{nomeLogado || (isEstacio ? 'Unimeta' : 'Colaborador')}</span>
+                <span className="font-black text-[#1e3a8a] uppercase text-lg tracking-tighter block">Menu SerClin</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{nomeLogado || 'Colaborador'}</span>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setIsMenuMobileOpen(false)} className="text-gray-400 -mr-2"><X size={24} /></Button>
+              <Button variant="ghost" size="icon" onClick={() => setIsMenuMobileOpen(false)} className="text-gray-400 -mr-2"><X size={26} /></Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 text-left hide-scrollbar flex flex-col">
+            <div className="flex-1 overflow-y-auto p-4 space-y-1 text-left flex flex-col no-scrollbar">
               
-              {!isEstacio && (
-                <>
-                  <div className="mb-2 px-2">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Ações Diárias</span>
-                  </div>
-
-                  {meuPerfil?.permissao_confirmacao_amanha && (
-                    <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-700 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); setIsConfirmacaoAmanhaOpen(true); }}>
-                      <Send size={18} /> Confirmar Amanhã
-                      {agendamentosAmanha.length > 0 && <span className="ml-auto bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px]">{agendamentosAmanha.length}</span>}
-                    </Button>
-                  )}
-
-                  <Button variant="ghost" className="w-full justify-start gap-4 text-blue-700 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/pacientes'); }}>
-                    <Users size={18} /> Pacientes / Prontuários
-                  </Button>
-                </>
-              )}
-
-              {/* BOTÃO DA UNIMETA MOBILE */}
-              <div className={!isEstacio ? "mt-4 mb-2 px-2 border-t pt-4" : "mb-2 px-2"}>
-                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Institucional</span>
+              {/* ATENDIMENTO */}
+              <div className="mb-2 px-2 mt-2">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Atendimento</span>
               </div>
-              <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-700 h-12 rounded-xl font-bold uppercase text-[11px] bg-emerald-50/50" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/encaminhamentos'); }}>
+
+              <Button variant="ghost" className="w-full justify-start gap-4 h-12 rounded-xl font-bold uppercase text-[11px] text-blue-700" onClick={() => { navigate('/sistema/pacientes'); setIsMenuMobileOpen(false); }}>
+                <Users size={18} /> Pacientes / Prontuários
+              </Button>
+
+              <Button variant="ghost" className="w-full justify-start gap-4 h-12 rounded-xl font-bold uppercase text-[11px] text-emerald-700 bg-emerald-50/50" onClick={() => { navigate('/sistema/encaminhamentos'); setIsMenuMobileOpen(false); }}>
                 <GraduationCap size={18} /> Triagem Unimeta
               </Button>
-              
-              {!isEstacio && (
+
+              {/* FINANCEIRO COMPLETO */}
+              {meuPerfil?.permissao_financeiro && (
                 <>
-                  {meuPerfil?.permissao_financeiro && (
-                    <>
-                      <div className="mt-6 mb-2 px-2 border-t pt-4">
-                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Financeiro & Caixa</span>
-                      </div>
-                      <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/planos'); }}><Wallet size={18} /> Controle de Planos</Button>
-                      <Button variant="ghost" className="w-full justify-start gap-4 text-red-500 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/despesas'); }}><Receipt size={18} /> Despesas e Custos</Button>
-                      <Button variant="ghost" className="w-full justify-start gap-4 text-blue-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/repasses'); }}><Calculator size={18} /> Repasses Médicos</Button>
-                      <Button variant="ghost" className="w-full justify-start gap-4 text-indigo-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/fechamento'); }}><Scale size={18} /> Fechamento de Caixa</Button>
-                    </>
-                  )}
-
                   <div className="mt-6 mb-2 px-2 border-t pt-4">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gestão da Clínica</span>
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Financeiro & Caixa</span>
                   </div>
-
-                  {meuPerfil?.permissao_financeiro && (
-                    <Button variant="ghost" className="w-full justify-start gap-4 text-green-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/horarios'); }}><Clock size={18} /> Grade de Horários</Button>
-                  )}
-
-                  {meuPerfil?.permissao_relatorios && (
-                    <Button variant="ghost" className="w-full justify-start gap-4 text-orange-500 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/relatorios'); }}><BarChart3 size={18} /> Relatórios Gerenciais</Button>
-                  )}
-
-                  {meuPerfil?.permissao_acessos && (
-                    <Button variant="ghost" className="w-full justify-start gap-4 text-purple-600 h-12 rounded-xl font-bold uppercase text-[11px]" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/acessos'); }}><Users size={18} /> Gestão de Acessos</Button>
-                  )}
-
-                  {userEmail === 'romulochaves77@gmail.com' && (
-                    <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-600 h-12 rounded-xl font-bold uppercase text-[11px] bg-emerald-50" onClick={() => { setIsMenuMobileOpen(false); navigate('/sistema/permissoes'); }}>
-                      <Shield size={18} /> Chaves de Segurança
-                    </Button>
-                  )}
+                  <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-600 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/planos'); setIsMenuMobileOpen(false); }}><Wallet size={18} /> Planos</Button>
+                  <Button variant="ghost" className="w-full justify-start gap-4 text-red-500 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/despesas'); setIsMenuMobileOpen(false); }}><Receipt size={18} /> Despesas</Button>
+                  <Button variant="ghost" className="w-full justify-start gap-4 text-blue-600 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/repasses'); setIsMenuMobileOpen(false); }}><Calculator size={18} /> Repasses</Button>
+                  <Button variant="ghost" className="w-full justify-start gap-4 text-indigo-600 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/fechamento'); setIsMenuMobileOpen(false); }}><Scale size={18} /> Caixa</Button>
                 </>
               )}
-            </div>
 
-            <div className="p-4 border-t border-gray-100 pb-[calc(env(safe-area-inset-bottom,0px)+16px)]">
-              <Button onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="w-full bg-red-50 hover:bg-red-100 text-red-600 border-none font-black uppercase tracking-widest h-14 rounded-2xl flex items-center justify-center gap-3">
-                <LogOut size={18} /> Sair do Sistema
+              {/* GESTÃO E ACESSOS */}
+              <div className="mt-6 mb-2 px-2 border-t pt-4">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gestão</span>
+              </div>
+
+              <Button variant="ghost" className="w-full justify-start gap-4 text-orange-500 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/relatorios'); setIsMenuMobileOpen(false); }}>
+                <Search size={18} /> Relatórios
               </Button>
+
+              {(isAdmin || isGestorSeguro) && (
+                <Button variant="ghost" className="w-full justify-start gap-4 text-purple-600 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/usuarios'); setIsMenuMobileOpen(false); }}>
+                  <User size={18} /> Gerenciar Acessos
+                </Button>
+              )}
+
+              {/* SAIR */}
+              <div className="mt-auto pt-6 border-t pb-8">
+                <Button onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="w-full bg-red-50 hover:bg-red-100 text-red-600 border-none font-black uppercase tracking-widest h-14 rounded-2xl flex items-center justify-center gap-3">
+                  <LogOut size={18} /> Sair do Sistema
+                </Button>
+              </div>
             </div>
           </div>
         </div>
