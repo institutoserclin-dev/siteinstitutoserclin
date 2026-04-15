@@ -505,6 +505,26 @@ export function Dashboard() {
               <span className="text-[10px] font-black uppercase">AGENDAR</span>
             </Button>
 
+            {/* BOTÃO CONFIRMAR AMANHÃ (LÓGICA DE FIM DE SEMANA) */}
+{!isEstacio && meuPerfil?.permissao_confirmacao_amanha && (
+  <div 
+    className="flex flex-col items-center gap-1 cursor-pointer group relative" 
+    onClick={() => setIsConfirmacaoAmanhaOpen(true)}
+  >
+    <Button variant="ghost" size="icon" className="text-emerald-700 hover:bg-emerald-50 h-10 w-10">
+      <Send size={24}/>
+      {agendamentosAmanha.length > 0 && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
+          {agendamentosAmanha.length}
+        </span>
+      )}
+    </Button>
+    <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-emerald-700">
+      {new Date().getDay() === 5 ? 'Confirmar Segunda' : 'Confirmar Amanhã'}
+    </span>
+  </div>
+)}
+
             {/* MENU HAMBÚRGUER: AGORA NA DIREITA E SÓ NO MOBILE */}
             <Button 
               variant="ghost" 
@@ -552,6 +572,23 @@ export function Dashboard() {
                   <Search size={20} className="text-amber-600"/> Relatórios
                 </Button>
 
+                {/* BOTÃO CONFIRMAR NA GAVETA */}
+{!isEstacio && meuPerfil?.permissao_confirmacao_amanha && (
+  <Button 
+    variant="ghost" 
+    className="w-full justify-start gap-4 text-emerald-700 h-12 rounded-xl font-bold uppercase text-[11px] bg-emerald-50/50" 
+    onClick={() => { setIsMenuMobileOpen(false); setIsConfirmacaoAmanhaOpen(true); }}
+  >
+    <Send size={18} /> 
+    {new Date().getDay() === 5 ? 'Confirmar Segunda' : 'Confirmar Amanhã'}
+    {agendamentosAmanha.length > 0 && (
+      <span className="ml-auto bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px]">
+        {agendamentosAmanha.length}
+      </span>
+    )}
+  </Button>
+)}  
+
                 <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/encaminhamentos'); setIsMenuMobileOpen(false); }}>
                   <GraduationCap size={20} className="text-emerald-600"/> Unimeta
                 </Button>
@@ -587,6 +624,16 @@ export function Dashboard() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-1 text-left flex flex-col no-scrollbar">
+
+              {(isAdmin || isGestorSeguro) && (
+  <Button 
+                variant="ghost" 
+                className="justify-start gap-4 h-12 font-bold uppercase text-[11px] w-full" 
+                onClick={() => { navigate('/sistema/usuarios'); setIsMenuMobileOpen(false); }}
+              >
+                <User size={20} className="text-purple-600"/> Gerenciar Acesso
+              </Button>
+            )}
               
               {/* ATENDIMENTO */}
               <div className="mb-2 px-2 mt-2">
@@ -622,12 +669,15 @@ export function Dashboard() {
               <Button variant="ghost" className="w-full justify-start gap-4 text-orange-500 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/relatorios'); setIsMenuMobileOpen(false); }}>
                 <Search size={18} /> Relatórios
               </Button>
-
-              {(isAdmin || isGestorSeguro) && (
-                <Button variant="ghost" className="w-full justify-start gap-4 text-purple-600 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/usuarios'); setIsMenuMobileOpen(false); }}>
-                  <User size={18} /> Gerenciar Acessos
+    {/* 7. GERENCIAR ACESSO - ROTA CORRIGIDA PARA /USUARIOS */}
+            {(isAdmin || isGestorSeguro) && (
+            <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/usuarios')}>
+            <Button variant="ghost" size="icon" className="text-purple-600 hover:bg-purple-50 h-10 w-10">
+                          <User size={24}/>
                 </Button>
-              )}
+                <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-purple-600">Acessos</span>
+              </div>
+            )}
 
               {/* SAIR */}
               <div className="mt-auto pt-6 border-t pb-8">
