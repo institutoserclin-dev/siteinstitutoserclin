@@ -103,43 +103,55 @@ export function About() {
       </div>
 
       {/* 3. Destaque: Capacitação (Inverted Layout) */}
-      <div className="grid lg:grid-cols-2 gap-24 items-center pb-20">
+      <div className="grid lg:grid-cols-2 gap-10 lg:gap-24 items-center pb-20 px-4 lg:px-0">
+        
+        {/* LADO DO TEXTO: Centralizado no mobile, alinhado à direita no Desktop */}
         <motion.div
           initial={{ opacity: 0, x: -50 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
-          className="order-2 lg:order-1 space-y-8 text-right flex flex-col items-end"
+          className="order-2 lg:order-1 space-y-6 lg:space-y-8 text-center lg:text-right flex flex-col items-center lg:items-end"
         >
           <div className="inline-flex items-center gap-2 bg-primary/5 px-4 py-1.5 rounded-full border border-primary/10">
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Educação Corporativa</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">
+              Educação Corporativa
+            </span>
           </div>
-          <h3 className="text-6xl font-black uppercase tracking-tighter leading-[0.85] text-primary italic">
+          
+          <h3 className="text-4xl lg:text-6xl font-black uppercase tracking-tighter leading-[0.85] text-primary italic">
             Capacitação <br/>
             <span className="font-light text-slate-600 not-italic lowercase">Profissional</span>
           </h3>
-          <p className="text-slate-800 text-xl font-light leading-relaxed">
+          
+          <p className="text-slate-800 text-lg lg:text-xl font-light leading-relaxed max-w-md lg:max-w-none">
             Desenvolvemos programas personalizados para docentes e gestores escolares, focando em liderança e saúde mental no trabalho.
           </p>
+          
           <Button 
             variant="outline"
-            className="border-2 border-primary text-primary hover:bg-primary hover:text-white font-black px-12 py-7 rounded-2xl uppercase text-[10px] tracking-widest transition-all"
+            className="w-full lg:w-auto border-2 border-primary text-primary hover:bg-primary hover:text-white font-black px-12 py-7 rounded-2xl uppercase text-[10px] tracking-widest transition-all"
             asChild
           >
-            <a href="https://wa.me/5568992161717" target="_blank">Proposta Corporativa</a>
+            <a href="https://wa.me/5568992161717" target="_blank" rel="noopener noreferrer">
+              Proposta Corporativa
+            </a>
           </Button>
         </motion.div>
         
+        {/* LADO DA IMAGEM: Aparece em cima no mobile, na direita no Desktop */}
         <motion.div
           initial={{ opacity: 0, x: 50 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
           className="order-1 lg:order-2 relative"
         >
-          <div className="absolute -bottom-6 -right-6 w-2/3 h-full bg-primary/5 rounded-[4rem] -z-10 blur-xl" />
+          {/* Efeito decorativo de fundo */}
+          <div className="absolute -bottom-4 -right-4 lg:-bottom-6 lg:-right-6 w-2/3 h-full bg-primary/5 rounded-[2.5rem] lg:rounded-[4rem] -z-10 blur-xl" />
+          
           <img 
             src={trainingImg} 
             alt="Capacitação Profissional" 
-            className="rounded-[3.5rem] shadow-2xl w-full object-cover aspect-[4/3] border-[16px] border-slate-50" 
+            className="rounded-[2.5rem] lg:rounded-[3.5rem] shadow-2xl w-full object-cover aspect-[4/3] border-[8px] lg:border-[16px] border-slate-50" 
           />
         </motion.div>
       </div>
