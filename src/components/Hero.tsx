@@ -50,7 +50,7 @@ export function Hero() {
             {/* Subtexto Refinado - Sans Medium com Leading Amplo */}
             <p className="text-lg md:text-2xl text-white/50 max-w-2xl font-sans font-medium leading-relaxed italic">
               Onde a alta performance clínica encontra o <br />
-              <span className="text-white not-italic font-bold border-b border-secondary/30">acolhimento humano de elite.</span>
+              <span className="text-white not-italic font-bold border-b border-secondary/30">acolhimento humano.</span>
             </p>
 
             {/* Botões Signature - Unificação de Fonte Sans Black */}
