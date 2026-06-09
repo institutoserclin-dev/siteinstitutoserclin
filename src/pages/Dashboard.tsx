@@ -1,4 +1,8 @@
-
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import SignatureCanvas from 'react-signature-canvas';
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -54,26 +58,160 @@ const mensagensPortugues = {
 };
 
 const mapearStatusParaBanco = (statusVisual: string) => {
+  if (!statusVisual) return 'Agendado';
+  
   const s = statusVisual.toLowerCase();
-  if (s.includes('presen') || s.includes('atendido')) return 'Presenca';
-  if (s.includes('falta')) return 'Falta';
+  
+  // Se contiver atendimento, grava como 'em atendimento' para ativar o amarelo fixo
+  if (s.includes('atendimento') || s.includes('atendido')) {
+    return 'em atendimento';
+  }
+  // Se for Presença, devolve exatamente com P maiúsculo para travar o Verde!
+  if (s.includes('presen')) {
+    return 'Presenca';
+  }
+  if (s.includes('falta')) {
+    return 'Falta';
+  }
+  
   return 'Agendado';
 };
 
-// --- VISUAL SUPER CLEAN ---
+// --- FUNÇÃO DE AUTOMAÇÃO DE STATUS (FOCADA NOS 40 MINUTOS DE ATENDIMENTO) ---
+const aplicarAutomacaoFluxoClinico = (agendamentos: any[]) => {
+  return agendamentos.map((evt) => {
+    const statusBanco = evt.status || '';
+    let statusAtual = evt.status;
+    const agora = new Date();
+    const horaInicio = new Date(evt.data_inicio);
+    
+    const duracaoMinutos = parseInt(evt.duracao || '40', 10);
+    const horaTerminoEstimada = new Date(horaInicio.getTime() + duracaoMinutos * 60000);
+
+    // REGRA DE OURO: Se o status no banco for exatamente 'Presenca' (com P maiúsculo),
+    // significa que a recepção ou o menu rápido definiram PRESENÇA manualmente. 
+    // Portanto, fixamos como Presença (Verde) e ignoramos a checagem dos 40 minutos!
+    if (statusBanco === 'Presenca') {
+      statusAtual = 'Presenca';
+    } 
+    // Mas se o status no banco for 'presenca' (minúsculo, vindo da automação antiga) ou se o fluxo geral exigir:
+    else if (statusBanco.toLowerCase() === 'presenca' || statusBanco.toLowerCase() === 'presença') {
+      if (agora >= horaInicio && agora <= horaTerminoEstimada) {
+        statusAtual = 'Em atendimento'; // Fica Amarelo se estiver no meio da sessão
+      } else {
+        statusAtual = 'Presenca'; // Fora do horário vira Verde
+      }
+    }
+
+    return {
+      ...evt,
+      status_automatizado: statusAtual
+    };
+  });
+};
+
+// --- VISUAL SUPER CLEAN MODIFICADO COM MENU HOVER RAPIDO ---
 const EventoCustomizado = ({ event }: any) => {
-  const isPresenca = event.original?.status === 'Presenca' || event.original?.status === 'Presença';
-  const isFalta = event.original?.status === 'Falta';
-  
+  const status = event.original?.status_automatizado?.toLowerCase() || event.original?.status?.toLowerCase();
+  const isPresenca = status === 'presenca' || status === 'presença';
+  const isEmAtendimento = status === 'em atendimento';
+  const isFalta = status === 'falta';
+
+  const handleMudarStatusMenuHover = async (novoStatusVisual: string) => {
+    try {
+      const statusBanco = mapearStatusParaBanco(novoStatusVisual);
+
+      // ENVIANDO APENAS O STATUS QUE EXISTE NA TABELA DO SUPABASE
+      const { error: errorAgenda } = await supabase
+        .from('agendamentos')
+        .update({ 
+          status: statusBanco 
+        })
+        .eq('id', event.id);
+
+      if (errorAgenda) throw errorAgenda;
+
+      // Automação de escrita no prontuário da Helenara
+      const nomeProfissional = (event.original?.profissional_name || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+      if (statusBanco === 'Presenca' && nomeProfissional.includes('helenara')) {
+        await supabase.from("prontuarios").insert([
+          {
+            paciente_id: event.original?.paciente_id, 
+            tipo_registro: "Sessão", 
+            descricao: "Realizado consulta de neuropsicologia.",
+            profissional_nome: event.original?.profissional_name, 
+            historico: [], 
+            arquivo_url: null,
+            arquivo_nome: null
+          }
+        ]);
+      }
+
+      toast.success(`Status de ${event.original?.paciente_nome} alterado para ${novoStatusVisual}!`);
+      window.dispatchEvent(new Event('atualizar_agenda_serclin'));
+
+    } catch (err) {
+      console.error("Erro no update do hover:", err);
+      toast.error("Erro ao alterar status rapidamente.");
+    }
+  };
+
   return (
-    <div className="h-full w-full flex items-center justify-start gap-1.5 px-1 overflow-hidden text-left">
-      {isPresenca && (
-        <CheckCircle size={13} className="text-white shrink-0" strokeWidth={3} />
-      )}
-      <span className={`text-white font-bold text-[11px] uppercase leading-tight truncate text-left ${isFalta ? 'line-through opacity-75' : ''}`}>
-        {event.title}
-      </span>
-    </div>
+    <HoverCard openDelay={100} closeDelay={150}>
+      {/* AJUSTADO: Removido o stopPropagation daqui para permitir a abertura do modal padrão ao clicar */}
+      <HoverCardTrigger asChild>
+        <div className="h-full w-full flex items-center justify-start gap-1.5 px-1 overflow-hidden text-left cursor-pointer">
+          {isPresenca && <CheckCircle size={13} className="text-white shrink-0" strokeWidth={3} />}  
+          {isEmAtendimento && <Clock size={13} className="text-white shrink-0 animate-pulse" strokeWidth={3} />}
+          <span className={`text-white font-bold text-[11px] uppercase leading-tight truncate text-left ${isFalta ? 'line-through opacity-75' : ''}`}>
+            {event.title}
+          </span>
+        </div>
+      </HoverCardTrigger>
+
+      <HoverCardContent 
+        className="w-48 p-2 bg-white rounded-2xl shadow-xl border border-gray-100 z-[9999] text-left"
+        onClick={(e) => e.stopPropagation()} // Segura o clique apenas dentro da caixinha flutuante
+      >
+        <p className="text-[9px] font-black uppercase text-gray-400 mb-1.5 px-2 tracking-wider">Ações Rápidas</p>
+        <div className="flex flex-col gap-0.5">
+          <button 
+            type="button" 
+            onClick={(e) => {
+              e.stopPropagation(); // Trava o clique para o calendário não abrir o formulário por trás
+              handleMudarStatusMenuHover('Em atendimento');
+            }}
+            className="w-full text-left px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50/60 hover:bg-amber-100 rounded-xl transition-all"
+          >
+            ⚡ Em atendimento
+          </button>
+          <button 
+            type="button" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMudarStatusMenuHover('Presença');
+            }}
+            className="w-full text-left px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50/60 hover:bg-emerald-100 rounded-xl transition-all"
+          >
+            ✓ Presença
+          </button>
+          <button 
+            type="button" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMudarStatusMenuHover('Falta');
+            }}
+            className="w-full text-left px-3 py-1.5 text-xs font-bold text-red-700 bg-red-50/60 hover:bg-red-100 rounded-xl transition-all"
+          >
+            ✕ Falta
+          </button>
+        </div>
+      </HoverCardContent>
+    </HoverCard>
   );
 };
 
@@ -93,6 +231,14 @@ export function Dashboard() {
   const [events, setEvents] = useState<any[]>([]);
   const [equipe, setEquipe] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // --- Números do dia ---
+  const [stats, setStats] = useState({
+  totalHoje: 0,
+  confirmados: 0,
+  pendentes: 0,
+  finalizados: 0
+});
   
   // Modais e UI
   const [isAgendamentoOpen, setIsAgendamentoOpen] = useState(false);
@@ -105,11 +251,17 @@ export function Dashboard() {
   const [pacientesSugeridos, setPacientesSugeridos] = useState<any[]>([]);
   
   const [form, setForm] = useState({ 
-    profissional: '', paciente_nome: '', paciente_id: null as number | null,
-    telefone: '', sala: '1', inicio: '', duracao: '40', status: 'Agendado',
+    profissional: '', 
+    paciente_nome: '', 
+    paciente_id: null as number | null,
+    telefone: '', 
+    sala: '1', 
+    inicio: '', 
+    duracao: '40', 
+    status: 'Agendado', // Nunca deixe vazio ou null
     assinatura_url: null as string | null,
     valor_atendimento: "0,00",
-    forma_pagamento: "Pix"
+    forma_pagamento: "Pix" // Nunca deixe vazio ou null
   });
 
   // --- REGRA DE ACESSO DA ESTÁCIO ---
@@ -165,18 +317,22 @@ export function Dashboard() {
 
         const { data: agendamentos, error } = await supabase.from('agendamentos').select('*');
         if (!error && agendamentos) {
-          let permitidos = agendamentos;
+          
+          // >>> LINHA INTERCEPTADA: Passa os dados do banco pela nossa função de automação
+          const agendamentosTratados = aplicarAutomacaoFluxoClinico(agendamentos);
+          
+          let permitidos = agendamentosTratados;
           
           if (!ehGestorEfetivo && nomeParaFiltro) {
             const nomeLogadoNorm = nomeParaFiltro.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-            permitidos = agendamentos.filter((ag: any) => {
-              const nomeAgNorm = (ag.profissional_nome || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+            permitidos = agendamentosTratados.filter((ag: any) => {
+              const nomeAgNorm = (ag.profissional_name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
               return nomeAgNorm === nomeLogadoNorm;
             });
           }
 
           const eventosFormatados = permitidos.map((evt: any) => {
-            const perfil = todosPerfis.find((p: any) => p.nome?.trim().toLowerCase() === evt.profissional_nome?.trim().toLowerCase());
+            const perfil = todosPerfis.find((p: any) => p.nome?.trim().toLowerCase() === evt.profissional_name?.trim().toLowerCase());
             
             const dataInicio = new Date(evt.data_inicio);
             let dataFim = evt.data_fim ? new Date(evt.data_fim) : addMinutes(dataInicio, parseInt(evt.duracao || '40'));
@@ -188,7 +344,7 @@ export function Dashboard() {
               start: dataInicio,
               end: dataFim,
               color: perfil?.cor || '#1e3a8a',
-              original: evt
+              original: evt // O 'original' agora carrega a propriedade 'status_automatizado'
             };
           });
           setEvents(eventosFormatados);
@@ -197,7 +353,12 @@ export function Dashboard() {
     } catch (err) { toast.error("Erro ao carregar dados."); }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { 
+    fetchData(); 
+    // Escuta o evento global para recarregar quando o hover alterar um status
+    window.addEventListener('atualizar_agenda_serclin', fetchData);
+    return () => window.removeEventListener('atualizar_agenda_serclin', fetchData);
+  }, []);
 
   useEffect(() => {
     const pesquisar = async () => {
@@ -213,6 +374,8 @@ export function Dashboard() {
     const apenasNumeros = value.replace(/\D/g, "");
     return apenasNumeros.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{1})(\d{4})(\d{4})$/, "$1 $2-$3").slice(0, 16);
   };
+
+  
 
   const aplicarMascaraMoeda = (value: string) => {
     const apenasNumeros = value.replace(/\D/g, "");
@@ -235,7 +398,10 @@ export function Dashboard() {
     try {
       const { data: val, error } = await supabase
         .from('validacoes')
-        .insert([{ paciente_nome: form.paciente_nome, profissional_nome: form.profissional }])
+        .insert([{ 
+          paciente_nome: form.paciente_nome, 
+          profissional_nome: form.profissional // <<< CORRIGIDO: profissional_nome com dois 'ss'
+        }])
         .select('id')
         .single();
         
@@ -349,26 +515,72 @@ export function Dashboard() {
         forma_pagamento: form.forma_pagamento
       };
 
-      // 4. Update ou Insert
+      // 4. Update ou Insert do Agendamento (Aqui já declara a primeira variável 'error')
       const { error } = eventoSelecionadoId 
         ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId) 
         : await supabase.from('agendamentos').insert([payload]);
 
       if (error) throw error;
 
+// ====================================================================
+      // >>> AUTOMATIZAÇÃO MANDATÓRIA: PRONTUÁRIO DA HELENARA CHAVES <<<
+      // ====================================================================
+      const statusNormalizado = payload.status; // 'Presenca'
+      const nomeProfissional = (form.profissional || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+        .toLowerCase();
+
+      if (
+        statusNormalizado === 'Presenca' && 
+        nomeProfissional.includes('helenara')
+      ) {
+        const textoGenerico = "Realizado consulta de neuropsicologia.";
+
+        // CORRIGIDO: Alterado de profissional_name para profissional_nome
+        const { error: errorProntuario } = await supabase.from("prontuarios").insert([
+          {
+            paciente_id: idDoPaciente, 
+            tipo_registro: "Sessão", 
+            descricao: textoGenerico,
+            profissional_nome: form.profissional, // <<< AQUI: _nome bate com seu banco!
+            historico: [], 
+            arquivo_url: null,
+            arquivo_nome: null
+          }
+        ]);
+
+        if (errorProntuario) throw errorProntuario;
+      }
+      // ====================================================================
+
       // 5. Feedback e Refresh
       setIsAgendamentoOpen(false);
       setEventoSelecionadoId(null);
-      fetchData(); // Certifique-se que sua função de carregar se chama fetchData
+      fetchData(); 
       toast.success(eventoSelecionadoId ? "Agendamento atualizado!" : "Paciente agendado com sucesso!");
 
-    } catch (err: any) {
-      console.error("Erro SerClin Save:", err);
-      toast.error(err.message || "Erro ao salvar na agenda.");
-    } finally {
-      setLoading(false);
+   } catch (err: any) {
+    console.error("--- DETALHES DO ERRO SERCLIN SAVE ---");
+    console.error("Objeto de erro completo:", err);
+    
+    // Se for um erro de resposta do servidor (Axios / Supabase / Fetch)
+    if (err.response || err.data) {
+      console.error("Dados de erro do servidor:", err.response?.data || err.data);
+      console.error("Status do servidor:", err.response?.status);
     }
-  };
+    
+    // Extrai a mensagem real para exibir no toast
+    const mensagemErro = err.response?.data?.message || 
+                         err.response?.data?.error || 
+                         err.message || 
+                         "Erro ao salvar na agenda.";
+                         
+    toast.error(mensagemErro);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Filtro de Agendamentos de Amanhã (Para o botão do Header)
   const agendamentosAmanha = events
@@ -714,44 +926,92 @@ export function Dashboard() {
             </div>
           )}
 
-          <Card className="flex-1 border-none shadow-sm bg-white rounded-[2rem] overflow-hidden flex flex-col">
-            <CardContent className="p-0 flex-1 min-h-[500px]">
-              <Calendar 
-                style={{ height: '100%', minHeight: '65vh' }}
-                localizer={localizer} culture='pt-BR' messages={mensagensPortugues}
-                events={filtroProfissional === "geral" ? events : events.filter((e: any) => e.original?.profissional_nome === filtroProfissional)} 
-                view={view} onView={setView} date={date} onNavigate={setDate} 
-                views={['day', 'week', 'month', 'agenda']} 
-                min={minTime} 
-                max={maxTime} 
-                components={{ event: EventoCustomizado }} 
-                eventPropGetter={(event: any) => ({ style: { backgroundColor: event.color, color: 'white', border: 'none', borderRadius: '6px', opacity: event.original?.status === 'Falta' ? 0.5 : 1 } })}
-                onSelectEvent={(e) => { 
-                  const evt = e.original; 
-                  setEventoSelecionadoId(evt.id); 
-                  setBuscaPaciente(evt.paciente_nome); 
-                  setForm({ ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), sala: evt.sala_id?.toString() || '1', inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), duracao: evt.original?.duracao || '40', assinatura_url: evt.assinatura_url || null, valor_atendimento: aplicarMascaraMoeda(evt.valor_atendimento?.toString() || "0"), forma_pagamento: evt.forma_pagamento || "Pix" }); 
-                  setIsAgendamentoOpen(true); 
-                }} 
-              />
-            </CardContent>
-          </Card>
+         <Card className="flex-1 border-none shadow-sm bg-white rounded-[2rem] overflow-hidden flex flex-col">
+  <CardContent className="p-0 flex-1 min-h-[500px]">
+    <Calendar 
+      style={{ height: '100%', minHeight: '65vh' }}
+      localizer={localizer} culture='pt-BR' messages={mensagensPortugues}
+      events={filtroProfissional === "geral" ? events : events.filter((e: any) => e.original?.profissional_name === filtroProfissional)} 
+      view={view} onView={setView} date={date} onNavigate={setDate} 
+      views={['day', 'week', 'month', 'agenda']} 
+      min={minTime} 
+      max={maxTime} 
+      components={{ event: EventoCustomizado }} 
+      eventPropGetter={(event: any) => {
+      // Pega o status já tratado pela nossa função de automação
+      const status = (event.original?.status_automatizado || event.original?.status || '').toLowerCase();   
 
-          {meuPerfil?.permissao_agendar && (
-            <button 
-              onClick={() => { 
-                setEventoSelecionadoId(null); 
-                setBuscaPaciente(""); 
-                setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
-                setIsAgendamentoOpen(true); 
-              }} 
-              className="md:hidden fixed bottom-6 right-6 z-[45] bg-blue-600 hover:bg-blue-700 text-white rounded-full h-14 px-6 flex items-center justify-center shadow-[0_8px_30px_rgb(37,99,235,0.4)] active:scale-95 transition-transform"
-            >
-              <Plus size={20} className="mr-1.5" />
-              <span className="font-black text-[13px] uppercase tracking-widest">Agendar</span>
-            </button>
-          )}
-        </main>
+        let backgroundColor = event.color; 
+        let opacity = 1;
+
+        if (status === 'presenca' || status === 'presença' || status === 'atendido') {
+          backgroundColor = '#10b981'; // Verde Emerald
+        } else if (status === 'falta') {
+          backgroundColor = '#ef4444'; // Vermelho
+          opacity = 0.5;
+        } else if (status === 'em atendimento') {
+          backgroundColor = '#f5c60b'; // Amarelo Amber para Atendimento ativo
+        } else if (status === 'finalizado') {
+          backgroundColor = '#6b7280'; // Cinza para Concluído automaticamente
+        }
+
+        return {
+    style: {
+      backgroundColor,
+      borderRadius: '12px',
+      border: 'none',
+      color: 'white',
+    },
+  };
+}}
+
+
+      onSelectEvent={(e) => { 
+        const evt = e.original; 
+        setEventoSelecionadoId(evt.id); 
+        setBuscaPaciente(evt.paciente_nome); let statusForm = 'Agendado';
+        // ATUALIZADO: Recupera o status com base na automação para manter a coerência visual no formulário
+        const statusAtualParaForm = evt.status_automatizado || evt.status;
+        if (statusAtualParaForm === 'Presenca' || statusAtualParaForm === 'Presença') statusForm = 'Presença';
+        else if (statusAtualParaForm === 'Em atendimento') statusForm = 'Em atendimento';
+        else if (statusAtualParaForm === 'Falta') statusForm = 'Falta';
+        else if (statusAtualParaForm === 'Finalizado') statusForm = 'Presença'; // Fallback visual seguro no Form
+
+        setForm({ ...form, 
+          profissional: evt.profissional_name || '', // Blindado contra nulo/uncontrolled
+          paciente_nome: evt.paciente_nome || '', // Blindado contra nulo/uncontrolled
+          paciente_id: evt.paciente_id || null, 
+          telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), 
+          sala: evt.sala_id?.toString() || '1', 
+          inicio: evt.data_inicio ? format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm") : '', 
+          status: statusForm || 'Agendado', // Garante string válida sempre
+          duracao: evt.duracao || '40', 
+          assinatura_url: evt.assinatura_url || null, 
+          valor_atendimento: aplicarMascaraMoeda(evt.valor_atendimento?.toString() || "0"), 
+          forma_pagamento: evt.forma_pagamento || "Pix" // Garante string válida sempre
+        }); 
+
+        setIsAgendamentoOpen(true); 
+      }}
+    />
+  </CardContent>
+</Card>
+
+{meuPerfil?.permissao_agendar && (
+  <button 
+    onClick={() => { 
+      setEventoSelecionadoId(null); 
+      setBuscaPaciente(""); 
+      setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
+      setIsAgendamentoOpen(true); 
+    }} 
+    className="md:hidden fixed bottom-6 right-6 z-[45] bg-blue-600 hover:bg-blue-700 text-white rounded-full h-14 px-6 flex items-center justify-center shadow-[0_8px_30px_rgb(37,99,235,0.4)] active:scale-95 transition-transform"
+  >
+    <Plus size={20} className="mr-1.5" />
+    <span className="font-black text-[13px] uppercase tracking-widest">Agendar</span>
+  </button>
+)}
+</main>
       ) : (
         /* TELA EXCLUSIVA PARA QUEM LOGA COM E-MAIL DA ESTÁCIO */
         <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
@@ -833,18 +1093,33 @@ export function Dashboard() {
                 </Button>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[12px] font-black text-gray-500 uppercase">Status</label>
-                  <Select value={form.status} onValueChange={(v) => setForm({...form, status: v})}>
-                    <SelectTrigger className="bg-blue-50 border-none font-bold text-blue-700 h-10"><SelectValue /></SelectTrigger>
-                    <SelectContent className="z-[110]">
-                      <SelectItem value="Agendado">Agendado</SelectItem>
-                      <SelectItem value="Presença">Presença</SelectItem>
-                      <SelectItem value="Falta">Falta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+  <div className="space-y-1">
+    <label className="text-[12px] font-black text-gray-500 uppercase">Status</label>
+    <Select 
+      value={form.status} 
+      onValueChange={(v) => setForm({ ...form, status: v })}
+    >
+      <SelectTrigger 
+        className={`border-none font-bold h-10 transition-colors ${
+          form.status === 'Presença' ? 'bg-emerald-50 text-emerald-700' :
+          form.status === 'Em atendimento' ? 'bg-amber-50 text-amber-700' :
+          form.status === 'Falta' ? 'bg-red-50 text-red-700' :
+          'bg-blue-50 text-blue-700'
+        }`}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      
+      <SelectContent className="z-[110]">
+        <SelectItem value="Agendado" className="font-semibold text-blue-700">Agendado</SelectItem>
+                <SelectItem value="Presença" className="font-semibold text-emerald-700">Presença</SelectItem>
+                <SelectItem value="Em atendimento" className="font-semibold text-amber-700">Em atendimento</SelectItem>
+                <SelectItem value="Falta" className="font-semibold text-red-700">Falta</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
                 <div className="space-y-1">
                   <label className="text-[12px] font-black text-gray-400 uppercase text-left">Pagamento</label>
                   <Select value={form.forma_pagamento} onValueChange={(v) => setForm({...form, forma_pagamento: v})}>
