@@ -654,7 +654,7 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
             </Card>
           </div>
 
-         <div className="lg:col-span-2 space-y-4 text-left">
+          <div className="lg:col-span-2 space-y-4 text-left">
             {registros.map((reg) => (
               <div key={reg.id} className="bg-white p-6 pl-8 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden group">
                 <div className="absolute left-0 top-0 bottom-0 w-2" style={{ backgroundColor: getCorProfissional(reg.profissional_nome) }} />
@@ -663,39 +663,22 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
                     <span className="text-[9px] font-black uppercase px-2 py-1 bg-blue-50 text-[#1e3a8a] rounded-md">{reg.tipo_registro}</span>
                     <span className="text-[11px] font-black text-gray-800 uppercase">{reg.profissional_nome}</span>
                   </div>
-                  
-                  {/* BLOCO ATUALIZADO: GAP-3 COM O BOTÃO EDITAR E EXCLUIR */}
-                  <div className="flex gap-3 items-center">
-                    {/* BOTÃO DE EDITAR */}
-                    <button 
-                      type="button"
-                      onClick={() => {
-                        setNovoRegistro({
-                          tipo: reg.tipo_registro,
-                          descricao: reg.descricao
-                        });
-                        setModoEdicao(reg.id); 
-                        window.scrollTo({ top: 300, behavior: 'smooth' });
-                        toast.info(`Editando ${reg.tipo_registro}...`);
-                      }}
-                      className="text-gray-300 hover:text-amber-500 transition-colors"
-                      title="Editar registro"
-                    >
-                      <Edit size={14}/>
-                    </button>
-
-                    {/* BOTÃO EXCLUIR */}
+                  <div className="flex gap-2">
+                    {/* BOTÃO EXCLUIR AJUSTADO PARA LIMPAR O PORTAL TAMBÉM */}
                     {meuPerfil?.permissao_excluir && (
                       <button 
-                        type="button"
                         onClick={async () => { 
                           if(confirm("Deseja apagar este registro e remover o acesso do paciente ao documento?")) { 
                             setLoading(true);
                             try {
+                              // 1. Apaga do Prontuário Interno
                               await supabase.from("prontuarios").delete().eq("id", reg.id);
+                              
+                              // 2. Apaga do Portal do Paciente (Se houver arquivo)
                               if (reg.arquivo_url) {
                                 await supabase.from("pacientes_arquivos").delete().eq("url_arquivo", reg.arquivo_url);
                               }
+
                               await registrarLog("Apagou Registro", reg.tipo_registro);
                               toast.success("Removido com sucesso!");
                               carregarDados();
@@ -707,14 +690,12 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
                           } 
                         }} 
                         className="text-gray-200 hover:text-red-400 transition-colors"
-                        title="Excluir registro"
                       >
                         <Trash2 size={14}/>
                       </button>
                     )}
                   </div>
                 </div>
-
                 <p className="text-sm text-gray-600 whitespace-pre-wrap mt-4 leading-relaxed">{reg.descricao}</p>
                 {reg.arquivo_url && (
                   <a href={reg.arquivo_url} target="_blank" className="inline-flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 px-4 py-2 rounded-xl uppercase mt-4 shadow-sm transition-colors">
