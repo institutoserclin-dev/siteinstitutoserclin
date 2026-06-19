@@ -467,15 +467,24 @@ export function Dashboard() {
               <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-amber-600">Relatórios</span>
             </div>
 
-            {/* 7. GERENCIAR ACESSO (CORRIGIDO) */}
-            {(isAdmin || isGestorSeguro) && (
-              <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/usuarios')}>
-                <Button variant="ghost" size="icon" className="text-purple-600 hover:bg-purple-50 h-10 w-10">
-                  <User size={24}/>
-                </Button>
-                <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-purple-600">Acessos</span>
-              </div>
-            )}
+            {/* 7. GERENCIAR ACESSO E TRAVA DE HORÁRIOS */}
+{(isAdmin || isGestorSeguro) && (
+  <>
+    <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/usuarios')}>
+      <Button variant="ghost" size="icon" className="text-purple-600 hover:bg-purple-50 h-10 w-10">
+        <User size={24}/>
+      </Button>
+      <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-purple-600">Acessos</span>
+    </div>
+
+    <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/permissoes')}>
+      <Button variant="ghost" size="icon" className="text-indigo-600 hover:bg-indigo-50 h-10 w-10">
+        <Clock size={24}/>
+      </Button>
+      <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-indigo-600">Config Horários</span>
+    </div>
+  </>
+)}
 
             <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/encaminhamentos')}>
               <Button variant="ghost" size="icon" className="text-emerald-600 hover:bg-emerald-50 h-10 w-10">
