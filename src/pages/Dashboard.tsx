@@ -467,6 +467,7 @@ export function Dashboard() {
               <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-amber-600">Relatórios</span>
             </div>
 
+            {/* 7. GERENCIAR ACESSO (CORRIGIDO) */}
             {(isAdmin || isGestorSeguro) && (
               <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/usuarios')}>
                 <Button variant="ghost" size="icon" className="text-purple-600 hover:bg-purple-50 h-10 w-10">

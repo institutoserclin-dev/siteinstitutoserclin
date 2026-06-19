@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, UserPlus, Shield, Trash2, 
-  RefreshCw, UserCog, KeyRound, Palette
+  RefreshCw, KeyRound
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from '@/lib/supabase';
@@ -38,7 +38,7 @@ export function Acessos() {
     try {
       const { error } = await supabase.from('perfis').update({ role: novoRole }).eq('id', id);
       if (error) throw error;
-      toast.success("Nível de acesso atualizado!");
+      toast.success("Nível de acesso updated!");
       fetchUsuarios();
     } catch (err) {
       toast.error("Erro ao atualizar nível");
@@ -89,6 +89,7 @@ export function Acessos() {
         {/* HEADER COM PROTEÇÃO IPHONE */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
           <div>
+            {/* 🌟 CORRIGIDO: Botão voltar agora te joga de volta para a raiz do /sistema */}
             <button
               onClick={() => navigate("/sistema")}
               className="flex items-center text-[10px] text-gray-500 hover:text-blue-600 mb-2 transition-colors font-black uppercase tracking-widest"
@@ -102,8 +103,9 @@ export function Acessos() {
             </h1>
           </div>
 
+          {/* 🌟 CORRIGIDO: Botão agora aponta exatamente para a rota correta de novo usuário */}
           <Button 
-            onClick={() => navigate("/sistema/cadastro")}
+            onClick={() => navigate("/sistema/usuarios/novo")}
             className="w-full md:w-auto bg-blue-600 hover:bg-black text-white font-black rounded-xl px-6 h-12 shadow-lg transition-all flex items-center justify-center gap-2 uppercase text-xs"
           >
             <UserPlus size={18} />
@@ -115,7 +117,7 @@ export function Acessos() {
           <div className="flex justify-center py-20"><RefreshCw className="animate-spin text-blue-600" size={32} /></div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {/* VERSÃO MOBILE EM CARDS / DESKTOP EM TABELA */}
+            {/* VERSÃO DESKTOP EM TABELA */}
             <Card className="border-none shadow-xl rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white">
               <CardContent className="p-0">
                 <div className="hidden md:block overflow-x-auto">

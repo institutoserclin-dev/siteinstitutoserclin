@@ -56,7 +56,7 @@ export function GestaoPermissoes() {
         {/* HEADER SAFE AREA IPHONE */}
         <header className="pt-[calc(env(safe-area-inset-top,0px)+12px)]">
           <button
-            onClick={() => navigate("/sistema/acessos")}
+            onClick={() => navigate("/sistema/usuarios")}
             className="flex items-center text-[10px] text-gray-500 hover:text-blue-600 mb-2 font-black uppercase tracking-widest"
           >
             <ArrowLeft className="w-4 h-4 mr-2" /> Voltar para Acessos

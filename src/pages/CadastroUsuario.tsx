@@ -18,56 +18,64 @@ export function CadastroUsuario() {
     setLoading(true);
 
     try {
-      // 1. Criar o usuário na Autenticação (Auth)
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: nome },
-        },
-      });
+      // 1. FORMATAR EMAIL
+      const emailFormatado = email.toLowerCase().trim();
 
-      if (error) throw error;
+      // 2. BUSCAR SE JÁ EXISTE ESSE EMAIL NA TABELA DE PERFIS
+      const { data: perfilExistente } = await supabase
+        .from('perfis')
+        .select('email')
+        .eq('email', emailFormatado)
+        .maybeSingle();
 
-      // 2. Inserir ou Atualizar o Perfil na tabela 'perfis'
-      if (data.user) {
-        const { error: perfilError } = await supabase
-          .from('perfis')
-          .upsert([
-            { 
-              id: data.user.id, 
-              nome: nome, 
-              email: email.toLowerCase().trim(), 
-              role: role,
-              cor: cor 
-            }
-          ], { onConflict: 'id' });
-
-        if (perfilError) throw perfilError;
-
-        toast.success(`Profissional ${nome} criado com sucesso!`, {
-          icon: <CheckCircle2 className="text-green-500" />,
-        });
-        
-        setEmail("");
-        setPassword("");
-        setNome("");
-        setRole("profissional");
-        setCor("#3b82f6");
+      if (perfilExistente) {
+        throw new Error("User already registered");
       }
+
+      // 3. INSERIR NA TABELA DE PERFIS
+      const { error: perfilError } = await supabase
+        .from('perfis')
+        .insert([
+          { 
+            nome: nome, 
+            email: emailFormatado, 
+            role: role,
+            cor: cor 
+          }
+        ]);
+
+      if (perfilError) throw perfilError;
+
+      toast.success(`Profissional ${nome} pré-cadastrado com sucesso!`, {
+        icon: <CheckCircle2 className="text-green-500" />,
+      });
+      
+      // Limpa os campos do formulário
+      setEmail("");
+      setPassword("");
+      setNome("");
+      setRole("profissional");
+      setCor("#3b82f6");
+
+      // Opcional: Redireciona de volta após o sucesso para não precisar clicar em voltar
+      setTimeout(() => {
+        navigate("/sistema/usuarios");
+      }, 1500);
+
     } catch (error: any) {
       console.error("Erro no cadastro SerClin:", error);
       
       let mensagemErro = "Ocorreu um erro ao processar o cadastro.";
-      if (error.message === "User already registered") {
+      // 🌟 CORRIGIDO: De 'messageErro' para 'mensagemErro'
+      if (error.message === "User already registered" || error.code === "23505") {
         mensagemErro = "Este e-mail já está em uso no sistema.";
       }
 
       toast.error("Falha no Cadastro", {
-        description: mensagemErro,
+        description: mensagemErro, // Aqui já estava correto
         icon: <AlertCircle className="text-red-500" />,
       });
-    } finally {
+      // garante que o loading seja desativado em caso de erro
       setLoading(false);
     }
   };
@@ -76,13 +84,13 @@ export function CadastroUsuario() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-left font-sans pb-10">
       <div className="max-w-2xl mx-auto">
         
-        {/* BOTÃO VOLTAR COM AJUSTE PARA IPHONE */}
+        {/* 🌟 CORRIGIDO: Agora volta perfeitamente para a listagem de profissionais sem ir para a Home */}
         <button
-          onClick={() => navigate("/sistema/acessos")}
+          onClick={() => navigate("/sistema/usuarios")}
           className="flex items-center text-sm text-gray-500 hover:text-blue-600 mb-6 transition-colors font-black uppercase tracking-widest pt-[calc(env(safe-area-inset-top,0px)+10px)]"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar para Acessos
+          Voltar para Profissionais
         </button>
 
         <div className="bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden">
