@@ -476,12 +476,11 @@ export function Dashboard() {
       </Button>
       <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-purple-600">Acessos</span>
     </div>
-
-    <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/permissoes')}>
+<div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/horarios')}>
       <Button variant="ghost" size="icon" className="text-indigo-600 hover:bg-indigo-50 h-10 w-10">
         <Clock size={24}/>
       </Button>
-      <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-indigo-600">Config Horários</span>
+      <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-indigo-600">Horários</span>
     </div>
   </>
 )}
