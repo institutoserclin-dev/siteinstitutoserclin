@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { ArrowLeft, Shield, Check, X, KeyRound } from "lucide-react";
+import { ArrowLeft, Shield, Check, X, KeyRound, Clock } from "lucide-react";
 
 export function Permissoes() {
   const navigate = useNavigate();
@@ -22,20 +22,37 @@ export function Permissoes() {
     carregarEquipe();
   }, []);
 
+  // Controla as chaves liga/desliga
   const togglePermissao = async (id: string, campo: string, valorAtual: boolean) => {
     const novoValor = !valorAtual;
-    
-    // Atualização otimista na tela
     setEquipe(equipe.map(p => p.id === id ? { ...p, [campo]: novoValor } : p));
     
-    // Atualiza no banco de dados
     const { error } = await supabase.from('perfis').update({ [campo]: novoValor }).eq('id', id);
-    
     if (error) {
-      toast.error("Erro ao atualizar chave.");
+      toast.error("Erro ao atualizar permissão.");
       carregarEquipe(); 
     } else {
-      toast.success("Chave atualizada com sucesso!");
+      toast.success("Permissão atualizada!");
+    }
+  };
+
+  // Controla as mudanças de horários individuais e salva direto no banco
+  const handleHorarioChange = async (id: string, campo: string, valor: string) => {
+    const valorFormatado = valor + ':00'; // Garante o formato HH:MM:SS para o Postgres
+    
+    // Atualização otimista na tela
+    setEquipe(equipe.map(p => p.id === id ? { ...p, [campo]: valorFormatado } : p));
+
+    const { error } = await supabase
+      .from('perfis')
+      .update({ [campo]: valorFormatado })
+      .eq('id', id);
+
+    if (error) {
+      toast.error("Erro ao salvar horário.");
+      carregarEquipe();
+    } else {
+      toast.success("Horário de expediente atualizado!");
     }
   };
 
@@ -48,6 +65,8 @@ export function Permissoes() {
     { key: 'permissao_excluir', label: 'Editar/Excluir (Prontuário)' }
   ];
 
+  const inputClass = "flex h-10 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all";
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans text-left">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -59,9 +78,9 @@ export function Permissoes() {
             </button>
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-800 flex items-center gap-2 uppercase tracking-tighter">
-                <Shield className="text-emerald-600" size={24}/> Central de Chaves
+                <Shield className="text-emerald-600" size={24}/> Central de Chaves & Horários
               </h1>
-              <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">Gestão de Permissões SerClin</p>
+              <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">Gestão Completa de Perfis e Expedientes SerClin</p>
             </div>
           </div>
         </header>
@@ -72,13 +91,12 @@ export function Permissoes() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {equipe.map((prof) => (
               <div key={prof.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                {/* TOPO DO CARD */}
                 <div className="p-6 bg-gray-900 flex items-center gap-4">
                   <div className="w-12 h-12 bg-gray-800 text-white rounded-full flex items-center justify-center font-black text-lg shadow-inner border border-gray-700">
-                    {/* CORREÇÃO AQUI: Proteção contra nome nulo */}
                     {prof.nome?.charAt(0).toUpperCase() || "?"}
                   </div>
                   <div>
-                    {/* CORREÇÃO AQUI: Fallback caso nome não exista */}
                     <h3 className="font-black text-white uppercase tracking-tight text-sm">
                       {prof.nome || "Usuário sem nome"}
                     </h3>
@@ -88,8 +106,11 @@ export function Permissoes() {
                   </div>
                 </div>
                 
-                <div className="p-6 flex-1 space-y-3">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 mb-4 border-b pb-2"><KeyRound size={12}/> Chaves de Acesso</p>
+                {/* CORPO DO CARD: PERMISSÕES */}
+                <div className="p-6 flex-1 space-y-3 border-b border-gray-100">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 mb-4 border-b pb-2">
+                    <KeyRound size={12}/> Chaves de Acesso
+                  </p>
                   
                   {chaves.map(chave => {
                     const estaLigado = prof[chave.key] === true;
@@ -110,6 +131,35 @@ export function Permissoes() {
                     );
                   })}
                 </div>
+
+                {/* BASE DO CARD: EXPEDIENTE DO PROFISSIONAL */}
+                <div className="p-6 bg-gray-50/60 space-y-3">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 border-b pb-2">
+                    <Clock size={12} className="text-emerald-600"/> Limites da Agenda (Expediente)
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest pl-1">Início</label>
+                      <input 
+                        type="time" 
+                        value={prof.hora_inicio ? prof.hora_inicio.substring(0,5) : "07:00"} 
+                        onChange={(e) => handleHorarioChange(prof.id, 'hora_inicio', e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest pl-1">Fim</label>
+                      <input 
+                        type="time" 
+                        value={prof.hora_fim ? prof.hora_fim.substring(0,5) : "20:00"} 
+                        onChange={(e) => handleHorarioChange(prof.id, 'hora_fim', e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                </div>
+
               </div>
             ))}
           </div>
