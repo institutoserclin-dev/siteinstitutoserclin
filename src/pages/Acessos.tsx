@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, UserPlus, Shield, Trash2, 
-  RefreshCw, KeyRound
+  RefreshCw, KeyRound, Edit2, Check
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from '@/lib/supabase';
@@ -15,6 +15,10 @@ export function Acessos() {
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [atualizandoId, setAtualizandoId] = useState<string | null>(null);
+  
+  // Estados para controlar quem está sendo editado e o texto novo
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [novoNome, setNovoNome] = useState("");
 
   const fetchUsuarios = async () => {
     setLoading(true);
@@ -33,12 +37,37 @@ export function Acessos() {
     fetchUsuarios();
   }, []);
 
+  // 🌟 NOVA FUNÇÃO: Atualiza o nome do profissional no Supabase
+  const handleSalvarNome = async (id: string) => {
+    if (!novoNome.trim()) {
+      toast.error("O nome não pode ficar vazio");
+      return;
+    }
+    setAtualizandoId(id);
+    try {
+      const { error } = await supabase
+        .from('perfis')
+        .update({ nome: novoNome.trim() })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      toast.success("Nome atualizado com sucesso!");
+      setUsuarios(usuarios.map(u => u.id === id ? { ...u, nome: novoNome.trim() } : u));
+      setEditandoId(null);
+    } catch (err) {
+      toast.error("Erro ao atualizar o nome");
+    } finally {
+      setAtualizandoId(null);
+    }
+  };
+
   const handleMudarRole = async (id: string, novoRole: string) => {
     setAtualizandoId(id);
     try {
       const { error } = await supabase.from('perfis').update({ role: novoRole }).eq('id', id);
       if (error) throw error;
-      toast.success("Nível de acesso updated!");
+      toast.success("Nível de acesso atualizado!");
       fetchUsuarios();
     } catch (err) {
       toast.error("Erro ao atualizar nível");
@@ -86,10 +115,8 @@ export function Acessos() {
     <div className="min-h-screen bg-gray-50 p-2 md:p-8 text-left font-sans pb-20">
       <div className="max-w-6xl mx-auto space-y-6">
         
-        {/* HEADER COM PROTEÇÃO IPHONE */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
           <div>
-            {/* 🌟 CORRIGIDO: Botão voltar agora te joga de volta para a raiz do /sistema */}
             <button
               onClick={() => navigate("/sistema")}
               className="flex items-center text-[10px] text-gray-500 hover:text-blue-600 mb-2 transition-colors font-black uppercase tracking-widest"
@@ -103,7 +130,6 @@ export function Acessos() {
             </h1>
           </div>
 
-          {/* 🌟 CORRIGIDO: Botão agora aponta exatamente para a rota correta de novo usuário */}
           <Button 
             onClick={() => navigate("/sistema/usuarios/novo")}
             className="w-full md:w-auto bg-blue-600 hover:bg-black text-white font-black rounded-xl px-6 h-12 shadow-lg transition-all flex items-center justify-center gap-2 uppercase text-xs"
@@ -117,7 +143,6 @@ export function Acessos() {
           <div className="flex justify-center py-20"><RefreshCw className="animate-spin text-blue-600" size={32} /></div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {/* VERSÃO DESKTOP EM TABELA */}
             <Card className="border-none shadow-xl rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-white">
               <CardContent className="p-0">
                 <div className="hidden md:block overflow-x-auto">
@@ -138,10 +163,40 @@ export function Acessos() {
                               <div className="h-10 w-10 rounded-full flex items-center justify-center font-black text-white uppercase text-xs border-2 border-white shadow-sm" style={{ backgroundColor: user.cor || '#3b82f6' }}>
                                 {user.nome?.substring(0, 2)}
                               </div>
-                              <div className="flex flex-col text-left">
-                                <span className="font-black text-gray-800 uppercase text-sm">{user.nome}</span>
-                                <span className="text-xs text-gray-400">{user.email}</span>
-                              </div>
+                              
+                              {/* Campo de nome condicional para Desktop */}
+                              {editandoId === user.id ? (
+                                <div className="flex items-center gap-2">
+                                  <input 
+                                    type="text" 
+                                    value={novoNome} 
+                                    onChange={(e) => setNovoNome(e.target.value)}
+                                    className="border border-blue-300 rounded-lg px-2 py-1 text-sm font-bold bg-white text-gray-800 uppercase outline-none focus:ring-2 focus:ring-blue-500"
+                                    autoFocus
+                                  />
+                                  <button 
+                                    onClick={() => handleSalvarNome(user.id)}
+                                    disabled={atualizandoId === user.id}
+                                    className="p-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
+                                  >
+                                    <Check size={14} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col text-left group/name flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-black text-gray-800 uppercase text-sm">{user.nome}</span>
+                                    <button 
+                                      onClick={() => { setEditandoId(user.id); setNovoNome(user.nome || ""); }}
+                                      className="opacity-0 group-hover/name:opacity-100 text-gray-400 hover:text-blue-600 transition-all p-1"
+                                      title="Editar Nome"
+                                    >
+                                      <Edit2 size={12} />
+                                    </button>
+                                  </div>
+                                  <span className="text-xs text-gray-400">{user.email}</span>
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="px-6 py-4">
@@ -175,10 +230,38 @@ export function Acessos() {
                         <div className="h-12 w-12 rounded-2xl flex items-center justify-center font-black text-white uppercase text-sm shadow-md" style={{ backgroundColor: user.cor || '#3b82f6' }}>
                           {user.nome?.substring(0, 2)}
                         </div>
-                        <div className="flex flex-col text-left flex-1 min-w-0">
-                          <span className="font-black text-gray-800 uppercase text-sm truncate">{user.nome}</span>
-                          <span className="text-[10px] text-gray-400 truncate">{user.email}</span>
-                        </div>
+                        
+                        {/* Campo de nome condicional para Mobile */}
+                        {editandoId === user.id ? (
+                          <div className="flex items-center gap-2 flex-1">
+                            <input 
+                              type="text" 
+                              value={novoNome} 
+                              onChange={(e) => setNovoNome(e.target.value)}
+                              className="border border-blue-300 rounded-lg px-2 py-1 text-xs font-bold bg-white text-gray-800 uppercase outline-none w-full"
+                            />
+                            <button 
+                              onClick={() => handleSalvarNome(user.id)}
+                              disabled={atualizandoId === user.id}
+                              className="p-2 bg-emerald-500 text-white rounded-lg"
+                            >
+                              <Check size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col text-left flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-black text-gray-800 uppercase text-sm truncate">{user.nome}</span>
+                              <button 
+                                onClick={() => { setEditandoId(user.id); setNovoNome(user.nome || ""); }}
+                                className="text-gray-400 p-1"
+                              >
+                                <Edit2 size={12} />
+                              </button>
+                            </div>
+                            <span className="text-[10px] text-gray-400 truncate">{user.email}</span>
+                          </div>
+                        )}
                       </div>
                       
                       <div className="grid grid-cols-2 gap-3">
