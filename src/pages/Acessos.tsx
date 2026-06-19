@@ -43,6 +43,11 @@ export function Acessos() {
       toast.error("O nome não pode ficar vazio");
       return;
     }
+    if (!id) {
+      toast.error("ID do usuário não encontrado");
+      return;
+    }
+    
     setAtualizandoId(id);
     try {
       const { error } = await supabase
@@ -55,8 +60,9 @@ export function Acessos() {
       toast.success("Nome atualizado com sucesso!");
       setUsuarios(usuarios.map(u => u.id === id ? { ...u, nome: novoNome.trim() } : u));
       setEditandoId(null);
-    } catch (err) {
-      toast.error("Erro ao atualizar o nome");
+    } catch (err: any) {
+      console.error("Erro detalhado do Supabase:", err);
+      toast.error(`Falha ao salvar: ${err.message || 'Erro 400'}`);
     } finally {
       setAtualizandoId(null);
     }
