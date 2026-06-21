@@ -36,7 +36,7 @@ export function Permissoes() {
     }
   };
 
-  // 2. Controla o expediente (Início / Fim)
+  // 2. Controla o expediente diário (Início / Fim)
   const handleHorarioChange = async (id: string, campo: string, valor: string) => {
     const valorFormatado = valor + ':00';
     setEquipe(equipe.map(p => p.id === id ? { ...p, [campo]: valorFormatado } : p));
@@ -50,11 +50,8 @@ export function Permissoes() {
     }
   };
 
-  // 3. 🌟 CONTROLADOR DOS DIAS DE ATENDIMENTO (Segunda a Domingo)
-  // Nota: Essa função assume as colunas 'dias_atendimento' como array ou texto, ou colunas individuais.
-  // Para máxima compatibilidade sem quebrar seu banco, vamos salvar como um array de strings ou texto JSON no campo 'dias_semana'
+  // 3. Controla os dias da semana de atendimento (Segunda a Domingo)
   const toggleDiaAtendimento = async (id: string, profissional: any, dia: string) => {
-    // Se não existir a propriedade no objeto, inicializa como array vazio
     let diasAtuais: string[] = [];
     if (Array.isArray(profissional.dias_atendimento)) {
       diasAtuais = profissional.dias_atendimento;
@@ -67,22 +64,19 @@ export function Permissoes() {
       ? diasAtuais.filter(d => d !== dia)
       : [...diasAtuais, dia];
 
-    // Atualiza o estado local
     setEquipe(equipe.map(p => p.id === id ? { ...p, dias_atendimento: novosDias } : p));
 
-    // Salva no banco de dados na coluna 'dias_atendimento'
     const { error } = await supabase
       .from('perfis')
       .update({ dias_atendimento: novosDias })
       .eq('id', id);
 
     if (error) {
-      // Se der erro de coluna inexistente (42703), avisa o desenvolvedor de forma limpa
       console.error(error);
-      toast.error("Coluna 'dias_atendimento' não encontrada no banco. Crie-a no Supabase como texto ou jsonb.");
+      toast.error("Erro ao salvar dias de atendimento. Verifique a coluna no banco.");
       carregarEquipe();
     } else {
-      toast.success(`Agenda de ${dia} atualizada!`);
+      toast.success(`Agenda de ${dia} modificada!`);
     }
   };
 
@@ -118,9 +112,9 @@ export function Permissoes() {
             </button>
             <div>
               <h1 className="text-xl md:text-2xl font-black text-gray-800 flex items-center gap-2 uppercase tracking-tighter">
-                <Shield className="text-emerald-600" size={24}/> Central de Chaves & Agendas
+                <Shield className="text-emerald-600" size={24}/> Configuração da Equipe
               </h1>
-              <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">Gestão de Permissões, Horários e Dias de Atendimento</p>
+              <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">Permissões, Horários e Dias de Atendimento</p>
             </div>
           </div>
         </header>
@@ -130,14 +124,13 @@ export function Permissoes() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {equipe.map((prof) => {
-              // Parse amigável dos dias de atendimento salvos
               const diasAtendidos = Array.isArray(prof.dias_atendimento) 
                 ? prof.dias_atendimento 
                 : (typeof prof.dias_atendimento === 'string' ? prof.dias_atendimento.split(',') : []);
 
               return (
                 <div key={prof.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-                  {/* TOPO */}
+                  {/* CARD HEADER */}
                   <div className="p-6 bg-gray-900 flex items-center gap-4">
                     <div className="w-12 h-12 bg-gray-800 text-white rounded-full flex items-center justify-center font-black text-lg shadow-inner border border-gray-700">
                       {prof.nome?.charAt(0).toUpperCase() || "?"}
@@ -150,10 +143,10 @@ export function Permissoes() {
                     </div>
                   </div>
                   
-                  {/* CORPO 1: PERMISSÕES (CHAVES) */}
+                  {/* SEÇÃO 1: CHAVES DE ACESSO */}
                   <div className="p-6 space-y-3 border-b border-gray-100">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 mb-4 border-b pb-2">
-                      <KeyRound size={12}/> Chaves de Acesso
+                      <KeyRound size={12}/> Chaves de Permissão
                     </p>
                     {chaves.map(chave => {
                       const estaLigado = prof[chave.key] === true;
@@ -173,7 +166,7 @@ export function Permissoes() {
                     })}
                   </div>
 
-                  {/* CORPO 2: DIAS DA SEMANA ATENDIDOS */}
+                  {/* SEÇÃO 2: DIAS DE ATENDIMENTO */}
                   <div className="p-6 border-b border-gray-100 bg-gray-50/30 space-y-3">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 border-b pb-2">
                       <Calendar size={12} className="text-blue-600"/> Dias Semanais de Atendimento
@@ -187,7 +180,6 @@ export function Permissoes() {
                             type="button"
                             onClick={() => toggleDiaAtendimento(prof.id, prof, dia.key)}
                             className={`w-10 h-10 rounded-xl font-black text-xs transition-all flex items-center justify-center border uppercase shadow-sm ${ativo ? 'bg-blue-600 border-blue-600 text-white font-black' : 'bg-white border-gray-200 text-gray-400 hover:border-blue-300'}`}
-                            title={`Atende ${dia.key}`}
                           >
                             {dia.label}
                           </button>
@@ -196,7 +188,7 @@ export function Permissoes() {
                     </div>
                   </div>
 
-                  {/* CORPO 3: LIMITES DE HORÁRIO */}
+                  {/* SEÇÃO 3: HORÁRIOS DE EXPEDIENTE */}
                   <div className="p-6 bg-gray-50/70 space-y-3">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 border-b pb-2">
                       <Clock size={12} className="text-emerald-600"/> Horário de Expediente Diário
