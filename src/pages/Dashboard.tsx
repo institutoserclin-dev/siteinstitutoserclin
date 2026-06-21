@@ -509,23 +509,15 @@ export function Dashboard() {
               <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-amber-600">Relatórios</span>
             </div>
 
-            {/* 7. GERENCIAR ACESSO E TRAVA DE HORÁRIOS */}
-{(isAdmin || isGestorSeguro) && (
-  <>
-    <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/usuarios')}>
-      <Button variant="ghost" size="icon" className="text-purple-600 hover:bg-purple-50 h-10 w-10">
-        <User size={24}/>
-      </Button>
-      <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-purple-600">Acessos</span>
-    </div>
-<div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/horarios')}>
-      <Button variant="ghost" size="icon" className="text-indigo-600 hover:bg-indigo-50 h-10 w-10">
-        <Clock size={24}/>
-      </Button>
-      <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-indigo-600">Horários</span>
-    </div>
-  </>
-)}
+            {/* 7. GERENCIAR EQUIPE UNIFICADO (PC) */}
+            {(isAdmin || isGestorSeguro) && (
+              <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/permissoes')}>
+                <Button variant="ghost" size="icon" className="text-purple-600 hover:bg-purple-50 h-10 w-10">
+                  <User size={24}/>
+                </Button>
+                <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-purple-600">Equipe</span>
+              </div>
+            )}
 
             <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/encaminhamentos')}>
               <Button variant="ghost" size="icon" className="text-emerald-600 hover:bg-emerald-50 h-10 w-10">
@@ -712,6 +704,15 @@ export function Dashboard() {
                 </>
               )}
 
+            {/* GESTÃO E ACESSOS */}
+              <div className="mt-6 mb-2 px-2 border-t pt-4">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gestão</span>
+              </div>
+
+              <Button variant="ghost" className="w-full justify-start gap-4 text-orange-500 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/relatorios'); setIsMenuMobileOpen(false); }}>
+                <Search size={18} /> Relatórios
+              </Button>
+              
               {/* GESTÃO E ACESSOS */}
               <div className="mt-6 mb-2 px-2 border-t pt-4">
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gestão</span>
@@ -720,15 +721,17 @@ export function Dashboard() {
               <Button variant="ghost" className="w-full justify-start gap-4 text-orange-500 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/relatorios'); setIsMenuMobileOpen(false); }}>
                 <Search size={18} /> Relatórios
               </Button>
-    {/* 7. GERENCIAR ACESSO - ROTA CORRIGIDA PARA /USUARIOS */}
-            {(isAdmin || isGestorSeguro) && (
-            <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/usuarios')}>
-            <Button variant="ghost" size="icon" className="text-purple-600 hover:bg-purple-50 h-10 w-10">
-                          <User size={24}/>
+              
+              {/* 7. GERENCIAR EQUIPE UNIFICADO (SUBSTITUI OS DOIS ANTERIORES) */}
+              {(isAdmin || isGestorSeguro) && (
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start gap-4 h-12 font-bold uppercase text-[11px]" 
+                  onClick={() => { navigate('/sistema/permissoes'); setIsMenuMobileOpen(false); }}
+                >
+                  <User size={20} className="text-purple-600"/> Gerenciar Equipe
                 </Button>
-                <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-purple-600">Acessos</span>
-              </div>
-            )}
+              )}
 
               {/* SAIR */}
               <div className="mt-auto pt-6 border-t pb-8">
@@ -740,7 +743,7 @@ export function Dashboard() {
           </div>
         </div>
       )}
-
+      
       {/* ÁREA PRINCIPAL DO DASHBOARD */}
       {!isEstacio ? (
         <main className="flex-1 p-2 md:p-4 overflow-hidden text-left flex flex-col relative">
