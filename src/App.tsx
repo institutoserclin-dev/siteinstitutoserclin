@@ -10,20 +10,20 @@ import { Login } from './pages/Login';
 import { CadastroUnimeta } from './pages/CadastroUnimeta'; 
 import { Dashboard } from './pages/Dashboard';
 import { Pacientes } from './pages/Pacientes';
-import { GestaoPermissoes } from './pages/GestaoPermissoes'; // Central de Chaves
 import { Relatorios } from './pages/Relatorios';
-import { Horarios } from './pages/Horarios';
 import { Checkin } from './pages/Checkin';
 import { Prontuario } from './pages/Prontuario';
 import { Validar } from './pages/Validar'; 
 import { Encaminhamentos } from './pages/Encaminhamentos';
 
-// --- NOVAS IMPORTAÇÕES DO FINANCEIRO ---
+// --- CENTRAL UNIFICADA (CHAVES, DIAS E HORÁRIOS) ---
+import { Permissoes } from './pages/Permissoes'; // 🌟 Centro de comando único da equipe
+
+// --- OUTRAS IMPORTAÇÕES DO FINANCEIRO ---
 import { Planos } from './pages/Planos';
 import { Despesas } from './pages/Despesas';
 import { Repasses } from './pages/Repasses';
 import { Fechamento } from './pages/Fechamento';
-import { Acessos } from './pages/Acessos'; // Sua página de profissionais/equipe
 import { CadastroUsuario } from './pages/CadastroUsuario'; 
 
 // --- COMPONENTE DE SEGURANÇA (ROTA PRIVADA) ---
@@ -81,19 +81,19 @@ function App() {
         {/* 1. Rotas de Subnível */}
         <Route path="/sistema/pacientes/:id" element={ <PrivateRoute><Prontuario /></PrivateRoute> } />
         <Route path="/sistema/pacientes" element={ <PrivateRoute><Pacientes /></PrivateRoute> } />
-        <Route path="/sistema/permissoes" element={ <PrivateRoute><GestaoPermissoes /></PrivateRoute> } />
         <Route path="/sistema/relatorios" element={ <PrivateRoute><Relatorios /></PrivateRoute> } />
-        <Route path="/sistema/horarios" element={ <PrivateRoute><Horarios /></PrivateRoute> } />
         <Route path="/sistema/encaminhamentos" element={ <PrivateRoute><Encaminhamentos /></PrivateRoute> } />
+
+        {/* 🌟 CENTRAL UNIFICADA: Redireciona as 3 rotas antigas para o componente definitivo */}
+        <Route path="/sistema/permissoes" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
+        <Route path="/sistema/horarios" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
+        <Route path="/sistema/usuarios" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
 
         {/* 2. Rotas do Módulo Financeiro */}
         <Route path="/sistema/planos" element={ <PrivateRoute><Planos /></PrivateRoute> } />
         <Route path="/sistema/despesas" element={ <PrivateRoute><Despesas /></PrivateRoute> } />
         <Route path="/sistema/repasses" element={ <PrivateRoute><Repasses /></PrivateRoute> } />
         <Route path="/sistema/fechamento" element={ <PrivateRoute><Fechamento /></PrivateRoute> } />
-        
-        {/* ROTA DE GESTÃO DE PROFISSIONAIS (Seu componente Acessos.tsx) */}
-        <Route path="/sistema/usuarios" element={ <PrivateRoute><Acessos /></PrivateRoute> } />
 
         {/* FORMULÁRIO DE NOVO CADASTRO DE PROFISSIONAL */}
         <Route path="/sistema/usuarios/novo" element={ <PrivateRoute><CadastroUsuario /></PrivateRoute> } />
