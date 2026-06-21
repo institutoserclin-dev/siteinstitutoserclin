@@ -97,6 +97,32 @@ export function Pacientes() {
 
   useEffect(() => { fetchPacientes(); }, []);
 
+  // 🌟 NOVA FUNÇÃO: Executa a exclusão segura direto no Supabase
+  const handleExcluirPaciente = async (id: number, nome: string) => {
+    if (!confirm(`⚠️ Deseja realmente apagar definitivamente o cadastro de ${nome}?`)) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("pacientes")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error(error);
+        return toast.error("Não foi possível apagar o paciente.", {
+          description: "Remova primeiro as consultas associadas a ele na agenda para liberar a exclusão."
+        });
+      }
+
+      toast.success("Cadastro removido com sucesso!");
+      fetchPacientes();
+    } catch (err) {
+      toast.error("Erro interno ao tentar excluir.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const abrirWhatsApp = async (numero: string, nomePaciente: string) => {
     const limpo = numero.replace(/\D/g, "");
     if (limpo.length < 10) return toast.error("Telefone inválido.");
@@ -159,12 +185,9 @@ export function Pacientes() {
       const { ultimaConsulta, agendamentos, ...newPayload } = form as any;
       const payload = { ...newPayload, foto_url: urlDaFoto };
 
-      // --- FILTRO SALVA-VIDAS DA DATA ---
-      // Se a data estiver vazia, enviamos null para o banco aceitar
       if (payload.data_nascimento === "") {
         payload.data_nascimento = null;
       }
-      // ----------------------------------
 
       if (form.id) { 
         const { error } = await supabase.from("pacientes").update(payload).eq("id", form.id); 
@@ -265,28 +288,36 @@ export function Pacientes() {
                       <FileText size={16} className="mr-1.5"/> Prontuário
                     </Button>
 
+                    {/* EDIÇÃO DE REGISTRO */}
                     {(isAdmin || isSecretaria || meuPerfil?.permissao_excluir) && (
-                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl text-gray-300 hover:text-blue-600 hover:bg-blue-50" onClick={() => { 
-                    setForm({ 
-                     id: p.id, 
-                    nome: p.nome || "", 
-                    cpf: p.cpf || "", 
-                    data_nascimento: p.data_nascimento || "", 
-                    genero: p.genero || "Feminino", 
-                    endereco: p.endereco || "", 
-                    telefone: p.telefone || "", 
-                    convenio: p.convenio || "Particular", 
-                    foto_url: p.foto_url || "", 
-                    responsavel_nome: p.responsavel_nome || "", 
-                    responsavel_cpf: p.responsavel_cpf || "", 
-                    anamnese: p.anamnese || "", 
-                    observacoes: p.observacoes || "" 
-                    }); 
-                      setPreviewUrl(p.foto_url); 
-                      setIsModalOpen(true); 
-                     }}>
-                    <Edit size={18}/>
-                    </Button>
+                      <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl text-gray-300 hover:text-blue-600 hover:bg-blue-50" onClick={() => { 
+                        setForm({ 
+                          id: p.id, 
+                          nome: p.nome || "", 
+                          cpf: p.cpf || "", 
+                          data_nascimento: p.data_nascimento || "", 
+                          genero: p.genero || "Feminino", 
+                          endereco: p.endereco || "", 
+                          telefone: p.telefone || "", 
+                          convenio: p.convenio || "Particular", 
+                          foto_url: p.foto_url || "", 
+                          responsavel_nome: p.responsavel_nome || "", 
+                          responsavel_cpf: p.responsavel_cpf || "", 
+                          anamnese: p.anamnese || "", 
+                          observacoes: p.observacoes || "" 
+                        }); 
+                        setPreviewUrl(p.foto_url); 
+                        setIsModalOpen(true); 
+                      }}>
+                        <Edit size={18}/>
+                      </Button>
+                    )}
+
+                    {/* 🗑️ BOTÃO DE EXCLUSÃO CRÍTICA ADICIONADO COM SEGURANÇA */}
+                    {(isAdmin || meuPerfil?.permissao_excluir) && (
+                      <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors" onClick={() => handleExcluirPaciente(p.id, p.nome)}>
+                        <Trash2 size={18}/>
+                      </Button>
                     )}
                     
                   </div>
@@ -323,7 +354,7 @@ export function Pacientes() {
                   <button onClick={limparModal} className="p-2 -mr-2 text-gray-400 hover:text-red-500"><X size={24}/></button>
                 </div>
 
-                {/* ÁREA DE SCROLL DO FORMULÁRIO (CORRIGIDA) */}
+                {/* ÁREA DE SCROLL DO FORMULÁRIO */}
                 <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
                   <form id="pacienteForm" onSubmit={handleSalvar} className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     
@@ -400,7 +431,7 @@ export function Pacientes() {
                   </form>
                 </div>
 
-                {/* RODAPÉ FIXO DO MODAL (EVITA QUE O BOTÃO SAIA ROLANDO) */}
+                {/* RODAPÉ FIXO DO MODAL */}
                 <div className="bg-white border-t p-4 md:p-6 shrink-0 z-10 flex flex-col md:flex-row-reverse gap-3 pb-[calc(var(--safe-bottom)+16px)]">
                   <Button type="submit" form="pacienteForm" disabled={loading} className="w-full md:w-auto bg-blue-600 text-white font-black uppercase tracking-widest h-14 px-8 rounded-2xl shadow-xl flex-1">
                     {loading ? "Salvando..." : "Salvar Cadastro"}
