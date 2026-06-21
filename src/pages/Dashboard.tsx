@@ -391,42 +391,42 @@ export function Dashboard() {
         forma_pagamento: form.forma_pagamento
       };
 
-      // 4. Update ou Insert do Agendamento no Supabase
-      const { data: agendamentoSalvo, error } = eventoSelecionadoId 
-        ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId).select('paciente_id, profissional_nome').single()
-        : await supabase.from('agendamentos').insert([payload]).select('paciente_id, profissional_nome').single();
+      // 4. Update ou Insert do Agendamento (Preservando sua estrutura)
+      const { error } = eventoSelecionadoId 
+        ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId) 
+        : await supabase.from('agendamentos').insert([payload]);
 
       if (error) throw error;
 
-      // Recupera com segurança o ID do paciente e do profissional do agendamento
-      const idPacienteEfetivo = agendamentoSalvo?.paciente_id || idDoPaciente || form.paciente_id;
-      const profissionalEfetivo = agendamentoSalvo?.profissional_nome || form.profissional;
-
       // =========================================================================
-      // 🌟 GERAÇÃO AUTOMÁTICA DE RASCUNHO DE EVOLUÇÃO DIÁRIA (PSICOLOGIA)
+      // 🌟 REGISTRO AUTOMÁTICO DE EVOLUÇÃO DIÁRIA POR COMPARECIMENTO
       // =========================================================================
-      if (mapearStatusParaBanco(form.status) === 'Presenca' && idPacienteEfetivo) {
-        const dataHojeFormatada = new Date().toLocaleDateString('pt-BR');
+      if (mapearStatusParaBanco(form.status) === 'Presenca' && idDoPaciente) {
+        const dataHoje = new Date();
+        const dataFormatada = dataHoje.toLocaleDateString('pt-BR');
+        const horaFormatada = dataHoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        
+        // Registro objetivo e genérico de comparecimento para a clínica de psicologia
+        const textoPresencaGenerico = `[Registro Automático de Comparecimento]\n\n` +
+          `• Status: Presença confirmada no consultório em ${dataFormatada} às ${horaFormatada}.\n` +
+          `• Paciente: ${buscaPaciente.toUpperCase()}\n` +
+          `• Profissional Responsável: ${form.profissional || 'Profissional SerClin'}\n` +
+          `• Sala de Atendimento: Sala 0${form.sala || '1'}\n\n` +
+          `--------------------------------------------------\n` +
+          `EVOLUÇÃO CLÍNICA DA SESSÃO (Espaço reservado para o profissional):\n\n`;
 
-        // Cria o esqueleto padrão de atendimento clínico para o psicólogo preencher
-        const rascunhoEvolucao = `[Rascunho de Atendimento - Sessão Realizada em ${dataHojeFormatada}]\n\n` +
-          `• Estado Mental / Humor Inicial:\n  \n\n` +
-          `• Principais Temáticas Trazidas pelo Paciente:\n  \n\n` +
-          `• Intervenções / Técnicas Psicoterapêuticas Utilizadas:\n  \n\n` +
-          `• Observações do Comportamento e Evolução Clínica:\n  \n\n` +
-          `• Encaminhamento / Próximos Passos para a Próxima Sessão:\n  `;
-
-        // Dá o INSERT direto na tabela de prontuários criando a evolução diária em branco
+        // Inserção direta e infalível na tabela 'prontuarios'
         await supabase.from("prontuarios").insert([{
-          paciente_id: idPacienteEfetivo,
-          tipo_registro: "Sessão", // Mapeia exatamente para aparecer como Sessão / Evolução Diária
-          descricao: rascunhoEvolucao,
-          profissional_nome: profissionalEfetivo || "Profissional SerClin",
+          paciente_id: idDoPaciente,
+          tipo_registro: "Sessão", // Exibe como Sessão / Evolução Diária no prontuário
+          descricao: textoPresencaGenerico,
+          profissional_nome: form.profissional || "Profissional SerClin",
           historico: []
         }]);
       }
       // =========================================================================
-     
+
+         
       // 5. Feedback e Refresh
       setIsAgendamentoOpen(false);
       setEventoSelecionadoId(null);
