@@ -302,7 +302,49 @@ export function Dashboard() {
     try {
       const dInicio = new Date(form.inicio);
       const dFim = addMinutes(dInicio, parseInt(form.duracao));
-      
+
+      // =========================================================================
+      // 🌟 VALIDAÇÃO DE DIAS E HORÁRIOS DA CENTRAL DE CONFIGURAÇÃO (NÃO REMOVER)
+      // =========================================================================
+      const diasSemanaMap = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
+      const diaDaSemanaDesejado = diasSemanaMap[dInicio.getDay()]; // Retorna 'DOM', 'SEG', etc.
+
+      // Encontra as regras do profissional atual dentro do estado 'equipe' do seu Dashboard
+      const profissionalConfig = equipe.find(p => p.nome?.trim().toLowerCase() === form.profissional?.trim().toLowerCase());
+
+      if (profissionalConfig) {
+        // 1. Validar Dias Permitidos
+        let diasPermitidos: string[] = [];
+        if (Array.isArray(profissionalConfig.dias_atendimento)) {
+          diasPermitidos = profissionalConfig.dias_atendimento;
+        } else if (typeof profissionalConfig.dias_atendimento === 'string') {
+          try { diasPermitidos = JSON.parse(profissionalConfig.dias_atendimento); } 
+          catch { diasPermitidos = profissionalConfig.dias_atendimento.split(','); }
+        }
+
+        // Se o gestor configurou os dias na central, valida se o dia atual está liberado
+        if (diasPermitidos.length > 0 && !diasPermitidos.includes(diaDaSemanaDesejado)) {
+          setLoading(false);
+          return toast.error(`Este profissional não está configurado para atender na ${diaDaSemanaDesejado}.`, {
+            description: "Ative este dia na tela de Configurações para liberar."
+          });
+        }
+
+        // 2. Validar Limites de Horário (Início e Fim)
+        if (profissionalConfig.hora_inicio && profissionalConfig.hora_fim) {
+          const horaMinutosAgendamento = format(dInicio, "HH:mm:ss");
+          const horaMinutosFimAgendamento = format(dFim, "HH:mm:ss");
+
+          if (horaMinutosAgendamento < profissionalConfig.hora_inicio || horaMinutosFimAgendamento > profissionalConfig.hora_fim) {
+            setLoading(false);
+            return toast.error("Horário fora do expediente deste profissional!", {
+              description: `Permitido: ${profissionalConfig.hora_inicio.substring(0,5)}h às ${profissionalConfig.hora_fim.substring(0,5)}h.`
+            });
+          }
+        }
+      }
+      // =========================================================================
+
       let idDoPaciente = form.paciente_id;
 
       // 1. Lógica de Auto-cadastro de Paciente (Neuropsicologia costuma ter muitos novos)
