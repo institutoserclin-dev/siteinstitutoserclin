@@ -393,43 +393,40 @@ export function Dashboard() {
 
       // 4. Update ou Insert do Agendamento no Supabase
       const { data: agendamentoSalvo, error } = eventoSelecionadoId 
-        ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId).select('paciente_id').single()
-        : await supabase.from('agendamentos').insert([payload]).select('paciente_id').single();
+        ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId).select('paciente_id, profissional_nome').single()
+        : await supabase.from('agendamentos').insert([payload]).select('paciente_id, profissional_nome').single();
 
       if (error) throw error;
 
-      // Garante que temos o ID do paciente vindo diretamente do banco ou do fluxo anterior
+      // Recupera com segurança o ID do paciente e do profissional do agendamento
       const idPacienteEfetivo = agendamentoSalvo?.paciente_id || idDoPaciente || form.paciente_id;
+      const profissionalEfetivo = agendamentoSalvo?.profissional_nome || form.profissional;
 
       // =========================================================================
-      // 🌟 GERAÇÃO AUTOMÁTICA DE ANAMNESE/ACOLHIMENTO PSICOLÓGICO
+      // 🌟 GERAÇÃO AUTOMÁTICA DE RASCUNHO DE EVOLUÇÃO DIÁRIA (PSICOLOGIA)
       // =========================================================================
       if (mapearStatusParaBanco(form.status) === 'Presenca' && idPacienteEfetivo) {
-        
-        // 1. Busca o estado atual da anamnese para nunca apagar dados de sessões passadas
-        const { data: pacAtual } = await supabase
-          .from('pacientes')
-          .select('anamnese')
-          .eq('id', idPacienteEfetivo)
-          .maybeSingle();
+        const dataHojeFormatada = new Date().toLocaleDateString('pt-BR');
 
-        // 2. Se estiver vazia, injeta a estrutura inicial de Avaliação Psicológica
-        if (!pacAtual?.anamnese || pacAtual.anamnese.trim() === "") {
-          const dataHoje = new Date().toLocaleDateString('pt-BR');
-          const estruturaPsicologica = `[Acolhimento Inicial - Presença Confirmada em ${dataHoje}]\n\n` +
-            `• Motivo da Procura (Demanda Inicial):\n  A preencher (Encaminhado para triagem / psicoterapia espontânea).\n\n` +
-            `• Aspectos Emocionais / Comportamentais Observados na Recepção:\n  Paciente compareceu ao consultório para a sessão configurada.\n\n` +
-            `• Histórico de Cuidados Anteriores em Saúde Mental:\n  Não informado / Em investigação pelo psicólogo.\n\n` +
-            `• Objetivos Terapêuticos Iniciais:\n  Alinhamento de contrato terapêutico e estabelecimento de vínculo clínico.`;
+        // Cria o esqueleto padrão de atendimento clínico para o psicólogo preencher
+        const rascunhoEvolucao = `[Rascunho de Atendimento - Sessão Realizada em ${dataHojeFormatada}]\n\n` +
+          `• Estado Mental / Humor Inicial:\n  \n\n` +
+          `• Principais Temáticas Trazidas pelo Paciente:\n  \n\n` +
+          `• Intervenções / Técnicas Psicoterapêuticas Utilizadas:\n  \n\n` +
+          `• Observações do Comportamento e Evolução Clínica:\n  \n\n` +
+          `• Encaminhamento / Próximos Passos para a Próxima Sessão:\n  `;
 
-          await supabase
-            .from('pacientes')
-            .update({ anamnese: estruturaPsicologica })
-            .eq('id', idPacienteEfetivo);
-        }
+        // Dá o INSERT direto na tabela de prontuários criando a evolução diária em branco
+        await supabase.from("prontuarios").insert([{
+          paciente_id: idPacienteEfetivo,
+          tipo_registro: "Sessão", // Mapeia exatamente para aparecer como Sessão / Evolução Diária
+          descricao: rascunhoEvolucao,
+          profissional_nome: profissionalEfetivo || "Profissional SerClin",
+          historico: []
+        }]);
       }
       // =========================================================================
-
+     
       // 5. Feedback e Refresh
       setIsAgendamentoOpen(false);
       setEventoSelecionadoId(null);
