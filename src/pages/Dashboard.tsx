@@ -391,40 +391,41 @@ export function Dashboard() {
         forma_pagamento: form.forma_pagamento
       };
 
-      // 4. Update ou Insert do Agendamento
-      const { error } = eventoSelecionadoId 
-        ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId) 
-        : await supabase.from('agendamentos').insert([payload]);
+      // 4. Update ou Insert do Agendamento no Supabase
+      const { data: agendamentoSalvo, error } = eventoSelecionadoId 
+        ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId).select('paciente_id').single()
+        : await supabase.from('agendamentos').insert([payload]).select('paciente_id').single();
 
       if (error) throw error;
 
+      // Garante que temos o ID do paciente vindo diretamente do banco ou do fluxo anterior
+      const idPacienteEfetivo = agendamentoSalvo?.paciente_id || idDoPaciente || form.paciente_id;
+
       // =========================================================================
-      // 🌟 GERAÇÃO AUTOMÁTICA DE ANAMNESE GENÉRICA AO CONFIRMAR PRESENÇA
+      // 🌟 GERAÇÃO AUTOMÁTICA DE ANAMNESE/ACOLHIMENTO PSICOLÓGICO
       // =========================================================================
-      if (mapearStatusParaBanco(form.status) === 'Presenca' && idDoPaciente) {
-        // 1. Checa se o paciente já tem alguma anamnese registrada para não sobrescrever dados antigos
+      if (mapearStatusParaBanco(form.status) === 'Presenca' && idPacienteEfetivo) {
+        
+        // 1. Busca o estado atual da anamnese para nunca apagar dados de sessões passadas
         const { data: pacAtual } = await supabase
           .from('pacientes')
           .select('anamnese')
-          .eq('id', idDoPaciente)
-          .single();
+          .eq('id', idPacienteEfetivo)
+          .maybeSingle();
 
-        // 2. Se a anamnese estiver vazia ou nula, injeta o modelo genérico de registro
+        // 2. Se estiver vazia, injeta a estrutura inicial de Avaliação Psicológica
         if (!pacAtual?.anamnese || pacAtual.anamnese.trim() === "") {
           const dataHoje = new Date().toLocaleDateString('pt-BR');
-          const anamneseGenerica = `[Registro Automático - ${dataHoje}]\n` +
-            `• Queixa Principal: Encaminhado para avaliação especializada.\n` +
-            `• Histórico de Saúde: Sem intercorrências agudas relatadas no ato da recepção.\n` +
-            `• Uso de Medicações: Em investigação/A preencher pelo profissional.\n` +
-            `• Sintomas Relatados: Nega dores ou queixas emergenciais físicas.\n` +
-            `• Observações: Aguardando abertura de sessão clínica individual.`;
+          const estruturaPsicologica = `[Acolhimento Inicial - Presença Confirmada em ${dataHoje}]\n\n` +
+            `• Motivo da Procura (Demanda Inicial):\n  A preencher (Encaminhado para triagem / psicoterapia espontânea).\n\n` +
+            `• Aspectos Emocionais / Comportamentais Observados na Recepção:\n  Paciente compareceu ao consultório para a sessão configurada.\n\n` +
+            `• Histórico de Cuidados Anteriores em Saúde Mental:\n  Não informado / Em investigação pelo psicólogo.\n\n` +
+            `• Objetivos Terapêuticos Iniciais:\n  Alinhamento de contrato terapêutico e estabelecimento de vínculo clínico.`;
 
           await supabase
             .from('pacientes')
-            .update({ anamnese: anamneseGenerica })
-            .eq('id', idDoPaciente);
-            
-          toast.info("Anamnese inicial gerada no prontuário!");
+            .update({ anamnese: estruturaPsicologica })
+            .eq('id', idPacienteEfetivo);
         }
       }
       // =========================================================================
