@@ -391,12 +391,43 @@ export function Dashboard() {
         forma_pagamento: form.forma_pagamento
       };
 
-      // 4. Update ou Insert
+      // 4. Update ou Insert do Agendamento
       const { error } = eventoSelecionadoId 
         ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId) 
         : await supabase.from('agendamentos').insert([payload]);
 
       if (error) throw error;
+
+      // =========================================================================
+      // 🌟 GERAÇÃO AUTOMÁTICA DE ANAMNESE GENÉRICA AO CONFIRMAR PRESENÇA
+      // =========================================================================
+      if (mapearStatusParaBanco(form.status) === 'Presenca' && idDoPaciente) {
+        // 1. Checa se o paciente já tem alguma anamnese registrada para não sobrescrever dados antigos
+        const { data: pacAtual } = await supabase
+          .from('pacientes')
+          .select('anamnese')
+          .eq('id', idDoPaciente)
+          .single();
+
+        // 2. Se a anamnese estiver vazia ou nula, injeta o modelo genérico de registro
+        if (!pacAtual?.anamnese || pacAtual.anamnese.trim() === "") {
+          const dataHoje = new Date().toLocaleDateString('pt-BR');
+          const anamneseGenerica = `[Registro Automático - ${dataHoje}]\n` +
+            `• Queixa Principal: Encaminhado para avaliação especializada.\n` +
+            `• Histórico de Saúde: Sem intercorrências agudas relatadas no ato da recepção.\n` +
+            `• Uso de Medicações: Em investigação/A preencher pelo profissional.\n` +
+            `• Sintomas Relatados: Nega dores ou queixas emergenciais físicas.\n` +
+            `• Observações: Aguardando abertura de sessão clínica individual.`;
+
+          await supabase
+            .from('pacientes')
+            .update({ anamnese: anamneseGenerica })
+            .eq('id', idDoPaciente);
+            
+          toast.info("Anamnese inicial gerada no prontuário!");
+        }
+      }
+      // =========================================================================
 
       // 5. Feedback e Refresh
       setIsAgendamentoOpen(false);
