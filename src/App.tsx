@@ -86,7 +86,7 @@ function App() {
 
         {/* 🌟 CENTRAL UNIFICADA: Redireciona as 3 rotas antigas para o componente definitivo */}
         <Route path="/sistema/permissoes" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
-        <Route path="/sistema/horarios" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
+        <Route path="/sistema/gestao" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
         <Route path="/sistema/usuarios" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
 
         {/* 2. Rotas do Módulo Financeiro */}
