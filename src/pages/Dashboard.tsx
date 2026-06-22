@@ -377,26 +377,33 @@ export function Dashboard() {
           .replace(",", ".")
       ) || 0;
 
+      // --- SANITIZAÇÃO E BLINDAGEM DE TIPOS PARA EVITAR ERRO 400 ---
+      const salaNumero = parseInt(form.sala) || 1;
+
       const payload = {
-        sala_id: parseInt(form.sala),
+        sala_id: salaNumero,
         profissional_nome: form.profissional,
         paciente_nome: buscaPaciente.toUpperCase(),
-        paciente_id: idDoPaciente,
-        paciente_telefone: form.telefone,
+        paciente_id: idDoPaciente || null, // Garante null válido se não houver ID
+        paciente_telefone: form.telefone || "",
         data_inicio: dInicio.toISOString(),
         data_fim: dFim.toISOString(),
         status: mapearStatusParaBanco(form.status),
-        assinatura_url: assinaturaBase64,
+        assinatura_url: assinaturaBase64 || null, // Evita undefined se estiver vazio
         valor_atendimento: valorLimpo,
-        forma_pagamento: form.forma_pagamento
+        forma_pagamento: form.forma_pagamento || "Pix"
       };
 
-      // 4. Update ou Insert do Agendamento (Preservando sua estrutura)
+      // 4. Update ou Insert do Agendamento
       const { error } = eventoSelecionadoId 
         ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId) 
         : await supabase.from('agendamentos').insert([payload]);
 
-      if (error) throw error;
+      // 🌟 DIAGNÓSTICO ATIVO: Mostra a coluna exata que quebrou no console F12
+      if (error) {
+        console.error("Erro detalhado do Supabase na tabela agendamentos:", error);
+        throw new Error(`Erro no banco: ${error.message} (Código: ${error.code})`);
+      }
 
       // =========================================================================
       // 🌟 REGISTRO AUTOMÁTICO DE EVOLUÇÃO DIÁRIA POR COMPARECIMENTO
@@ -406,7 +413,6 @@ export function Dashboard() {
         const dataFormatada = dataHoje.toLocaleDateString('pt-BR');
         const horaFormatada = dataHoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         
-        // Registro objetivo e genérico de comparecimento para a clínica de psicologia
         const textoPresencaGenerico = `[Registro Automático de Comparecimento]\n\n` +
           `• Status: Presença confirmada no consultório em ${dataFormatada} às ${horaFormatada}.\n` +
           `• Paciente: ${buscaPaciente.toUpperCase()}\n` +
@@ -415,17 +421,19 @@ export function Dashboard() {
           `--------------------------------------------------\n` +
           `EVOLUÇÃO CLÍNICA DA SESSÃO (Espaço reservado para o profissional):\n\n`;
 
-        // Inserção direta e infalível na tabela 'prontuarios'
-        await supabase.from("prontuarios").insert([{
+        const { error: erroProntuario } = await supabase.from("prontuarios").insert([{
           paciente_id: idDoPaciente,
-          tipo_registro: "Sessão", // Exibe como Sessão / Evolução Diária no prontuário
+          tipo_registro: "Sessão", 
           descricao: textoPresencaGenerico,
           profissional_nome: form.profissional || "Profissional SerClin",
           historico: []
         }]);
+
+        if (erroProntuario) {
+          console.error("Erro detalhado ao gerar evolução automática:", erroProntuario);
+        }
       }
       // =========================================================================
-
          
       // 5. Feedback e Refresh
       setIsAgendamentoOpen(false);
