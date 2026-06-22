@@ -443,11 +443,22 @@ export function Dashboard() {
 
     } catch (err: any) {
       console.error("Erro SerClin Save:", err);
-      toast.error(err.message || "Erro ao salvar na agenda.");
+      
+      // Mapeia o erro de choque de horário do banco de dados para a secretária entender
+      if (err.toString().includes("no_profissional_overlap") || (err.message && err.message.includes("no_profissional_overlap"))) {
+        toast.error("⚠️ CHOQUE DE HORÁRIO DETECTADO!", {
+          description: "O(A) profissional selecionado(a) já possui outro atendimento agendado nesta mesma faixa de horário. Escolha outro horário ou verifique a agenda deste profissional.",
+          duration: 8000,
+        });
+      } else {
+        toast.error(err.message || "Erro ao salvar na agenda.");
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // Filtro de Agendamentos de Amanhã (Para o botão do Header)
 
   // Filtro de Agendamentos de Amanhã (Para o botão do Header)
   const agendamentosAmanha = events
