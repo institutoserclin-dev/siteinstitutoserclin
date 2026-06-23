@@ -575,8 +575,26 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* DIREITA: STATUS, AGENDAR (PC) E MENU (MOBILE) */}
+         {/* DIREITA: STATUS, AGENDAR (PC) E MENU (MOBILE) */}
           <div className="flex items-center gap-4 shrink-0">
+            
+            {/* BOTÃO RETORNAR AO SITE PRINCIPAL (PC) */}
+            <Button
+              variant="ghost"
+              onClick={async () => {
+                try {
+                  await supabase.auth.signOut();
+                } catch (e) {
+                  console.error(e);
+                } finally {
+                  window.location.href = "https://institutoserclin.vercel.app";
+                }
+              }}
+              className="hidden md:flex items-center gap-2 border border-red-100 bg-red-50 hover:bg-red-100 text-red-600 font-black h-11 px-4 rounded-xl text-[10px] uppercase tracking-wider transition-all"
+            >
+              <LogOut size={15} strokeWidth={3} />
+              <span>Sair</span>
+            </Button>
             
             {/* Online Status: Só PC */}
             <div className="hidden md:flex flex-col items-end mr-1">
@@ -587,6 +605,7 @@ export function Dashboard() {
               </div>
             </div>
 
+            
             {/* Botão Agendar: Só PC */}
             <Button 
               onClick={() => { setEventoSelecionadoId(null); setIsAgendamentoOpen(true); }}
@@ -691,7 +710,19 @@ export function Dashboard() {
                 )}
                 
                 <div className="mt-auto border-t pt-4">
-                  <Button variant="ghost" className="w-full justify-start gap-4 h-12 font-bold uppercase text-[11px] text-red-500" onClick={() => { supabase.auth.signOut(); navigate('/login'); }}>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-4 h-12 font-bold uppercase text-[11px] text-red-500"
+                    onClick={async () => {
+                      try {
+                        await supabase.auth.signOut();
+                      } catch (e) {
+                        console.error(e);
+                      } finally {
+                        window.location.href = "https://institutoserclin.vercel.app";
+                      }
+                    }}
+                  >
                     <LogOut size={20} /> Sair do Sistema
                   </Button>
                 </div>
@@ -783,7 +814,18 @@ export function Dashboard() {
 
               {/* SAIR */}
               <div className="mt-auto pt-6 border-t pb-8">
-                <Button onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="w-full bg-red-50 hover:bg-red-100 text-red-600 border-none font-black uppercase tracking-widest h-14 rounded-2xl flex items-center justify-center gap-3">
+                <Button
+                  onClick={async () => {
+                    try {
+                      await supabase.auth.signOut();
+                    } catch (e) {
+                      console.error(e);
+                    } finally {
+                      window.location.href = "https://institutoserclin.vercel.app";
+                    }
+                  }}
+                  className="w-full bg-red-50 hover:bg-red-100 text-red-600 border-none font-black uppercase tracking-widest h-14 rounded-2xl flex items-center justify-center gap-3"
+                >
                   <LogOut size={18} /> Sair do Sistema
                 </Button>
               </div>
