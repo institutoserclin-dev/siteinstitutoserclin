@@ -5,7 +5,7 @@ import {
   CheckCircle, Search, Clock, ArrowRight, User, 
   CalendarDays, FileText, ShoppingBag, History, Camera, LogOut,
   Check, Brain, AlertTriangle, BookOpen, Play, 
-  ExternalLink 
+  ExternalLink, X, Sparkles, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,6 @@ const planosSerClin = [
   { nome: "Protocolo Família Prestige", preco: "1.200,00", desc: "Cuidado integral para o seu maior patrimônio.", destaque: "EXCLUSIVO FAMÍLIA", link: "https://invoice.infinitepay.io/plans/instituto-serclin/1FbTSP1Qcr", itens: ["Cobertura para até 4 pessoas", "Terapias Semanais para todos", "Reunião mensal de alinhamento familiar", "Cuidado completo", "Sessões mensais não cumulativas"] },
 ];
 
-// DADOS DOS E-BOOKS (ESTILO NETFLIX)
 const ebooksSerClin = [
   { id: 1, titulo: "Entendendo o TDAH", subtitulo: "Guia prático para pais", cor: "from-[#1e3a8a] to-blue-900" },
   { id: 2, titulo: "Rotinas Saudáveis", subtitulo: "Autismo no dia a dia", cor: "from-amber-500 to-orange-600" },
@@ -37,11 +36,13 @@ export function Checkin() {
   const [abaAtiva, setAbaAtiva] = useState<'inicio' | 'historico' | 'servicos' | 'perfil'>('inicio');
   const [paciente, setPaciente] = useState<any>(null);
   const [agendamentos, setAgendamentos] = useState<any[]>([]);
-  const [arquivos, setArquivos] = useState<any[]>([]); // INJETADO
+  const [arquivos, setArquivos] = useState<any[]>([]); 
   const [consultaHoje, setConsultaHoje] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // FUNÇÃO INJETADA
+  const [showPopup, setShowPopup] = useState(false);
+  const [lancamentoPopup, setLancamentoPopup] = useState<any>(null);
+
   const carregarArquivos = async (pacienteId: any) => {
     const { data } = await supabase
       .from('pacientes_arquivos')
@@ -51,14 +52,40 @@ export function Checkin() {
     if (data) setArquivos(data);
   };
 
-  // VIGIA DE ATUALIZAÇÃO
+  const checarNovoEbookPopup = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("infoprodutos")
+        .select("*")
+        .eq("is_new", true)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        const ultimoEbook = data[0];
+        const jaViuPopup = localStorage.getItem(`visto_popup_${ultimoEbook.id}`);
+        if (!jaViuPopup) {
+          setLancamentoPopup(ultimoEbook);
+          setShowPopup(true);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     if (paciente?.id && abaAtiva === 'perfil') {
       carregarArquivos(paciente.id);
     }
   }, [abaAtiva, paciente?.id]);
 
-  // --- MÁSCARA INTELIGENTE ---
+  useEffect(() => {
+    if (paciente?.id) {
+      checarNovoEbookPopup();
+    }
+  }, [paciente?.id]);
+
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     let v = e.target.value.replace(/\D/g, "");
     if (v.length > 11) v = v.slice(0, 11);
@@ -104,8 +131,6 @@ export function Checkin() {
       }
 
       setPaciente(pEncontrado);
-      
-      // --- AJUSTADO: ADICIONADO AWAIT PARA GARANTIR A CARGA ---
       await carregarArquivos(pEncontrado.id); 
 
       const { data: meusAgendamentos, error: errAg } = await supabase
@@ -172,17 +197,15 @@ export function Checkin() {
     setIdentificacao("");
     setTelaAtiva(0);
     setAbaAtiva('inicio');
+    setShowPopup(false);
   };
 
-  // --- FUNÇÃO PARA COMPRAR SERVIÇO COM REDIRECIONAMENTO INTELIGENTE ---
   const handleComprarServico = (nomeDoServico: string, linkCheckout?: string) => {
-    // Se existir um link da InfinitePay configurado, abre a página de pagamento direto
     if (linkCheckout && linkCheckout.startsWith('http')) {
       window.open(linkCheckout, '_blank');
       return;
     }
 
-    // Se não existir link (ou for plano Família/Oficina), abre o WhatsApp da clínica
     const telefoneClinica = "5568992161717"; 
     const mensagem = `Olá! Sou o(a) paciente *${paciente?.nome.trim()}* e tenho interesse em contratar o *${nomeDoServico}* pelo Portal SerClin. Podem me passar as orientações?`;
     const url = `https://wa.me/${telefoneClinica}?text=${encodeURIComponent(mensagem)}`;
@@ -192,10 +215,33 @@ export function Checkin() {
   const consultasFuturas = agendamentos.filter(ag => isAfter(new Date(ag.data_inicio), endOfDay(new Date())));
   const consultasPassadas = agendamentos.filter(ag => isBefore(new Date(ag.data_inicio), startOfDay(new Date())));
 
+  const documentoRecente = arquivos.length > 0 ? arquivos[0] : null;
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans antialiased selection:bg-blue-100 relative overflow-hidden text-left">
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-blue-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-emerald-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+
+      {showPopup && lancamentoPopup && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 border border-slate-100 shadow-2xl relative flex flex-col items-center text-center">
+            <button onClick={() => setShowPopup(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-full">
+              <X size={16} />
+            </button>
+            <div className="w-12 h-12 bg-amber-500/10 text-amber-600 rounded-2xl flex items-center justify-center mb-5">
+              <Sparkles size={24} className="animate-pulse" />
+            </div>
+            <div className="space-y-2 mb-6">
+              <span className="text-[9px] font-black tracking-widest text-secondary uppercase bg-amber-500/10 px-3 py-1 rounded-full">NOVIDADE NO PORTAL</span>
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight pt-2">{lancamentoPopup.titulo}</h3>
+              <p className="text-xs text-slate-500 font-medium leading-relaxed">{lancamentoPopup.descricao}</p>
+            </div>
+            <Button onClick={() => { localStorage.setItem(`visto_popup_${lancamentoPopup.id}`, "true"); setShowPopup(false); window.open(lancamentoPopup.checkout_url, '_blank'); }} className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black uppercase text-[10px] tracking-widest h-12 rounded-xl shadow-lg flex items-center justify-center gap-2">
+              Adquirir Material <ArrowRight size={14} />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* --- TELA 0: LOGIN --- */}
       {telaAtiva === 0 && (
@@ -246,9 +292,31 @@ export function Checkin() {
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             
-            {/* ABA: INÍCIO */}
             {abaAtiva === 'inicio' && (
               <div className="space-y-6 animate-in fade-in">
+                
+                {documentoRecente && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-5 shadow-sm flex flex-col gap-3 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500"></div>
+                    <div className="flex items-start gap-3">
+                      <FileText className="text-emerald-600 mt-0.5 shrink-0" size={20} />
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-black text-emerald-700 bg-emerald-200/50 px-2 py-0.5 rounded uppercase tracking-wider">DOCUMENTO LIBERADO</span>
+                        <h4 className="text-sm font-black text-slate-800 leading-tight pt-1">{documentoRecente.nome_arquivo}</h4>
+                        <p className="text-xs text-slate-500 font-medium">Seu laudo clínico está pronto e disponível para download.</p>
+                      </div>
+                    </div>
+                    <a 
+                      href={documentoRecente.url_arquivo} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="mt-1 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] tracking-widest uppercase py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all"
+                    >
+                      <Download size={14} /> Baixar Documento
+                    </a>
+                  </div>
+                )}
+
                 <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest">Consulta de Hoje</h3>
                 
                 {consultaHoje ? (
@@ -305,7 +373,6 @@ export function Checkin() {
               </div>
             )}
 
-            {/* ABA: HISTÓRICO */}
             {abaAtiva === 'historico' && (
               <div className="space-y-4 animate-in fade-in">
                 <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest mb-4">Meu Histórico Clínico</h3>
@@ -335,11 +402,75 @@ export function Checkin() {
               </div>
             )}
 
-            {/* ABA: SERVIÇOS (NETFLIX + OFICINA + PROTOCOLOS) */}
             {abaAtiva === 'servicos' && (
               <div className="space-y-8 animate-in fade-in pb-4">
                 
-                {/* SECÇÃO 1: E-BOOKS (Estilo Netflix) */}
+                {/* 🌟 FOCO DE VENDAS 1: GRUPO TERAPÊUTICO AUTISMO ADULTO */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black text-gray-800 uppercase text-xs tracking-widest flex items-center gap-2">
+                      <Sparkles size={16} className="text-secondary animate-pulse" /> Vagas Prioritárias
+                    </h3>
+                    <span className="text-[9px] bg-red-100 text-red-600 font-black px-2 py-0.5 rounded uppercase tracking-wide">Apenas 8 Vagas</span>
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-[#1e3a8a] to-slate-900 rounded-3xl p-6 text-white shadow-xl border border-blue-800 relative overflow-hidden">
+                    <div className="absolute -right-6 -bottom-6 opacity-5 font-black text-9xl italic select-none pointer-events-none">8V</div>
+                    
+                    <span className="text-[9px] font-black tracking-widest text-secondary uppercase bg-amber-500/10 px-3 py-1 rounded-full border border-secondary/20">
+                      PROGRAMA EXCLUSIVO ADULTOS
+                    </span>
+                    
+                    <h4 className="font-serif font-bold italic text-2xl text-white mt-3 leading-tight">
+                      Grupo de Desenvolvimento <br/>
+                      <span className="font-sans font-light text-slate-300 not-italic text-lg lowercase block mt-0.5">
+                        de conexões sociais e autonomia
+                      </span>
+                    </h4>
+                    
+                    <p className="text-xs text-slate-300 font-normal leading-relaxed mt-3 mb-6">
+                      Desenvolvido para adultos neuroatípicos focando em comunicação prática, nuances sociais (ironia/sarcasmo), autorregulação e decodificação do ambiente profissional.
+                    </p>
+
+                    <div className="flex items-center justify-between gap-4 pt-4 border-t border-white/10">
+                      <div>
+                        <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Triagem Obrigatória</p>
+                        <p className="text-base font-black text-secondary">R$ 250,00</p>
+                      </div>
+                      <Button 
+                        onClick={() => handleComprarServico("Triagem OBRIGATÓRIA - Grupo Terapêutico Adulto")}
+                        className="bg-secondary hover:bg-white text-primary font-black text-[10px] uppercase tracking-wider h-11 px-5 rounded-xl shadow-md transition-all shrink-0"
+                      >
+                        Garantir Minha Vaga <ArrowRight size={12} className="ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 🌟 FOCO DE VENDAS 2: CLUB SERCLIN */}
+                <div className="space-y-3">
+                  <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest">Acesso de Alta Performance</h3>
+                  
+                  <div className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+                    <div className="absolute right-[-20px] top-[-20px] text-white/5 text-[8rem] font-black pointer-events-none">CLUB</div>
+                    
+                    <h4 className="font-black uppercase text-xl tracking-tight mb-1 flex items-center gap-2">
+                      <Brain size={20} className="text-white animate-pulse" /> Club SerClin
+                    </h4>
+                    <p className="text-xs font-bold text-orange-50 uppercase mb-5 w-11/12 leading-relaxed">
+                      Seu ecossistema completo de saúde, inteligência emocional e evolução contínua com condições exclusivas na clínica.
+                    </p>
+                    
+                    <Button 
+                      onClick={() => handleComprarServico("Adesão ao Club SerClin", "https://invoice.infinitepay.io/plans/instituto-serclin/0HJPOIpqjg")}
+                      className="w-full bg-white text-orange-600 hover:bg-orange-50 font-black text-[11px] uppercase tracking-widest h-12 rounded-xl shadow-md flex items-center justify-center gap-1.5"
+                    >
+                      Fazer Parte do Club <ArrowRight size={14} />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* CARROSSEL DE E-BOOKS ORIGINAL NETFLIX */}
                 <div className="space-y-3">
                   <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest flex items-center gap-2">
                     <BookOpen size={18} className="text-amber-500"/> E-books SerClin
@@ -361,7 +492,7 @@ export function Checkin() {
                   </div>
                 </div>
 
-                {/* SECÇÃO 2: OFICINA DAS EMOÇÕES (Destaque) */}
+                {/* OFICINA DAS EMOÇÕES */}
                 <div className="space-y-3">
                   <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest">Serviços Especiais</h3>
                   <div className="bg-gradient-to-r from-orange-400 to-amber-500 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
@@ -381,75 +512,57 @@ export function Checkin() {
                   </div>
                 </div>
 
-                {/* SECÇÃO 3: PROTOCOLOS DE CUIDADOS */}
+                {/* LISTAGEM SECUNDÁRIA DE OUTROS PROTOCOLOS PARA COMPARAÇÃO */}
                 <div className="space-y-4 pt-2">
-                  <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest">Protocolos de Cuidados</h3>
-                  
-                  <div className="bg-gradient-to-br from-[#1e3a8a] to-blue-900 border border-blue-800 rounded-3xl p-6 shadow-md relative overflow-hidden">
-                    <div className="absolute -right-4 -top-4 opacity-10">
-                      <Brain size={120} className="text-white" />
-                    </div>
-                    <h4 className="font-black text-amber-400 uppercase text-sm mb-3 flex items-center gap-2">
-                      <AlertTriangle size={18} /> Benefício Exclusivo
-                    </h4>
-                    <p className="text-xs font-medium text-blue-100 leading-relaxed mb-5">
-                      A partir do <strong>3º mês</strong> de protocolo ativo, adquire o direito de realizar a <strong>Avaliação Neuropsicológica</strong> por um valor especial de <strong>R$ 850,00</strong>.
-                    </p>
-                    
-                    <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-sm relative z-10">
-                      <p className="text-[12px] font-black text-amber-300 uppercase tracking-widest mb-2">Regras de Utilização:</p>
-                      <ul className="text-[12px] text-blue-50 space-y-2 ml-4 list-disc font-medium">
-                        <li>O benefício é pessoal e <strong>intransferível</strong>.</li>
-                        <li>No protocolo <strong>Família Prestige</strong>, a regra aplica-se igualmente: cada membro registado no protocolo paga a sua própria avaliação (R$ 850,00 cada).</li>
-                      </ul>
-                    </div>
+                  <div className="flex flex-col space-y-1">
+                    <h3 className="font-black text-gray-800 uppercase text-xs tracking-widest">Outros Protocolos de Cuidados</h3>
+                    <p className="text-[11px] text-gray-400 font-medium">Opções de manutenção emocional individual regular</p>
                   </div>
-
+                  
                   <div className="grid grid-cols-1 gap-5">
                     {planosSerClin.map((plano, idx) => (
-                      <div key={idx} className={`bg-white rounded-3xl shadow-sm border ${plano.destaque ? 'border-amber-400 ring-2 ring-amber-400/20' : 'border-gray-100'} p-6 relative overflow-hidden`}>
+                      <div key={idx} className={`bg-white rounded-3xl shadow-sm border ${plano.destaque ? 'border-amber-400/60 ring-1 ring-amber-400/10' : 'border-gray-100'} p-5 relative overflow-hidden`}>
                         
                         {plano.destaque && (
-                          <div className="absolute top-0 right-0 bg-amber-400 text-amber-950 text-[9px] font-black uppercase tracking-widest px-4 py-1.5 rounded-bl-xl shadow-sm">
+                          <div className="absolute top-0 right-0 bg-amber-400 text-amber-950 text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg shadow-sm">
                             {plano.destaque}
                           </div>
                         )}
 
-                        <h4 className="font-black text-[#1e3a8a] text-lg mb-1">{plano.nome}</h4>
-                        <p className="text-[14px] text-gray-500 font-medium mb-4 pr-10 h-8">{plano.desc}</p>
+                        <h4 className="font-black text-[#1e3a8a] text-base mb-0.5">{plano.nome}</h4>
+                        <p className="text-[13px] text-gray-500 font-normal mb-3 pr-10 leading-tight">{plano.desc}</p>
                         
-                        <div className="flex items-end gap-1 mb-5">
+                        <div className="flex items-end gap-1 mb-4">
                           <span className="text-sm font-bold text-gray-400">R$</span>
-                          <span className="text-3xl font-black text-[#1e3a8a] leading-none">{plano.preco}</span>
-                          <span className="text-xs font-bold text-gray-400 mb-1">/mês</span>
+                          <span className="text-2xl font-black text-[#1e3a8a] leading-none">{plano.preco}</span>
+                          <span className="text-[10px] font-bold text-gray-400 mb-0.5">/mês</span>
                         </div>
 
-                        <div className="space-y-3 mb-6">
-                          {plano.itens.map((item, i) => (
+                        <div className="space-y-2.5 mb-5 border-t border-gray-50 pt-4">
+                          {plano.itens.slice(0, 3).map((item, i) => (
                             <div key={i} className="flex items-start gap-2">
                               <div className="mt-0.5 bg-amber-100 rounded-full p-0.5 shrink-0">
-                                <Check size={10} className="text-amber-600 font-bold" />
+                                <Check size={8} className="text-amber-600 font-bold" />
                               </div>
-                              <p className="text-[14px] font-medium text-gray-700 leading-snug">{item}</p>
+                              <p className="text-[13px] font-normal text-gray-600 leading-none">{item}</p>
                             </div>
                           ))}
                         </div>
 
-                        {/* BOTÃO ATUALIZADO QUE CHAMA A INFINITEPAY OU WHATSAPP */}
                         <Button 
                           onClick={() => handleComprarServico(plano.nome, plano.link)}
-                          className={`w-full h-12 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${plano.destaque ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-[#1e3a8a]'}`}
+                          className="w-full h-11 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-gray-50 hover:bg-gray-100 text-[#1e3a8a] border border-gray-100"
                         >
-                          {plano.destaque === 'EXCLUSIVO FAMÍLIA' ? 'Quero este Protocolo' : 'Quero este Protocolo'}
+                          Contratar Protocolo
                         </Button>
                       </div>
                     ))}
                   </div>
                 </div>
+
               </div>
             )}
 
-            {/* ABA: PERFIL */}
             {abaAtiva === 'perfil' && (
               <div className="space-y-6 animate-in fade-in text-center">
                 <h3 className="font-black text-gray-800 uppercase text-sm tracking-widest text-left mb-6">Meu Cadastro</h3>
@@ -468,7 +581,6 @@ export function Checkin() {
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Clique na câmera para alterar a foto</p>
                 </div>
 
-                {/* INJETADO: LISTA DE DOCUMENTOS E LAUDOS */}
                 <div className="space-y-4">
                   <h3 className="font-black text-gray-800 uppercase text-[12px] tracking-[0.2em] flex items-center gap-2 px-2 text-left">
                     <FileText size={16} className="text-blue-600"/> Meus Documentos e Laudos
@@ -540,7 +652,7 @@ export function Checkin() {
             </button>
             <button onClick={() => setAbaAtiva('servicos')} className={`flex flex-col items-center p-2 w-16 transition-colors ${abaAtiva === 'servicos' ? 'text-[#1e3a8a]' : 'text-gray-400'}`}>
               <ShoppingBag size={22} className="mb-1" />
-              <span className="text-[9px] font-black uppercase tracking-widest">Protocolos e Serviços</span>
+              <span className="text-[9px] font-black uppercase tracking-widest">Serviços</span>
             </button>
             <button onClick={() => setAbaAtiva('perfil')} className={`flex flex-col items-center p-2 w-16 transition-colors ${abaAtiva === 'perfil' ? 'text-[#1e3a8a]' : 'text-gray-400'}`}>
               <User size={22} className="mb-1" />
