@@ -110,7 +110,7 @@ export function GrupoSection() {
                     <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Passo 1 (Obrigatório)</p>
                     <p className="text-base font-bold text-white/95">Sessão de Triagem Individual</p>
                   </div>
-                  <span className="font-black text-xl text-secondary">R$ 250</span>
+                  <span className="font-black text-xl text-secondary">R$ 100</span>
                 </div>
 
                 <div className="flex justify-between items-center bg-white/5 p-5 rounded-2xl border border-white/5 shadow-inner">
