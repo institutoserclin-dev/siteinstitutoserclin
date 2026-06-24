@@ -435,7 +435,7 @@ export function Checkin() {
                     <div className="flex items-center justify-between gap-4 pt-4 border-t border-white/10">
                       <div>
                         <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Triagem Obrigatória</p>
-                        <p className="text-base font-black text-secondary">R$ 250,00</p>
+                        <p className="text-base font-black text-secondary">R$ 100,00</p>
                       </div>
                       <Button 
                         onClick={() => handleComprarServico("Triagem OBRIGATÓRIA - Grupo Terapêutico Adulto")}
