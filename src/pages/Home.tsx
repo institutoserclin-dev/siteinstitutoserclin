@@ -7,7 +7,9 @@ import { About } from "@/components/About";
 import { Plans } from "@/components/Plans";
 import { Covenants } from "@/components/Covenants";
 import { Footer } from "@/components/Footer";
-import { Award, ShieldCheck } from "lucide-react";
+import { ClubSection } from "@/components/ClubSection"; // 🌟 Mantido apenas uma vez aqui
+import { GrupoSection } from "../components/GrupoSection"; // 🌟 Caminho relativo direto seguro
+import { ShieldCheck } from "lucide-react"; 
 
 export default function Home() {
   const location = useLocation();
@@ -32,13 +34,16 @@ export default function Home() {
       <Navbar />
 
       <main className="relative">
+        {/* 1. INÍCIO */}
         <Hero />
         
-        <div className="relative z-10 -mt-24 px-4 md:px-0">
+        {/* 2. SOBRE */}
+        <section id="sobre" className="relative z-10 -mt-24 px-4 md:px-0 scroll-mt-24">
           <About />
-        </div>
+        </section>
 
-        <section id="servicos" className="py-40 bg-white">
+        {/* 3. SERVIÇOS / NOSSA ENTREGA */}
+        <section id="servicos" className="py-40 bg-white scroll-mt-24">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center mb-24 space-y-4">
               <span className="text-[10px] font-black uppercase tracking-[0.5em] text-secondary">Especialidades</span>
@@ -50,25 +55,28 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="convenios" className="py-40 bg-primary text-white">
-          <div className="container mx-auto px-4">
-            <Covenants />
-          </div>
-        </section>
+        {/* 4. CLUB SERCLIN (Seu Carro-Chefe estrategicamente posicionado) */}
+        <div id="club" className="container mx-auto px-4 py-12 scroll-mt-24">
+          <ClubSection />
+        </div>
 
-        <section id="planos" className="py-40 bg-slate-50">
+        {/* 5. GRUPO TERAPÊUTICO (Destaque do programa de conexões neuroatípico) */}
+        <GrupoSection />
+
+        {/* 6. PLANOS / SEU INVESTIMENTO */}
+        <section id="planos" className="py-40 bg-slate-50 scroll-mt-24">
           <div className="container mx-auto px-4">
             <div className="text-center mb-24 space-y-4">
                <h2 className="text-6xl md:text-8xl font-black uppercase tracking-tighter italic leading-[0.8] text-primary font-serif">
-                Seu <span className="font-light text-slate-500 not-italic font-sans lowercase">Investimento</span>
+                Planos <span className="font-light text-slate-500 not-italic font-sans lowercase">de Cuidado</span>
               </h2>
             </div>
             <Plans />
           </div>
         </section>
 
-        {/* --- FORMULÁRIO SALESFORCE COM TODAS AS FUNÇÕES RESTAURADAS --- */}
-        <section id="contato" className="py-40 bg-white border-t border-slate-100">
+        {/* 7. CONTATO / FORMULÁRIO SALESFORCE (Suas funções e lógicas 100% mantidas) */}
+        <section id="contato" className="py-40 bg-white border-t border-slate-100 scroll-mt-24">
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto bg-white rounded-[4rem] shadow-2xl overflow-hidden grid md:grid-cols-2 border border-slate-100">
               
@@ -79,7 +87,7 @@ export default function Home() {
                   </h2>
                   <div className="h-1 w-20 bg-secondary"></div>
                   <p className="text-white/60 text-xl font-light leading-relaxed">
-                    Um ambiente seguro para o seu desenvolvimento. Agende seu atendimento exclusivo.
+                    Um ambiente seguro para o seu development. Agende seu atendimento exclusivo.
                   </p>
                 </div>
                 <div className="relative z-10 flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-white/30">
@@ -90,8 +98,6 @@ export default function Home() {
 
               <div className="p-16 md:p-24 bg-white">
                 <form action="https://webto.salesforce.com/servlet/servlet.WebToLead?encoding=UTF-8" method="POST" className="space-y-6">
-                  
-                  {/* FUNÇÕES SISTÊMICAS RESTAURADAS */}
                   <input type="hidden" name="oid" value="00DgL00000L3Dav" />
                   <input type="hidden" name="retURL" value="https://institutoserclin.vercel.app/obrigado" />
                   <input type="hidden" name="company" value="Instituto SerClin - Site" />
@@ -101,13 +107,7 @@ export default function Home() {
                   <div className="space-y-6 text-left">
                     <div>
                       <label className="text-[10px] font-black uppercase tracking-widest text-primary/40">Identificação</label>
-                      <input 
-                        name="last_name" 
-                        type="text" 
-                        required 
-                        className="w-full p-4 border-b-2 border-slate-100 focus:border-secondary outline-none text-primary font-bold text-lg transition-all" 
-                        placeholder="Nome Completo" 
-                      />
+                      <input name="last_name" type="text" required className="w-full p-4 border-b-2 border-slate-100 focus:border-secondary outline-none text-primary font-bold text-lg transition-all" placeholder="Nome Completo" />
                     </div>
 
                     <div>
@@ -131,10 +131,7 @@ export default function Home() {
 
                     <div>
                       <label className="text-[10px] font-black uppercase tracking-widest text-primary/40">Área de Interesse</label>
-                      <select 
-                        name="00NgL00003Dnk2H" 
-                        className="w-full p-4 border-b-2 border-slate-100 focus:border-secondary outline-none text-primary font-bold text-lg bg-transparent"
-                      >
+                      <select name="00NgL00003Dnk2H" className="w-full p-4 border-b-2 border-slate-100 focus:border-secondary outline-none text-primary font-bold text-lg bg-transparent">
                         <option value="">-- Selecione --</option>
                         <option value="Neuropsicologia">Neuropsicologia</option>
                         <option value="Psicopedagogia">Psicopedagogia</option>
@@ -142,10 +139,7 @@ export default function Home() {
                       </select>
                     </div>
 
-                    <button 
-                      type="submit" 
-                      className="w-full bg-primary hover:bg-secondary text-white hover:text-primary font-black py-8 rounded-2xl uppercase text-[11px] tracking-[0.4em] shadow-xl transition-all active:scale-95"
-                    >
+                    <button type="submit" className="w-full bg-primary hover:bg-secondary text-white hover:text-primary font-black py-8 rounded-2xl uppercase text-[11px] tracking-[0.4em] shadow-xl transition-all active:scale-95">
                       Solicitar Atendimento
                     </button>
                   </div>
@@ -155,40 +149,19 @@ export default function Home() {
           </div>
         </section>
 
-        
-        {/* --- PORTAL UNIMETA --- */}
-        {/* AJUSTE: Adicionado id="unimeta" para o scroll da Navbar */}
-        <section id="unimeta" className="py-48 bg-white text-center relative">
-          <div className="container mx-auto px-4 space-y-20 relative z-10">
-            <div className="flex flex-col items-center gap-8">
-              <div className="bg-slate-50 border border-slate-100 px-8 py-3 rounded-full shadow-sm flex items-center gap-4">
-                <Award size={18} className="text-secondary" />
-                <span className="text-[14px] font-black uppercase tracking-[0.5em] text-primary">Portal Acadêmico Unimeta</span>
-              </div>
-              <h3 className="text-7xl md:text-[10rem] lg:text-[13rem] font-black uppercase tracking-[-0.08em] leading-[0.8] text-primary">
-                Estácio <br/><span className="font-serif italic font-light text-slate-500 lowercase">Unimeta</span>
-              </h3>
+        {/* 8. CONVÊNIOS */}
+        <section id="convenios" className="py-40 bg-primary text-white scroll-mt-24">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto text-center mb-20 space-y-4">
+              <span className="text-[10px] font-black uppercase tracking-[0.5em] text-secondary">Parcerias</span>
+              <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic leading-[0.8] text-white font-serif">
+                Nossos <span className="font-sans font-light text-white/40 not-italic lowercase">Convênios</span>
+              </h2>
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              {/* Ajustado para a rota privada /sistema/encaminhamentos do seu App.tsx */}
-              <button 
-                onClick={() => navigate('/sistema/encaminhamentos')} 
-                className="bg-primary text-white font-black px-16 py-7 rounded-[2rem] uppercase text-[11px] tracking-[0.3em] hover:bg-secondary hover:text-primary transition-all shadow-xl shadow-primary/20"
-              >
-                Entrar no Portal
-              </button>
-              
-              {/* Ajustado para a rota /cadastro do seu App.tsx */}
-              <button 
-                onClick={() => navigate('/cadastro')} 
-                className="bg-white border-2 border-slate-100 text-slate-500 font-black px-16 py-7 rounded-[2rem] uppercase text-[11px] tracking-[0.3em] hover:border-primary hover:text-primary transition-all"
-              >
-                Criar Senha
-              </button>
-            </div>
+            <Covenants />
           </div>
         </section>
+
       </main>
       <Footer />
     </div>

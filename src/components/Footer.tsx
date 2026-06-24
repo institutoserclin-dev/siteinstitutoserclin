@@ -84,15 +84,15 @@ export function Footer() {
             <h4 className="text-[10px] font-black uppercase tracking-[0.5em] mb-10 text-secondary">Disponibilidade</h4>
             <ul className="space-y-5 text-[11px] font-black uppercase tracking-widest font-sans">
               <li className="flex justify-between border-b border-white/5 pb-3">
-                <span className="text-white/30 italic font-medium">Segunda - Sexta</span>
+                <span className="text-white/80 italic font-medium">Segunda - Sexta</span>
                 <span className="text-white/80">08:00 — 18:00</span>
               </li>
               <li className="flex justify-between border-b border-white/5 pb-3">
-                <span className="text-white/30 italic font-medium">Sábado</span>
+                <span className="text-white/80 italic font-medium">Sábado</span>
                 <span className="text-white/80">08:00 — 12:00</span>
               </li>
               <li className="flex justify-between border-b border-white/5 pb-3">
-                <span className="text-white/30 italic font-medium">Domingo</span>
+                <span className="text-white/80 italic font-medium">Domingo</span>
                 <span className="text-secondary font-black italic">Private Access</span>
               </li>
             </ul>
