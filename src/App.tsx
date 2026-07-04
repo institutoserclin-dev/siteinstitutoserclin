@@ -26,6 +26,16 @@ import { Repasses } from './pages/Repasses';
 import { Fechamento } from './pages/Fechamento';
 import { CadastroUsuario } from './pages/CadastroUsuario'; 
 
+// ========================================================
+// 🌟 NOVAS IMPORTAÇÕES: NOVAS CATEGORIAS DE MERCADO
+// ========================================================
+// Módulo 1: Hub de Engenharia Neuroeducacional (Escolas)
+import { DashboardEscola } from './pages/Escola/DashboardEscola';
+import { AlertaProfessor } from './pages/Escola/AlertaProfessor';
+
+// Módulo 2: Blindagem Corporativa e Neurocognitiva (Varejo / Empresas)
+import { DashboardCorporativo } from './pages/corporativo/DashboardCorporativo';
+
 // --- COMPONENTE DE SEGURANÇA (ROTA PRIVADA) ---
 function PrivateRoute({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<any>(null);
@@ -75,7 +85,7 @@ function App() {
         <Route path="/validar/:id" element={<Validar />} />
 
         {/* ==========================================
-            ROTAS PRIVADAS (Gestão SerClin) 
+            ROTAS PRIVADAS (Gestão SerClin Interna) 
             ========================================== */}
         
         {/* 1. Rotas de Subnível */}
@@ -98,8 +108,22 @@ function App() {
         {/* FORMULÁRIO DE NOVO CADASTRO DE PROFISSIONAL */}
         <Route path="/sistema/usuarios/novo" element={ <PrivateRoute><CadastroUsuario /></PrivateRoute> } />
 
-        {/* 3. Rota Raiz do Sistema */}
+        {/* 3. Rota Raiz do Sistema Interno */}
         <Route path="/sistema" element={ <PrivateRoute><Dashboard /></PrivateRoute> } />
+
+        {/* ==========================================
+            🚀 PORTAL 1: HUB NEUROEDUCACIONAL (ESCOLAS)
+            ========================================== */}
+        {/* Painel Geral da Coordenação da Escola */}
+        <Route path="/escola" element={ <PrivateRoute><DashboardEscola /></PrivateRoute> } />
+        {/* Formulário rápido para o Professor disparar Alerta de Risco */}
+        <Route path="/escola/alerta" element={ <PrivateRoute><AlertaProfessor /></PrivateRoute> } />
+
+        {/* ==========================================
+            🚀 PORTAL 2: BLINDAGEM CORPORATIVA (EMPRESAS / VAREJO)
+            ========================================== */}
+        {/* Painel do RH e Diretoria Corporativa (Ex: Grupo Araújo) */}
+        <Route path="/corporativo" element={ <PrivateRoute><DashboardCorporativo /></PrivateRoute> } />
 
         {/* Rota Coringa */}
         <Route path="*" element={<Navigate to="/" replace />} />
