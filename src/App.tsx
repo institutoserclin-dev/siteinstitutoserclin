@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { supabase } from './lib/supabase';
+import FormularioAlerta from './pages/corporativo/FormularioAlerta';
 
 // --- IMPORTAÇÃO DAS PÁGINAS ---
 import Home from './pages/Home';
@@ -112,16 +113,20 @@ function App() {
         {/* ==========================================
             🚀 PORTAL 1: HUB NEUROEDUCACIONAL (ESCOLAS)
             ========================================== */}
-        {/* Painel Geral da Coordenação da Escola */}
+        {/* Painel Geral da Coordenação da Escola (Protegido por Login) */}
         <Route path="/escola" element={ <PrivateRoute><DashboardEscola /></PrivateRoute> } />
-        {/* Formulário rápido para o Professor disparar Alerta de Risco */}
-        <Route path="/escola/alerta" element={ <PrivateRoute><AlertaProfessor /></PrivateRoute> } />
+        
+        {/* Formulário rápido para o Professor disparar Alerta de Risco (LIVRE DE LOGIN) */}
+        <Route path="/escola/alerta" element={<AlertaProfessor />} />
 
         {/* ==========================================
             🚀 PORTAL 2: BLINDAGEM CORPORATIVA (EMPRESAS / VAREJO)
             ========================================== */}
-        {/* Painel do RH e Diretoria Corporativa (Ex: Grupo Araújo) */}
+        {/* Painel do RH e Diretoria Corporativa (Protegido por Login) */}
         <Route path="/corporativo" element={ <PrivateRoute><DashboardCorporativo /></PrivateRoute> } />
+        
+        {/* Formulário de Sobrecarga para os colaboradores (LIVRE DE LOGIN) */}
+        <Route path="/corporativo/alerta" element={<FormularioAlerta />} />
 
         {/* Rota Coringa */}
         <Route path="*" element={<Navigate to="/" replace />} />

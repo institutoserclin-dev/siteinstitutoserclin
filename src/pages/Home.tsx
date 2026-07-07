@@ -7,9 +7,9 @@ import { About } from "@/components/About";
 import { Plans } from "@/components/Plans";
 import { Covenants } from "@/components/Covenants";
 import { Footer } from "@/components/Footer";
-import { ClubSection } from "@/components/ClubSection"; // 🌟 Mantido apenas uma vez aqui
-import { GrupoSection } from "../components/GrupoSection"; // 🌟 Caminho relativo direto seguro
-import { ShieldCheck } from "lucide-react"; 
+import { ClubSection } from "@/components/ClubSection";
+import { GrupoSection } from "../components/GrupoSection";
+import { ShieldCheck, School, Building, LayoutDashboard, AlertTriangle, ShieldAlert } from "lucide-react"; 
 
 export default function Home() {
   const location = useLocation();
@@ -55,12 +55,12 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 4. CLUB SERCLIN (Seu Carro-Chefe estrategicamente posicionado) */}
+        {/* 4. CLUB SERCLIN */}
         <div id="club" className="container mx-auto px-4 py-12 scroll-mt-24">
           <ClubSection />
         </div>
 
-        {/* 5. GRUPO TERAPÊUTICO (Destaque do programa de conexões neuroatípico) */}
+        {/* 5. GRUPO TERAPÊUTICO */}
         <GrupoSection />
 
         {/* 6. PLANOS / SEU INVESTIMENTO */}
@@ -75,7 +75,75 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 7. CONTATO / FORMULÁRIO SALESFORCE (Suas funções e lógicas 100% mantidas) */}
+        {/* ==========================================
+            🚀 PORTAIS INSTITUCIONAIS (SERCLIN EDUCADOR & CORPORATIVO)
+            ========================================== */}
+        <section id="portais" className="py-24 bg-slate-100 border-y border-slate-200 scroll-mt-24">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto text-center mb-12 space-y-2">
+              <h2 className="text-3xl font-black uppercase tracking-tighter text-primary">Acesso Restrito a Parceiros</h2>
+              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Portais de monitoramento neurocognitivo B2B</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+              
+              {/* CARD ESCOLA */}
+              <div className="rounded-[2rem] border-none shadow-xl bg-white p-8 space-y-6 flex flex-col justify-between transition-transform hover:-translate-y-1">
+                <div>
+                  <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
+                    <div className="p-3 bg-purple-50 text-purple-700 rounded-2xl">
+                      <School size={28} />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="font-black text-lg uppercase text-slate-800 leading-tight">SerClin Educador</h3>
+                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Módulo Escolar Integrado</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-800 font-medium leading-relaxed text-left">
+                    Área restrita para a coordenação escolar monitorar alertas e docentes registrarem triagens rápidas em sala de aula.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 pt-4">
+                  <button onClick={() => navigate('/escola/dashboard')} className="w-full bg-primary hover:bg-secondary text-white font-black uppercase text-[10px] tracking-widest h-12 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                    <LayoutDashboard size={16} /> Painel da Coordenação
+                  </button>
+                  <button onClick={() => navigate('/escola/alerta')} className="w-full border-2 border-amber-200 text-amber-700 hover:bg-amber-50 font-black uppercase text-[10px] tracking-widest h-12 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                    <AlertTriangle size={16} /> Checklist do Professor
+                  </button>
+                </div>
+              </div>
+
+              {/* CARD CORPORATIVO */}
+              <div className="rounded-[2rem] border-none shadow-xl bg-white p-8 space-y-6 flex flex-col justify-between transition-transform hover:-translate-y-1">
+                <div>
+                  <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
+                    <div className="p-3 bg-blue-50 text-blue-700 rounded-2xl">
+                      <Building size={28} />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="font-black text-lg uppercase text-slate-800 leading-tight">SerClin Corporativo</h3>
+                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Módulo Empresarial de RH</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-800 font-medium leading-relaxed text-left">
+                    Ferramenta preditiva para o departamento de Recursos Humanos monitorar índices de sobrecarga e saúde da equipe.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 pt-4">
+                  <button onClick={() => navigate('/corporativo/dashboard')} className="w-full bg-primary hover:bg-secondary text-white font-black uppercase text-[10px] tracking-widest h-12 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                    <LayoutDashboard size={16} /> Painel Analítico do RH
+                  </button>
+                  <button onClick={() => navigate('/corporativo/alerta')} className="w-full border-2 border-purple-200 text-purple-700 hover:bg-purple-50 font-black uppercase text-[10px] tracking-widest h-12 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                    <ShieldAlert size={16} /> Termômetro do Colaborador
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* 7. CONTATO / FORMULÁRIO SALESFORCE */}
         <section id="contato" className="py-40 bg-white border-t border-slate-100 scroll-mt-24">
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto bg-white rounded-[4rem] shadow-2xl overflow-hidden grid md:grid-cols-2 border border-slate-100">

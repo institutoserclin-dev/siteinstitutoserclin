@@ -18,12 +18,12 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // 🌟 LIMPO E SEM DUPLICIDADE: Club e Grupo saíram daqui para ganhar caixas de destaque verticais dedicadas abaixo
   const navLinks = [
     { name: "Início", href: "#" },
     { name: "Sobre", href: "#sobre" },
     { name: "Serviços", href: "#servicos" },
     { name: "Planos", href: "#planos" },
+    { name: "Portais", href: "#portais" },
     { name: "Contato", href: "#contato" },
     { name: "Convênios", href: "#convenios" },
   ];
@@ -37,27 +37,30 @@ export function Navbar() {
           : "bg-transparent py-4"
       )}
     >
-      <div className="w-full px-6 md:px-12 flex items-center justify-between">
+      {/* 🌟 AJUSTE: Redução drástica de paddings laterais (px-3) para ganhar espaço */}
+      <div className="w-full px-3 xl:px-4 2xl:px-12 flex items-center justify-between">
         
         {/* LOGO TOTALMENTE À ESQUERDA */}
         <a href="/" className="flex items-center gap-2 group shrink-0">
-          <img src={logo} alt="Instituto SerClin" className="h-11 w-auto transition-transform group-hover:scale-105" />
-          <span className={cn("font-serif font-bold text-xl tracking-wide hidden lg:block", isScrolled ? "text-primary" : "text-white drop-shadow-md")}>
+          <img src={logo} alt="Instituto SerClin" className="h-9 xl:h-10 2xl:h-11 w-auto transition-transform group-hover:scale-105" />
+          <span className={cn("font-serif font-bold text-base xl:text-lg 2xl:text-xl tracking-wide hidden lg:block whitespace-nowrap", isScrolled ? "text-primary" : "text-white drop-shadow-md")}>
             Instituto SerClin
           </span>
         </a>
 
         {/* Desktop Menu - Distribuição Coesa e Simétrica */}
-        <div className="hidden xl:flex flex-1 items-center justify-between ml-12">
+        {/* 🌟 AJUSTE: Redução da margem esquerda (ml-2) */}
+        <div className="hidden xl:flex flex-1 items-center justify-between ml-2 2xl:ml-12">
           
           {/* LINKS DE NAVEGAÇÃO COM OS DESTAQUES EMPILHADOS NO CENTRO */}
-          <div className="flex items-center gap-7">
+          {/* 🌟 AJUSTE: Gaps bem mais curtos entre os menus (gap-2) e fonte um pouco menor */}
+          <div className="flex items-center gap-2 2xl:gap-5">
             {navLinks.slice(0, 3).map((link) => (
               <a
                 key={link.name}
                 href={link.href}
                 className={cn(
-                  "text-[13px] font-black transition-colors hover:text-secondary uppercase tracking-wider whitespace-nowrap",
+                  "text-[10.5px] 2xl:text-[13px] font-black transition-colors hover:text-secondary uppercase tracking-wider whitespace-nowrap",
                   isScrolled ? "text-foreground" : "text-white drop-shadow-sm"
                 )}
               >
@@ -65,32 +68,32 @@ export function Navbar() {
               </a>
             ))}
 
-            {/* 🌟 DESTAQUE 1: CLUB SERCLIN (Palavras Empilhadas de Forma Elegante) */}
+            {/* DESTAQUE 1: CLUB SERCLIN */}
             <a
               href="#club"
               className={cn(
-                "text-[11px] font-black uppercase tracking-widest whitespace-nowrap px-4 py-1 rounded-xl border border-secondary shadow-[0_0_15px_rgba(212,143,22,0.05)] hover:bg-secondary transition-all flex flex-col items-center justify-center leading-[1.1] text-center group min-w-[95px] h-9",
+                "text-[9px] 2xl:text-[11px] font-black uppercase tracking-widest whitespace-nowrap px-2 2xl:px-0 py-1 rounded-xl border border-secondary shadow-[0_0_15px_rgba(212,143,22,0.05)] hover:bg-secondary transition-all flex flex-col items-center justify-center leading-[1.1] text-center group min-w-[70px] 2xl:min-w-[85px] h-8 2xl:h-9",
                 isScrolled 
                   ? "text-primary border-secondary/70" 
                   : "text-white border-white/30 hover:text-primary"
               )}
             >
               <span className="group-hover:text-primary transition-colors">CLUB</span>
-              <span className="text-[10px] opacity-90 group-hover:text-primary transition-colors">SERCLIN</span>
+              <span className="text-[8px] 2xl:text-[10px] opacity-90 group-hover:text-primary transition-colors">SERCLIN</span>
             </a>
 
-            {/* 🌟 DESTAQUE 2: GRUPO TERAPÊUTICO (Palavras Empilhadas de Forma Elegante) */}
+            {/* DESTAQUE 2: GRUPO TERAPÊUTICO */}
             <a
               href="#grupo-terapeutico"
               className={cn(
-                "text-[11px] font-black uppercase tracking-widest whitespace-nowrap px-4 py-1 rounded-xl border transition-all flex flex-col items-center justify-center leading-[1.1] text-center group min-w-[110px] h-9",
+                "text-[9px] 2xl:text-[11px] font-black uppercase tracking-widest whitespace-nowrap px-2 2xl:px-0 py-1 rounded-xl border transition-all flex flex-col items-center justify-center leading-[1.1] text-center group min-w-[90px] 2xl:min-w-[100px] h-8 2xl:h-9",
                 isScrolled 
                   ? "text-slate-700 border-slate-300 hover:bg-slate-900 hover:text-white hover:border-slate-900" 
                   : "text-white border-white/20 hover:bg-white hover:text-primary hover:border-white"
               )}
             >
               <span>PROGRAMA DE</span>
-              <span className="text-[9px] opacity-80">DESENVOLVIMENTO</span>
+              <span className="text-[7.5px] 2xl:text-[9px] opacity-80">DESENVOLVIMENTO</span>
             </a>
 
             {navLinks.slice(3).map((link) => (
@@ -98,7 +101,7 @@ export function Navbar() {
                 key={link.name}
                 href={link.href}
                 className={cn(
-                  "text-[13px] font-black transition-colors hover:text-secondary uppercase tracking-wider whitespace-nowrap",
+                  "text-[10.5px] 2xl:text-[13px] font-black transition-colors hover:text-secondary uppercase tracking-wider whitespace-nowrap",
                   isScrolled ? "text-foreground" : "text-white drop-shadow-sm"
                 )}
               >
@@ -108,25 +111,27 @@ export function Navbar() {
           </div>
 
           {/* PORTAIS DE ACESSO TOTALMENTE À DIREITA */}
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-6 border-l pl-6" style={{ borderColor: isScrolled ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.3)' }}>
+          {/* 🌟 AJUSTE: Gaps reduzidos (gap-2), paddings internos e botão espremido */}
+          <div className="flex items-center gap-2 2xl:gap-3 ml-2">
+            <div className="flex items-center gap-2 2xl:gap-6 border-l pl-2 2xl:pl-3" style={{ borderColor: isScrolled ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.3)' }}>
               <button 
                 onClick={() => navigate('/login')}
                 className={cn(
-                  "text-[11px] font-black uppercase tracking-widest hover:text-amber-500 transition-colors flex items-center gap-1.5 whitespace-nowrap",
+                  "text-[9px] 2xl:text-[11px] font-black uppercase tracking-widest hover:text-amber-500 transition-colors flex items-center gap-1 whitespace-nowrap",
                   isScrolled ? "text-[#1e3a8a]" : "text-white drop-shadow-sm"
                 )}
               >
-                <ShieldCheck size={18} /> Colaborador
+                <ShieldCheck size={16} className="2xl:w-5 2xl:h-5" /> 
+                <span>Acesso Restrito</span>
               </button>
             </div>
 
             <Button 
-              className="bg-secondary hover:bg-primary hover:text-white text-primary font-black rounded-full h-10 px-6 transition-all uppercase text-[10px] tracking-widest shadow-lg shrink-0 border border-transparent hover:border-white/20"
+              className="bg-secondary hover:bg-primary hover:text-white text-primary font-black rounded-full h-8 2xl:h-10 px-3 2xl:px-6 transition-all uppercase text-[8.5px] 2xl:text-[10px] tracking-widest shadow-lg shrink-0 border border-transparent hover:border-white/20"
               asChild
             >
               <a href="https://institutoserclin.vercel.app/checkin" target="_blank" rel="noopener noreferrer">
-                <UserCircle className="w-4 h-4 mr-1.5" /> Portal do Paciente
+                <UserCircle className="w-3.5 h-3.5 2xl:w-4 2xl:h-4 mr-1" /> Portal do Paciente
               </a>
             </Button>
           </div>
@@ -134,7 +139,7 @@ export function Navbar() {
 
         {/* Mobile Menu Toggle */}
         <button
-          className="xl:hidden p-2 rounded-xl bg-slate-100/10 backdrop-blur-sm"
+          className="xl:hidden p-1 rounded-xl bg-slate-100/10 backdrop-blur-sm"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           {isMobileMenuOpen ? (
@@ -171,9 +176,9 @@ export function Navbar() {
           <div className="flex flex-col gap-2 pt-4 border-t border-slate-100">
             <button 
               onClick={() => { navigate('/login'); setIsMobileMenuOpen(false); }}
-              className="bg-slate-50 text-slate-800 text-xs font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2"
+              className="bg-slate-50 text-slate-800 text-xs font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-100 transition-colors"
             >
-              <ShieldCheck size={20} /> Acesso Colaborador
+              <ShieldCheck size={20} /> Acesso Restrito (Equipe)
             </button>
           </div>
 
