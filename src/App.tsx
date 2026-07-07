@@ -7,7 +7,6 @@ import { supabase } from './lib/supabase';
 // --- IMPORTAÇÃO DAS PÁGINAS ---
 import Home from './pages/Home';
 import { Login } from './pages/Login';
-import { CadastroUnimeta } from './pages/CadastroUnimeta'; 
 import { Dashboard } from './pages/Dashboard';
 import { Pacientes } from './pages/Pacientes';
 import { Relatorios } from './pages/Relatorios';
@@ -80,7 +79,6 @@ function App() {
             ========================================== */}
         <Route path="/" element={<Home />} /> 
         <Route path="/login" element={<Login />} />
-        <Route path="/cadastro" element={<CadastroUnimeta />} />
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/validar/:id" element={<Validar />} />
 
