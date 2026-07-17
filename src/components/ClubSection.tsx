@@ -7,7 +7,7 @@ export function ClubSection() {
 
   const handleConsultarTabelaZap = () => {
     const telefoneClinica = "5568992161717"; 
-    const mensagem = "Olá! Gostaria de consultar a tabela de valores reduzidos e condições especiais do Club SerClin.";
+    const mensagem = "Olá! Gostaria de consultar a tabela de valores exclusivos e condições especiais do Club SerClin.";
     window.open(`https://wa.me/${telefoneClinica}?text=${encodeURIComponent(mensagem)}`, "_blank");
   };
 
@@ -69,7 +69,9 @@ export function ClubSection() {
                   <Users className="text-primary mt-1 shrink-0" size={24} />
                   <div className="space-y-1">
                     <h5 className="font-black text-sm uppercase text-gray-800 tracking-tight">Titular + 1 Dependente</h5>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Cobertura direta inclusa para cônjuge ou filho sem cobrança adicional.</p>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                        <li>Cobertura direta inclusa para cônjuge ou filho sem cobrança adicional.</li>
+                    </p>
                   </div>
                 </div>
 
@@ -77,15 +79,19 @@ export function ClubSection() {
                   <Calendar className="text-emerald-600 mt-1 shrink-0" size={24} />
                   <div className="space-y-1">
                     <h5 className="font-black text-sm uppercase text-gray-800 tracking-tight">04 Sessões Mensais</h5>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Atendimentos individuais de psicoterapia de 40 minutos por mês.</p>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                        <li>Atendimentos individuais de psicoterapia de 40 minutos por mês.</li>
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-4">
                   <CheckCircle2 className="text-blue-600 mt-1 shrink-0" size={24} />
                   <div className="space-y-1">
-                    <h5 className="font-black text-sm uppercase text-gray-800 tracking-tight">Condições Reduzidas</h5>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Acesso direto a valores exclusivos para Psiquiatria e Neuropsicologia.</p>
+                    <h5 className="font-black text-sm uppercase text-gray-800 tracking-tight">Condições Exclusivas</h5>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed"> 
+                        <li>Acesso direto a valores exclusivos para Psiquiatria e Neuropsicologia.</li>
+                    </p>
                   </div>
                 </div>
 
@@ -93,7 +99,11 @@ export function ClubSection() {
                   <ShieldAlert className="text-amber-500 mt-1 shrink-0" size={24} />
                   <div className="space-y-1">
                     <h5 className="font-black text-sm uppercase text-gray-800 tracking-tight">Regras Claras</h5>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Liberação médica imediata e 30 dias de carência para terapias.</p>
+                    <ul className="text-xs text-slate-500 font-medium leading-relaxed space-y-1 list-disc list-inside">
+                      <li>Sessão de Acolhimento em até 48h</li>
+                      <li>30 dias de carência para terapias</li>
+                      <li>Liberação médica imediata</li>
+                    </ul>
                   </div>
                 </div>
               </div>

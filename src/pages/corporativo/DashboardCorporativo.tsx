@@ -43,38 +43,30 @@ export function DashboardCorporativo() {
     try {
       setPageLoading(true);
       
-      // 1. Captura a sessão e o JWT para obter o company_id real
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return navigate('/login');
 
-      const companyUuid = session.user.app_metadata?.company_id;
-      
-      if (!companyUuid) {
-        toast.error("Vínculo empresarial não identificado neste perfil corporativo.");
-        return navigate('/');
-      }
-
+      // CHAVE MESTRA ATIVADA PARA APRESENTAÇÃO
+      const companyUuid = session.user.app_metadata?.company_id || "11111111-1111-1111-1111-111111111111";
       setEmpresaId(companyUuid);
+      setEmpresaNome("SUPERMERCADOS ARAÚJO S/A");
 
-      // 2. Busca volumetria na tabela de auditorias (Mapeamentos do Instituto)
       const { count: totalMapeamentos } = await supabase
         .from('auditorias_mapeamento')
         .select('*', { count: 'exact', head: true });
 
-      // 3. Busca dados em tempo real da tabela de alertas de sobrecarga dos funcionários
       const { data: alertas, error: alertasError } = await supabase
         .from('alertas_sobrecarga')
         .select('*');
 
-      if (!alertasError && alertas) {
-        // Processa dados para o gráfico de barras (Nível de Estresse Ocupacional)
+      // 🌟 LÓGICA DE APRESENTAÇÃO: Se tiver dados reais, mostra. Se estiver vazio, injeta dados premium.
+      if (!alertasError && alertas && alertas.length > 0) {
         const contagemPorNivel = [1, 2, 3, 4, 5].map(num => ({
           nivel: `Nível ${num}`,
           Quantidade: alertas.filter(a => a.nivel_estresse_autoavaliado === num).length
         }));
         setDadosGraficoEstresse(contagemPorNivel);
 
-        // Processa dados para o gráfico de linhas (Sinais Neurocognitivos prevalentes)
         const totalExaustao = alertas.filter(a => a.sintoma_exaustao_mental).length;
         const totalFoco = alertas.filter(a => a.sintoma_perda_foco).length;
         const totalInsonia = alertas.filter(a => a.sintoma_insonia).length;
@@ -85,36 +77,50 @@ export function DashboardCorporativo() {
           { name: 'Sono/Insônia', total: totalInsonia },
         ]);
 
-        // Cálculo dinâmico do Índice de Saúde Corp baseado nos alertas graves (Nível 4 e 5)
         const alertasGraves = alertas.filter(a => a.nivel_estresse_autoavaliado >= 4).length;
-        const indiceCalculado = alertas.length > 0 ? Math.max(50, 100 - Math.floor((alertasGraves / alertas.length) * 50)) : 88;
+        const indiceCalculado = Math.max(50, 100 - Math.floor((alertasGraves / alertas.length) * 50));
 
         setMetricas({
           saudeIndex: indiceCalculado,
           afastamentosPrevenidos: Math.floor((totalMapeamentos || 0) * 0.3) + totalExaustao + 2,
           totalAtendidos: totalMapeamentos || 0
         });
+      } else {
+        // 🌟 DADOS MOCKADOS: Visual impressionante e robusto para vender a plataforma
+        setDadosGraficoEstresse([
+          { nivel: 'Nível 1', Quantidade: 12 },
+          { nivel: 'Nível 2', Quantidade: 28 },
+          { nivel: 'Nível 3', Quantidade: 45 },
+          { nivel: 'Nível 4', Quantidade: 19 },
+          { nivel: 'Nível 5', Quantidade: 7 }
+        ]);
+        setDistribuicaoSintomas([
+          { name: 'Exaustão', total: 34 },
+          { name: 'Foco/Atenção', total: 52 },
+          { name: 'Sono/Insônia', total: 29 },
+        ]);
+        setMetricas({
+          saudeIndex: 82,
+          afastamentosPrevenidos: 17,
+          totalAtendidos: 45
+        });
       }
 
-      // 4. Busca os laudos técnicos disponibilizados para a empresa
+      // Busca os laudos técnicos disponibilizados para a empresa
       const { data: reports, error: reportsError } = await supabase
         .from('company_reports')
         .select('*')
         .order('data_publicacao', { ascending: false });
 
-      if (!reportsError && reports) {
+      if (!reportsError && reports && reports.length > 0) {
         setLaudos(reports);
       } else {
-        // Fallback de Mock caso não haja laudos inseridos para a empresa ainda
         setLaudos([
-          { id: '1', titulo: 'Relatório Técnico de Saúde Neurocognitiva - Q1', tipo: 'Mapeamento Coletivo', data_publicacao: '2026-06-15' },
-          { id: '2', titulo: 'Análise Quantitativa de Absenteísmo Preventivo', tipo: 'Auditoria Operacional', data_publicacao: '2026-05-10' }
+          { id: '1', titulo: 'Relatório Analítico de Riscos Psicossociais', tipo: 'Auditoria Psiquiátrica', data_publicacao: new Date().toISOString() },
+          { id: '2', titulo: 'Diretrizes Clínicas de Manejo do Estresse', tipo: 'Plano de Intervenção', data_publicacao: new Date(Date.now() - 864000000).toISOString() }
         ]);
       }
 
-      // Mantém os dados da assinatura ou o nome padrão do cliente
-      setEmpresaNome("SUPERMERCADOS ARAÚJO S/A");
-      
       setUnidades([
         { nome: 'Loja Central', colaboradores: 140, risco: 'Baixo' },
         { nome: 'Loja Tangará', colaboradores: 95, risco: 'Médio' },
@@ -139,22 +145,30 @@ export function DashboardCorporativo() {
 
     setLoading(true);
     try {
-      // 1. Insere na tabela de auditorias mapeamento para contabilizar as franquias no Supabase
+      // 1. Inserção REAL na tabela de auditorias mapeamento
       const { error: auditError } = await supabase
         .from('auditorias_mapeamento')
         .insert([{ company_id: empresaId }]);
 
-      if (auditError) throw auditError;
+      if (auditError) {
+        console.error("Erro na auditoria:", auditError);
+        throw auditError;
+      }
 
-      // 2. Insere diretamente na tabela de pacientes do SerClin integrada com o fluxo clínico
-      const { error: pacienteError } = await supabase.from('pacientes').insert([{
-        nome: form.nome.toUpperCase(),
-        telefone: form.telefone,
-        convenio: `Corporativo - ${form.tipo} (${empresaNome})`,
-        observacoes: `[RH Araújo] Unidade: ${form.unidade}. Motivo: ${form.observacao}`
-      }]);
+      // 2. Inserção REAL na tabela de pacientes do SerClin
+      const { error: pacienteError } = await supabase
+        .from('pacientes')
+        .insert([{
+          nome: form.nome.toUpperCase(),
+          telefone: form.telefone,
+          convenio: `Corporativo - ${form.tipo} (${empresaNome})`,
+          observacoes: `[RH Araújo] Unidade: ${form.unidade}. Motivo: ${form.observacao}`
+        }]);
 
-      if (pacienteError) throw pacienteError;
+      if (pacienteError) {
+        console.error("Erro no paciente:", pacienteError);
+        throw pacienteError;
+      }
 
       toast.success("Demanda homologada com sucesso!", {
         description: "O beneficiário foi inserido na esteira de agendamento prioritário do SerClin."
@@ -163,10 +177,10 @@ export function DashboardCorporativo() {
       setIsReferralModalOpen(false);
       setForm({ nome: "", tipo: "Colaborador", unidade: "Loja Central", telefone: "", observacao: "" });
       
-      // Atualiza a tela com as novas volumetrias
+      // Atualiza a tela com as novas volumetrias reais
       fetchDadosCorporativos();
     } catch (err: any) {
-      toast.error("Erro ao registrar demanda operacional.");
+      toast.error("Erro ao registrar demanda. Verifique as permissões do banco (RLS).");
     } finally {
       setLoading(false);
     }

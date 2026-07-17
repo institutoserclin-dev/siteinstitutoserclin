@@ -96,7 +96,7 @@ export function Footer() {
                 <span className="text-secondary font-black italic">Private Access</span>
               </li>
             </ul>
-            <div className="pt-4 flex items-center gap-2 text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">
+            <div className="pt-4 flex items-center gap-2 text-[9px] font-black text-white/60 uppercase tracking-[0.3em]">
               <ShieldCheck size={14} className="text-secondary/40" /> Protocolos Signature
             </div>
           </div>

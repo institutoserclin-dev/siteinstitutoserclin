@@ -10,8 +10,8 @@ import {
   LogOut, Layout, Calendar as CalendarIcon, Plus, X, Trash2, 
   FileText, BarChart3, Shield, Clock, Users, GraduationCap,  
   CheckCircle, RefreshCw, Wallet, Receipt, Calculator, Scale, Search, 
-  MessageCircle, Send, User, Menu, Filter
-} from "lucide-react";
+  MessageCircle, Building, School, Send, User, Menu, Filter
+} from "lucide-react";  
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -111,13 +111,6 @@ export function Dashboard() {
     valor_atendimento: "0,00",
     forma_pagamento: "Pix"
   });
-
-  // --- REGRA DE ACESSO DA ESTÁCIO ---
-  const isEstacio = userEmail ? (
-    userEmail.endsWith('@alunos.estacio.br') || 
-    userEmail.endsWith('@professores.estacio.br') || 
-    userEmail.endsWith('@estacio.br')
-  ) : false;
 
   const fetchData = async () => {
     try {
@@ -557,6 +550,20 @@ export function Dashboard() {
               <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-amber-600">Relatórios</span>
             </div>
 
+            {(isAdmin || isGestorSeguro) && (
+              <div className="flex flex-col items-center gap-1 cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/escola')} className="text-purple-600 hover:bg-purple-50 h-10 w-10">
+                    <School size={24}/>
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/corporativo')} className="text-[#1e3a8a] hover:bg-blue-50 h-10 w-10">
+                    <Building size={24}/>
+                  </Button>
+                </div>
+                <span className="text-[9px] font-black uppercase text-gray-400">B2B</span>
+              </div>
+            )}
+
             {/* 7. GERENCIAR EQUIPE UNIFICADO (PC) */}
             {(isAdmin || isGestorSeguro) && (
               <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/permissoes')}>
@@ -616,7 +623,7 @@ export function Dashboard() {
             </Button>
 
             {/* BOTÃO CONFIRMAR AMANHÃ (LÓGICA DE FIM DE SEMANA) */}
-{!isEstacio && meuPerfil?.permissao_confirmacao_amanha && (
+{meuPerfil?.permissao_confirmacao_amanha && (
   <div 
     className="flex flex-col items-center gap-1 cursor-pointer group relative" 
     onClick={() => setIsConfirmacaoAmanhaOpen(true)}
@@ -683,7 +690,7 @@ export function Dashboard() {
                 </Button>
 
                 {/* BOTÃO CONFIRMAR NA GAVETA */}
-{!isEstacio && meuPerfil?.permissao_confirmacao_amanha && (
+{meuPerfil?.permissao_confirmacao_amanha && (
   <Button 
     variant="ghost" 
     className="w-full justify-start gap-4 text-emerald-700 h-12 rounded-xl font-bold uppercase text-[11px] bg-emerald-50/50" 
@@ -698,10 +705,6 @@ export function Dashboard() {
     )}
   </Button>
 )}  
-
-                <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/encaminhamentos'); setIsMenuMobileOpen(false); }}>
-                  <GraduationCap size={20} className="text-emerald-600"/> Unimeta
-                </Button>
 
                 {(isAdmin || isGestorSeguro) && (
                   <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/usuarios'); setIsMenuMobileOpen(false); }}>
@@ -835,8 +838,8 @@ export function Dashboard() {
       )}
       
       {/* ÁREA PRINCIPAL DO DASHBOARD */}
-      {!isEstacio ? (
-        <main className="flex-1 p-2 md:p-4 overflow-hidden text-left flex flex-col relative">
+      <main className="flex-1 p-2 md:p-4 overflow-hidden text-left flex flex-col relative">
+
           {isGestorSeguro && (
             <div className="mb-3 flex justify-end z-10 shrink-0">
               <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
@@ -896,20 +899,6 @@ export function Dashboard() {
             </button>
           )}
         </main>
-      ) : (
-        /* TELA EXCLUSIVA PARA QUEM LOGA COM E-MAIL DA ESTÁCIO */
-        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <GraduationCap size={64} className="text-emerald-500 mb-4 opacity-50" />
-          <h2 className="text-2xl font-black text-[#1e3a8a] uppercase tracking-tighter mb-2">Portal Institucional</h2>
-          <p className="text-sm font-bold text-gray-500 mb-8 max-w-md">
-            Bem-vindo (a)! O seu acesso é exclusivo para emissão de encaminhamentos para a clínica-escola.
-          </p>
-          <Button onClick={() => navigate('/sistema/encaminhamentos')} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black h-14 px-8 rounded-full uppercase tracking-widest text-xs shadow-lg">
-            <FileText size={16} className="mr-2" />
-            Acessar Triagem Unimeta
-          </Button>
-        </main>
-      )}
 
       {/* MODAL DE CONFIRMAÇÃO DE AMANHÃ */}
       {isConfirmacaoAmanhaOpen && (

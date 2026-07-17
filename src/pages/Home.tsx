@@ -104,7 +104,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 pt-4">
-                  <button onClick={() => navigate('/escola/dashboard')} className="w-full bg-primary hover:bg-secondary text-white font-black uppercase text-[10px] tracking-widest h-12 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                  <button onClick={() => navigate('/escola')} className="w-full bg-primary hover:bg-secondary text-white font-black uppercase text-[10px] tracking-widest h-12 rounded-xl flex items-center justify-center gap-2 transition-colors">
                     <LayoutDashboard size={16} /> Painel da Coordenação
                   </button>
                   <button onClick={() => navigate('/escola/alerta')} className="w-full border-2 border-amber-200 text-amber-700 hover:bg-amber-50 font-black uppercase text-[10px] tracking-widest h-12 rounded-xl flex items-center justify-center gap-2 transition-colors">
@@ -130,7 +130,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 pt-4">
-                  <button onClick={() => navigate('/corporativo/dashboard')} className="w-full bg-primary hover:bg-secondary text-white font-black uppercase text-[10px] tracking-widest h-12 rounded-xl flex items-center justify-center gap-2 transition-colors">
+                  <button onClick={() => navigate('/corporativo')} className="w-full bg-primary hover:bg-secondary text-white font-black uppercase text-[10px] tracking-widest h-12 rounded-xl flex items-center justify-center gap-2 transition-colors">
                     <LayoutDashboard size={16} /> Painel Analítico do RH
                   </button>
                   <button onClick={() => navigate('/corporativo/alerta')} className="w-full border-2 border-purple-200 text-purple-700 hover:bg-purple-50 font-black uppercase text-[10px] tracking-widest h-12 rounded-xl flex items-center justify-center gap-2 transition-colors">
