@@ -50,13 +50,6 @@ export function DashboardEscola() {
       // 🌟 CHAVE MESTRA: Se o seu perfil não tiver escola, injeta um ID genérico para não travar o desenvolvimento
       const escolaId = perfil?.escola_id || "22222222-2222-2222-2222-222222222222";
 
-      /* 🌟 TRAVA DESATIVADA TEMPORARIAMENTE PARA TESTES DO DESENVOLVEDOR:
-      if (!escolaId) {
-        toast.error("Usuário sem escola vinculada.");
-        return;
-      }
-      */
-
       // 2. Busca dados cadastrais e franquia da Escola Original
       const { data: escola } = await supabase.from('schools').select('*').eq('id', escolaId).single();
       setEscolaInfo(escola);
@@ -98,7 +91,6 @@ export function DashboardEscola() {
 
   useEffect(() => { fetchEscolaDados(); }, []);
 
-  // Lógica original de envio e verificação da franquia do PDI MANTIDA INTACTA
   const handleSubmeterPdi = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pdiForm.aluno_id) return toast.error("Selecione o aluno.");
@@ -153,14 +145,14 @@ export function DashboardEscola() {
   return (
     <div className="h-[100dvh] w-full bg-gray-50 text-left flex flex-col font-sans overflow-hidden">
       
-      {/* HEADER PREMIUM UNIFICADO (ORIGINAL) */}
+      {/* HEADER PREMIUM UNIFICADO */}
       <header className="bg-white border-b px-4 md:px-8 shadow-sm z-50 sticky top-0 w-full pt-[var(--safe-top)]">
         <div className="flex justify-between items-center h-[95px] max-w-[1800px] mx-auto">
           <div className="flex items-center gap-3 shrink-0 cursor-pointer" onClick={() => navigate('/')}>
             <img src={logoSer2} className="w-12 h-12 md:w-16 md:h-16 object-contain" alt="SerClin" />
             <div className="flex flex-col text-left">
               <h1 className="text-sm md:text-xl font-black text-[#1e3a8a] uppercase leading-none tracking-tighter">SerClin</h1>
-              <p className="text-[7px] md:text-[11px] text-[#emerald-600] font-bold uppercase mt-1 tracking-[0.1em] text-emerald-600">Hub Neuroeducacional</p>
+              <p className="text-[7px] md:text-[11px] font-bold uppercase mt-1 tracking-[0.1em] text-emerald-600">Hub Neuroeducacional</p>
             </div>
           </div>
 
@@ -175,15 +167,26 @@ export function DashboardEscola() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* 🌟 BOTÃO PARA NAVEGAR PARA /sistema */}
+            <Button 
+              onClick={() => navigate('/sistema')} 
+              className="bg-blue-50 hover:bg-blue-100 text-[#1e3a8a] border border-blue-200 rounded-xl h-11 px-4 shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <LayoutGrid size={18} strokeWidth={2.5} />
+              <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Acessar Sistema</span>
+            </Button>
+
             <Button onClick={() => navigate('/escola/alerta')} className="bg-amber-500 hover:bg-black text-white rounded-xl h-11 px-5 shadow-md flex items-center gap-2">
               <AlertTriangle size={18} strokeWidth={3} />
-              <span className="text-[10px] font-black uppercase tracking-wider">Novo Alerta de Risco</span>
+              <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Novo Alerta de Risco</span>
             </Button>
+            
             <Button onClick={() => setIsPdiModalOpen(true)} className="bg-[#1e3a8a] hover:bg-black text-white rounded-xl h-11 px-5 shadow-lg flex items-center gap-2">
               <Plus size={18} strokeWidth={3} />
-              <span className="text-[10px] font-black uppercase tracking-wider">Auditar PDI</span>
+              <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Auditar PDI</span>
             </Button>
+            
             <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate('/'); }} className="text-red-500 bg-red-50 rounded-xl h-11 w-11"><LogOut size={20}/></Button>
           </div>
         </div>
@@ -192,7 +195,7 @@ export function DashboardEscola() {
       {/* PAINEL CENTRAL MULTI-TENANT */}
       <main className="flex-1 p-4 md:p-6 overflow-y-auto max-w-[1800px] mx-auto w-full space-y-6 text-left no-scrollbar">
         
-        {/* METRICAS DE SUPORTE (ORIGINAL) */}
+        {/* METRICAS DE SUPORTE */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="rounded-3xl border-none shadow-sm bg-white p-6">
             <div className="flex items-center justify-between">
@@ -223,7 +226,7 @@ export function DashboardEscola() {
           </Card>
         </div>
 
-        {/* 📊 SEÇÃO COM SUCESSO: RECHARTS ANALÍTICO */}
+        {/* 📊 SEÇÃO RECHARTS ANALÍTICO */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="rounded-[2rem] border-none shadow-sm bg-white p-6 text-left">
             <h3 className="text-md font-black uppercase tracking-tight text-[#1e3a8a] mb-2">Prevalência de Sinais Clínico-Pedagógicos</h3>
@@ -265,7 +268,7 @@ export function DashboardEscola() {
           </Card>
         </section>
 
-        {/* TERMÔMETRO COGNITIVO ESCOLAR (TABELA ORIGINAL PRESERVADA) */}
+        {/* TERMÔMETRO COGNITIVO ESCOLAR */}
         <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden flex flex-col">
           <div className="p-6 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -315,7 +318,7 @@ export function DashboardEscola() {
         </Card>
       </main>
 
-      {/* MODAL ORIGINAL: AUDITAR NOVO PDI */}
+      {/* MODAL AUDITAR NOVO PDI */}
       {isPdiModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[440px] overflow-hidden border border-gray-100">
@@ -348,7 +351,7 @@ export function DashboardEscola() {
         </div>
       )}
 
-      {/* MODAL ORIGINAL: DIRETRIZES DE MANEJO */}
+      {/* MODAL DIRETRIZES DE MANEJO */}
       {isGuidelineModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[550px] overflow-hidden border border-gray-100 text-left">

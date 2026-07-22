@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building, Shield, Heart, Activity, Plus, LogOut, ArrowRight, X, RefreshCw, Download } from 'lucide-react';
+import { Building, Shield, Heart, Activity, Plus, LogOut, ArrowRight, X, RefreshCw, Download, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -59,7 +59,6 @@ export function DashboardCorporativo() {
         .from('alertas_sobrecarga')
         .select('*');
 
-      // 🌟 LÓGICA DE APRESENTAÇÃO: Se tiver dados reais, mostra. Se estiver vazio, injeta dados premium.
       if (!alertasError && alertas && alertas.length > 0) {
         const contagemPorNivel = [1, 2, 3, 4, 5].map(num => ({
           nivel: `Nível ${num}`,
@@ -86,7 +85,6 @@ export function DashboardCorporativo() {
           totalAtendidos: totalMapeamentos || 0
         });
       } else {
-        // 🌟 DADOS MOCKADOS: Visual impressionante e robusto para vender a plataforma
         setDadosGraficoEstresse([
           { nivel: 'Nível 1', Quantidade: 12 },
           { nivel: 'Nível 2', Quantidade: 28 },
@@ -106,7 +104,6 @@ export function DashboardCorporativo() {
         });
       }
 
-      // Busca os laudos técnicos disponibilizados para a empresa
       const { data: reports, error: reportsError } = await supabase
         .from('company_reports')
         .select('*')
@@ -145,17 +142,12 @@ export function DashboardCorporativo() {
 
     setLoading(true);
     try {
-      // 1. Inserção REAL na tabela de auditorias mapeamento
       const { error: auditError } = await supabase
         .from('auditorias_mapeamento')
         .insert([{ company_id: empresaId }]);
 
-      if (auditError) {
-        console.error("Erro na auditoria:", auditError);
-        throw auditError;
-      }
+      if (auditError) throw auditError;
 
-      // 2. Inserção REAL na tabela de pacientes do SerClin
       const { error: pacienteError } = await supabase
         .from('pacientes')
         .insert([{
@@ -165,10 +157,7 @@ export function DashboardCorporativo() {
           observacoes: `[RH Araújo] Unidade: ${form.unidade}. Motivo: ${form.observacao}`
         }]);
 
-      if (pacienteError) {
-        console.error("Erro no paciente:", pacienteError);
-        throw pacienteError;
-      }
+      if (pacienteError) throw pacienteError;
 
       toast.success("Demanda homologada com sucesso!", {
         description: "O beneficiário foi inserido na esteira de agendamento prioritário do SerClin."
@@ -177,7 +166,6 @@ export function DashboardCorporativo() {
       setIsReferralModalOpen(false);
       setForm({ nome: "", tipo: "Colaborador", unidade: "Loja Central", telefone: "", observacao: "" });
       
-      // Atualiza a tela com as novas volumetrias reais
       fetchDadosCorporativos();
     } catch (err: any) {
       toast.error("Erro ao registrar demanda. Verifique as permissões do banco (RLS).");
@@ -185,7 +173,6 @@ export function DashboardCorporativo() {
       setLoading(false);
     }
   };
-
 
   if (pageLoading) {
     return (
@@ -208,10 +195,20 @@ export function DashboardCorporativo() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* 🌟 BOTÃO PARA NAVEGAR PARA /sistema */}
+            <Button 
+              onClick={() => navigate('/sistema')} 
+              className="bg-blue-50 hover:bg-blue-100 text-[#1e3a8a] border border-blue-200 font-bold uppercase text-[11px] h-10 rounded-xl px-4 shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <LayoutGrid size={16} strokeWidth={2.5} />
+              <span className="hidden sm:inline">Acessar Sistema</span>
+            </Button>
+
             <Button variant="outline" className="border-purple-200 text-purple-700 hover:bg-purple-50 font-bold uppercase text-[11px] h-10 rounded-xl">
               <Building size={16} className="mr-2" /> {empresaNome.split(' ')[0]}
             </Button>
+            
             <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="text-red-500 hover:bg-red-50 h-10 w-10 rounded-xl">
               <LogOut size={18} />
             </Button>
@@ -264,9 +261,7 @@ export function DashboardCorporativo() {
           </Card>
         </section>
 
-        {/* ==========================================
-            📊 NOVA SEÇÃO ANALÍTICA: GRÁFICOS DO TERMÔMETRO COGNITIVO
-            ========================================== */}
+        {/* 📊 NOVA SEÇÃO ANALÍTICA: GRÁFICOS DO TERMÔMETRO COGNITIVO */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="rounded-[2rem] border-none shadow-sm bg-white p-6 text-left">
             <h3 className="text-md font-black uppercase tracking-tight text-[#1e3a8a] mb-2">Termômetro de Estresse Ocupacional</h3>
@@ -301,9 +296,7 @@ export function DashboardCorporativo() {
           </Card>
         </section>
 
-        {/* ==========================================
-            MANTIDO INTEGRAMENTE: SEÇÃO ORIGINAL DE UNIDADES E RESUMO
-            ========================================== */}
+        {/* SEÇÃO ORIGINAL DE UNIDADES E RESUMO */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="rounded-[2rem] border-none shadow-sm bg-white">
             <CardContent className="p-6">
@@ -351,9 +344,7 @@ export function DashboardCorporativo() {
           </Card>
         </section>
 
-        {/* ==========================================
-            📄 SEÇÃO DE LAUDOS TÉCNICOS E CONTRARREFERÊNCIA
-            ========================================== */}
+        {/* 📄 SEÇÃO DE LAUDOS TÉCNICOS E CONTRARREFERÊNCIA */}
         <section className="w-full">
           <Card className="rounded-[2rem] border-none shadow-sm bg-white p-6 text-left">
             <h3 className="text-md font-black uppercase tracking-tight text-[#1e3a8a] mb-2">Laudos Técnicos e Contrarreferência</h3>
@@ -390,7 +381,7 @@ export function DashboardCorporativo() {
         </section>
       </main>
 
-      {/* MODAL: REGISTRAR NOVA DEMANDA DO RH (MANTIDO) */}
+      {/* MODAL: REGISTRAR NOVA DEMANDA DO RH */}
       {isReferralModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[450px] overflow-hidden border border-gray-100">
