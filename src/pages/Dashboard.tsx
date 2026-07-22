@@ -10,7 +10,7 @@ import {
   LogOut, Layout, Calendar as CalendarIcon, Plus, X, Trash2, 
   FileText, BarChart3, Shield, Clock, Users, GraduationCap,  
   CheckCircle, RefreshCw, Wallet, Receipt, Calculator, Scale, Search, 
-  MessageCircle, Building, School, Send, User, Menu, Filter
+  MessageCircle, Building, HandCoins, School, Send, User, Menu, Filter
 } from "lucide-react";  
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -529,10 +529,18 @@ export function Dashboard() {
 
                 <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/repasses')}>
                   <Button variant="ghost" size="icon" className="text-blue-600 hover:bg-blue-50 h-10 w-10">
-                    <Calculator size={24}/>
+                    <HandCoins size={24}/>
                   </Button>
                   <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-blue-600">Repasses</span>
                 </div>
+
+                {/* 🌟 BOTÃO CALCULADORA NO HEADER DESKTOP */}
+          <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/calculadora')}>
+        <Button variant="ghost" size="icon" className="text-amber-500 hover:bg-amber-50 h-10 w-10">
+         <Calculator size={24} className="text-amber-500" />
+        </Button>
+        <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-amber-500">Taxas</span>
+            </div>    
 
                 <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/fechamento')}>
                   <Button variant="ghost" size="icon" className="text-indigo-600 hover:bg-indigo-50 h-10 w-10">

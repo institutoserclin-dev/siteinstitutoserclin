@@ -10,6 +10,7 @@ import Home from './pages/Home';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Pacientes } from './pages/Pacientes';
+import { CalculadoraTaxas } from "@/components/Taxas";
 import { Relatorios } from './pages/Relatorios';
 import { Checkin } from './pages/Checkin';
 import { Prontuario } from './pages/Prontuario';
@@ -103,6 +104,11 @@ function App() {
         <Route path="/sistema/despesas" element={ <PrivateRoute><Despesas /></PrivateRoute> } />
         <Route path="/sistema/repasses" element={ <PrivateRoute><Repasses /></PrivateRoute> } />
         <Route path="/sistema/fechamento" element={ <PrivateRoute><Fechamento /></PrivateRoute> } />
+         <Route path="/sistema/taxas" element={
+  <div className="min-h-screen bg-slate-50 p-6 md:p-12 flex items-center justify-center">
+    <CalculadoraTaxas />
+  </div>
+} />
 
         {/* FORMULÁRIO DE NOVO CADASTRO DE PROFISSIONAL */}
         <Route path="/sistema/usuarios/novo" element={ <PrivateRoute><CadastroUsuario /></PrivateRoute> } />
