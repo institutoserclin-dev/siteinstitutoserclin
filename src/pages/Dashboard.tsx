@@ -535,7 +535,7 @@ export function Dashboard() {
                 </div>
 
                 {/* 🌟 BOTÃO CALCULADORA NO HEADER DESKTOP */}
-          <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/calculadora')}>
+          <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/taxas')}>
         <Button variant="ghost" size="icon" className="text-amber-500 hover:bg-amber-50 h-10 w-10">
          <Calculator size={24} className="text-amber-500" />
         </Button>
