@@ -687,7 +687,8 @@ export function Dashboard() {
                     <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/repasses'); setIsMenuMobileOpen(false); }}>
                       <Calculator size={20} className="text-blue-600"/> Repasses
                     </Button>
-                    <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/fechamento'); setIsMenuMobileOpen(false); }}>
+         
+                                        <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/fechamento'); setIsMenuMobileOpen(false); }}>
                       <Scale size={20} className="text-indigo-600"/> Caixa
                     </Button>
                   </>
@@ -790,6 +791,7 @@ export function Dashboard() {
                   <Button variant="ghost" className="w-full justify-start gap-4 text-emerald-600 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/planos'); setIsMenuMobileOpen(false); }}><Wallet size={18} /> Planos</Button>
                   <Button variant="ghost" className="w-full justify-start gap-4 text-red-500 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/despesas'); setIsMenuMobileOpen(false); }}><Receipt size={18} /> Despesas</Button>
                   <Button variant="ghost" className="w-full justify-start gap-4 text-blue-600 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/repasses'); setIsMenuMobileOpen(false); }}><Calculator size={18} /> Repasses</Button>
+                  <Button variant="ghost" className="w-full justify-start gap-4 text-amber-500 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => {navigate('/sistema/taxas'); setIsMenuMobileOpen(false);}}><HandCoins size={18} className="text-amber-500" /> Simular Taxas</Button>
                   <Button variant="ghost" className="w-full justify-start gap-4 text-indigo-600 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/fechamento'); setIsMenuMobileOpen(false); }}><Scale size={18} /> Caixa</Button>
                 </>
               )}
