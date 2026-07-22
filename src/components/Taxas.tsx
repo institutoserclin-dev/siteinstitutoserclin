@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // 👈 Navegação do React Router
+import { useNavigate } from 'react-router-dom';
 import { Calculator, CreditCard, DollarSign, ArrowRight, CheckCircle2, TrendingDown, ArrowLeft } from 'lucide-react';
 
 const TAXAS = {
@@ -22,7 +22,7 @@ const TAXAS = {
 };
 
 export function CalculadoraTaxas() {
-  const navigate = useNavigate(); // 👈 Hook para navegação
+  const navigate = useNavigate();
   const [valor, setValor] = useState<number>(100);
   const [modalidade, setModalidade] = useState<'debito' | string>('1x');
   const [tipoCalculo, setTipoCalculo] = useState<'repassar' | 'absorver'>('repassar');
@@ -64,13 +64,13 @@ export function CalculadoraTaxas() {
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded-[2.5rem] p-6 md:p-10 border border-slate-100 shadow-xl font-sans text-slate-800">
       
-   {/* 🌟 BOTÃO VOLTAR PARA O DASHBOARD */}
-<button 
-  onClick={() => navigate('/sistema')} 
-  className="mb-6 flex items-center gap-2 text-xs font-black uppercase text-slate-500 hover:text-primary transition-colors bg-slate-50 hover:bg-slate-100 px-4 py-2.5 rounded-xl border border-slate-200/60 cursor-pointer"
->
-  <ArrowLeft size={16} /> Voltar ao Dashboard
-</button>
+      {/* 🌟 BOTÃO VOLTAR (USA NAVEGAÇÃO DE HISTÓRICO PARA RETORNAR AO DASHBOARD CORRETAMENTE) */}
+      <button 
+        onClick={() => navigate(-1)} 
+        className="mb-6 flex items-center gap-2 text-xs font-black uppercase text-slate-500 hover:text-primary transition-colors bg-slate-50 hover:bg-slate-100 px-4 py-2.5 rounded-xl border border-slate-200/60 cursor-pointer"
+      >
+        <ArrowLeft size={16} /> Voltar ao Dashboard
+      </button>
 
       {/* Cabeçalho */}
       <div className="flex items-center gap-3 mb-8 border-b border-slate-100 pb-6">
