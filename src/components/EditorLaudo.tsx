@@ -37,7 +37,7 @@ export function EditorLaudo({ paciente, perfil, onClose, onSave }: EditorLaudoPr
       doc.text("INSTITUTO SERCLIN", 105, y, { align: "center" });
       y += 8;
       doc.setFontSize(10); doc.setFont("times", "italic"); doc.setTextColor(100);
-      doc.text("Gestão em Saúde e Reabilitação Cognitiva", 105, y, { align: "center" });
+      doc.text("Neuropsicologia e Reabilitação Cognitiva", 105, y, { align: "center" });
       y += 10;
       doc.setDrawColor(30, 58, 138); doc.setLineWidth(0.5); doc.line(25, y, 185, y);
       y += 20;

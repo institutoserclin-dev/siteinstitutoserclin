@@ -269,7 +269,7 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
       doc.text("INSTITUTO SERCLIN", 105, y, { align: "center" });
       y += 8;
       doc.setFontSize(10); doc.setFont("times", "italic"); doc.setTextColor(120);
-      doc.text("Gestão em Saúde e Reabilitação Cognitiva", 105, y, { align: "center" });
+      doc.text("Neuropsicologia e Reabilitação Cognitiva", 105, y, { align: "center" });
       y += 10;
       doc.setDrawColor(30, 58, 138); doc.setLineWidth(0.5); doc.line(20, y, 190, y);
       y += 20;

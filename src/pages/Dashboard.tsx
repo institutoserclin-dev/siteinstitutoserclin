@@ -495,7 +495,7 @@ export function Dashboard() {
                 SerClin
               </h1>
               <p className="text-[7px] md:text-[11px] text-gray-500 font-bold uppercase mt-1 tracking-[0.2em]">
-                Gestão Integrada
+                Neuropsicologia Integrada
               </p>
             </div>
           </div>
