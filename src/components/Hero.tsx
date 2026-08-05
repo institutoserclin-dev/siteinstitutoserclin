@@ -33,7 +33,7 @@ export function Hero() {
             <div className="flex items-center gap-4">
               <div className="h-px w-12 bg-secondary" />
               <span className="text-[10px] font-sans font-black uppercase tracking-[0.6em] text-secondary">
-                Saúde & Excelência Humana
+                Neuropsicologia & Excelência Humana
               </span>
             </div>
 
