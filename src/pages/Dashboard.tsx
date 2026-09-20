@@ -155,11 +155,14 @@ const fetchData = async () => {
         });
         setEquipe(filtrados);
 
-        const { data: agendamentos, error } = await supabase
-  .from('agendamentos')
-  .select('*')
-  .order('data_inicio', { ascending: true })
-  .limit(5000);
+       const { data: agendamentos, error } = await supabase
+          .from('agendamentos')
+          .select('*')
+          .order('data_inicio', { ascending: true })
+          .limit(5000);
+
+        console.log("👉 TOTAL VINDO DO BANCO:", agendamentos?.length);
+        console.log("👉 É GESTOR EFETIVO?:", ehGestorEfetivo);
 
         if (!error && agendamentos) {
           let permitidos = agendamentos;
@@ -175,8 +178,13 @@ const fetchData = async () => {
           const eventosFormatados = permitidos.map((evt: any) => {
             const perfil = todosPerfis.find((p: any) => p.nome?.trim().toLowerCase() === evt.profissional_nome?.trim().toLowerCase());
             
-            const dataInicio = new Date(evt.data_inicio);
-            let dataFim = evt.data_fim ? new Date(evt.data_fim) : addMinutes(dataInicio, parseInt(evt.duracao || '40'));
+            // Corrige formatos com espaço do PostgreSQL para padrão ISO legível
+            const inicioFormatado = (evt.data_inicio || "").replace(" ", "T");
+            const fimFormatado = evt.data_fim ? evt.data_fim.replace(" ", "T") : null;
+
+            const dataInicio = new Date(inicioFormatado);
+            let dataFim = fimFormatado ? new Date(fimFormatado) : addMinutes(dataInicio, parseInt(evt.duracao || '40'));
+            
             if (isNaN(dataFim.getTime())) { 
               dataFim = addMinutes(dataInicio, 40); 
             }
@@ -190,6 +198,8 @@ const fetchData = async () => {
               original: evt
             };
           });
+
+          console.log("👉 EVENTOS QUE FORAM PARA O CALENDÁRIO:", eventosFormatados);
           setEvents(eventosFormatados);
         }
       }
@@ -212,9 +222,12 @@ const fetchData = async () => {
         .from('pacientes')
         .select('id, nome, telefone')
         .ilike('nome', `%${buscaPaciente}%`)
-        .limit(5); // 👈 Corrigido: era .ilike(...)(5)
+        .limit(5);
       setPacientesSugeridos(data || []);
     };
+    pesquisar();
+  }, [buscaPaciente]);
+  
     pesquisar();
   }, [buscaPaciente]);
   const aplicarMascaraTelefone = (value: string) => {
