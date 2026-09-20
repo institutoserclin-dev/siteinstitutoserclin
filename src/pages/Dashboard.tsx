@@ -166,11 +166,15 @@ export function Dashboard() {
         });
         setEquipe(filtrados);
 
+        // Busca os agendamentos dos últimos 60 dias em diante (evita estourar o teto de 1000 da API)
+        const dataCorte = new Date();
+        dataCorte.setDate(dataCorte.getDate() - 60);
+
         const { data: agendamentos, error } = await supabase
           .from('agendamentos')
           .select('*')
-          .order('data_inicio', { ascending: true })
-          .limit(5000);
+          .gte('data_inicio', dataCorte.toISOString().split('T')[0])
+          .order('data_inicio', { ascending: true });
 
         console.log("👉 TOTAL VINDO DO BANCO:", agendamentos?.length);
         console.log("👉 É GESTOR EFETIVO?:", ehGestorEfetivo);
