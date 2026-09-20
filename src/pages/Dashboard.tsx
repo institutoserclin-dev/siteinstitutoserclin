@@ -156,10 +156,10 @@ const fetchData = async () => {
         setEquipe(filtrados);
 
         const { data: agendamentos, error } = await supabase
-          .from('agendamentos')
-          .select('*')
-          .order('data_inicio', { ascending: true })
-          .limit(5000);
+  .from('agendamentos')
+  .select('*')
+  .order('data_inicio', { ascending: true })
+  .limit(5000);
 
         if (!error && agendamentos) {
           let permitidos = agendamentos;
@@ -384,8 +384,8 @@ const fetchData = async () => {
         paciente_nome: buscaPaciente.toUpperCase(),
         paciente_id: idDoPaciente || null,
         paciente_telefone: form.telefone || "",
-        data_inicio: dInicio.toISOString(),
-        data_fim: dFim.toISOString(),
+        data_inicio: form.inicio,
+        data_fim: format(dFim, "yyyy-MM-dd'T'HH:mm:ss"),
         status: mapearStatusParaBanco(form.status),
         assinatura_url: assinaturaBase64 || null,
         valor_atendimento: valorLimpo,
