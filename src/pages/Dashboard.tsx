@@ -177,7 +177,9 @@ export function Dashboard() {
             
             const dataInicio = new Date(evt.data_inicio);
             let dataFim = evt.data_fim ? new Date(evt.data_fim) : addMinutes(dataInicio, parseInt(evt.duracao || '40'));
-            if (isNaN(dataFim.getTime())) { dataFim = addMinutes(dataInicio, 40); }
+            if (isNaN(dataFim.getTime())) { 
+              dataFim = addMinutes(dataInicio, 40); 
+            }
 
             return {
               id: evt.id,
@@ -191,10 +193,14 @@ export function Dashboard() {
           setEvents(eventosFormatados);
         }
       }
-    } catch (err) { toast.error("Erro ao carregar dados."); }
+    } catch (err) { 
+      toast.error("Erro ao carregar dados."); 
+    }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { 
+    fetchData(); 
+  }, []);
 
   useEffect(() => {
     const pesquisar = async () => {
