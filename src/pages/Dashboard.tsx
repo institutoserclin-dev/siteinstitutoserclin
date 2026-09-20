@@ -170,7 +170,7 @@ export function Dashboard() {
         // 🌟 JANELA DINÂMICA DE AGENDAMENTOS (AJUSTE CONFORME NECESSIDADE)
         // =========================================================================
         const MESES_HISTORICO = 5; // 👈 Altere aqui a quantidade de meses para trás
-        const MESES_FUTURO = 6;    // 👈 Altere aqui a quantidade de meses para frente
+        const MESES_FUTURO = 3;    // 👈 Altere aqui a quantidade de meses para frente
 
         const dataReferencia = date instanceof Date && !isNaN(date.getTime()) ? date : new Date();
 
