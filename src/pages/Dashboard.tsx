@@ -111,7 +111,7 @@ export function Dashboard() {
     forma_pagamento: "Pix"
   });
 
-  const fetchData = async () => {
+const fetchData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const { data: todosPerfis } = await supabase.from('perfis').select('*').order('nome');
@@ -204,13 +204,19 @@ export function Dashboard() {
 
   useEffect(() => {
     const pesquisar = async () => {
-      if (buscaPaciente.length < 2) { setPacientesSugeridos([]); return; }
-      const { data } = await supabase.from('pacientes').select('id, nome, telefone').ilike('nome', `%${buscaPaciente}%`)(5);
+      if (buscaPaciente.length < 2) { 
+        setPacientesSugeridos([]); 
+        return; 
+      }
+      const { data } = await supabase
+        .from('pacientes')
+        .select('id, nome, telefone')
+        .ilike('nome', `%${buscaPaciente}%`)
+        .limit(5); // 👈 Corrigido: era .ilike(...)(5)
       setPacientesSugeridos(data || []);
     };
     pesquisar();
   }, [buscaPaciente]);
-
   const aplicarMascaraTelefone = (value: string) => {
     if (!value) return "";
     const apenasNumeros = value.replace(/\D/g, "");
