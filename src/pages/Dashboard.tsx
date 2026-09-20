@@ -166,14 +166,25 @@ export function Dashboard() {
         });
         setEquipe(filtrados);
 
-        // Busca os agendamentos dos últimos 60 dias em diante (evita estourar o teto de 1000 da API)
-        const dataCorte = new Date();
-        dataCorte.setDate(dataCorte.getDate() - 60);
+       // =========================================================================
+        // 🌟 JANELA DINÂMICA DE AGENDAMENTOS (AJUSTE CONFORME NECESSIDADE)
+        // =========================================================================
+        const MESES_HISTORICO = 5; // 👈 Altere aqui a quantidade de meses para trás
+        const MESES_FUTURO = 6;    // 👈 Altere aqui a quantidade de meses para frente
+
+        const dataReferencia = date instanceof Date && !isNaN(date.getTime()) ? date : new Date();
+
+        const dataInicioCorte = new Date(dataReferencia);
+        dataInicioCorte.setMonth(dataInicioCorte.getMonth() - MESES_HISTORICO);
+
+        const dataFimCorte = new Date(dataReferencia);
+        dataFimCorte.setMonth(dataFimCorte.getMonth() + MESES_FUTURO);
 
         const { data: agendamentos, error } = await supabase
           .from('agendamentos')
           .select('*')
-          .gte('data_inicio', dataCorte.toISOString().split('T')[0])
+          .gte('data_inicio', dataInicioCorte.toISOString().split('T')[0])
+          .lte('data_inicio', dataFimCorte.toISOString().split('T')[0])
           .order('data_inicio', { ascending: true });
 
         console.log("👉 TOTAL VINDO DO BANCO:", agendamentos?.length);
@@ -221,7 +232,7 @@ export function Dashboard() {
 
   useEffect(() => { 
     fetchData(); 
-  }, []);
+  }, [date]);
 
   useEffect(() => {
     const pesquisar = async () => {
