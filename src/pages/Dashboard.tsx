@@ -155,7 +155,12 @@ export function Dashboard() {
         });
         setEquipe(filtrados);
 
-        const { data: agendamentos, error } = await supabase.from('agendamentos').select('*');
+        const { data: agendamentos, error } = await supabase
+          .from('agendamentos')
+          .select('*')
+          .order('data_inicio', { ascending: true })
+          .limit(5000);
+
         if (!error && agendamentos) {
           let permitidos = agendamentos;
           
@@ -194,7 +199,7 @@ export function Dashboard() {
   useEffect(() => {
     const pesquisar = async () => {
       if (buscaPaciente.length < 2) { setPacientesSugeridos([]); return; }
-      const { data } = await supabase.from('pacientes').select('id, nome, telefone').ilike('nome', `%${buscaPaciente}%`).limit(5);
+      const { data } = await supabase.from('pacientes').select('id, nome, telefone').ilike('nome', `%${buscaPaciente}%`)(5);
       setPacientesSugeridos(data || []);
     };
     pesquisar();
