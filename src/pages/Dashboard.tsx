@@ -76,6 +76,17 @@ const EventoCustomizado = ({ event }: any) => {
   );
 };
 
+// Função auxiliar para parsear data sem alteração de timezone
+const criarDataLocalSemFuso = (dataString: string) => {
+  if (!dataString) return new Date();
+  const limpa = dataString.replace('T', ' ').replace('+00', '').replace('Z', '').trim();
+  const [dataPart, horaPart] = limpa.split(' ');
+  if (!dataPart) return new Date(dataString);
+  const [ano, mes, dia] = dataPart.split('-').map(Number);
+  const [hora, min, seg] = horaPart ? horaPart.split(':').map(Number) : [0, 0, 0];
+  return new Date(ano, mes - 1, dia, hora || 0, min || 0, seg || 0);
+};
+
 export function Dashboard() {
   const navigate = useNavigate();
   const { isAdmin, isSecretaria } = usePerfil();
@@ -111,7 +122,7 @@ export function Dashboard() {
     forma_pagamento: "Pix"
   });
 
-const fetchData = async () => {
+  const fetchData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const { data: todosPerfis } = await supabase.from('perfis').select('*').order('nome');
@@ -155,7 +166,7 @@ const fetchData = async () => {
         });
         setEquipe(filtrados);
 
-       const { data: agendamentos, error } = await supabase
+        const { data: agendamentos, error } = await supabase
           .from('agendamentos')
           .select('*')
           .order('data_inicio', { ascending: true })
@@ -178,12 +189,8 @@ const fetchData = async () => {
           const eventosFormatados = permitidos.map((evt: any) => {
             const perfil = todosPerfis.find((p: any) => p.nome?.trim().toLowerCase() === evt.profissional_nome?.trim().toLowerCase());
             
-            // Corrige formatos com espaço do PostgreSQL para padrão ISO legível
-            const inicioFormatado = (evt.data_inicio || "").replace(" ", "T");
-            const fimFormatado = evt.data_fim ? evt.data_fim.replace(" ", "T") : null;
-
-            const dataInicio = new Date(inicioFormatado);
-            let dataFim = fimFormatado ? new Date(fimFormatado) : addMinutes(dataInicio, parseInt(evt.duracao || '40'));
+            const dataInicio = criarDataLocalSemFuso(evt.data_inicio);
+            let dataFim = evt.data_fim ? criarDataLocalSemFuso(evt.data_fim) : addMinutes(dataInicio, parseInt(evt.duracao || '40'));
             
             if (isNaN(dataFim.getTime())) { 
               dataFim = addMinutes(dataInicio, 40); 
@@ -227,9 +234,7 @@ const fetchData = async () => {
     };
     pesquisar();
   }, [buscaPaciente]);
-  
-    pesquisar();
-  }, [buscaPaciente]);
+
   const aplicarMascaraTelefone = (value: string) => {
     if (!value) return "";
     const apenasNumeros = value.replace(/\D/g, "");
@@ -310,7 +315,7 @@ const fetchData = async () => {
       await supabase.from('agendamentos').delete().eq('id', eventoSelecionadoId);
       toast.success("Removido!");
       setIsAgendamentoOpen(false); 
-      await fetchData(); // 👈 Garante o refresh imediato
+      await fetchData();
     } catch (err) { toast.error("Erro."); } finally { setLoading(false); }
   };
 
@@ -322,10 +327,9 @@ const fetchData = async () => {
     
     setLoading(true);
     try {
-      const dInicio = new Date(form.inicio);
+      const dInicio = criarDataLocalSemFuso(form.inicio);
       const dFim = addMinutes(dInicio, parseInt(form.duracao));
 
-      // --- VALIDAÇÃO DE DIAS E HORÁRIOS DA CENTRAL ---
       const diasSemanaMap = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
       const diaDaSemanaDesejado = diasSemanaMap[dInicio.getDay()];
 
@@ -440,7 +444,6 @@ const fetchData = async () => {
         }
       }
           
-      // 🌟 Atualização garantida antes de fechar o modal
       await fetchData();
       setIsAgendamentoOpen(false);
       setEventoSelecionadoId(null);
@@ -810,7 +813,7 @@ const fetchData = async () => {
                   paciente_id: evt.paciente_id, 
                   telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), 
                   sala: evt.sala_id?.toString() || '1', 
-                  inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), 
+                  inicio: format(criarDataLocalSemFuso(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), 
                   status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), 
                   duracao: evt.original?.duracao || '40', 
                   assinatura_url: evt.assinatura_url || null, 
@@ -875,7 +878,7 @@ const fetchData = async () => {
                   <div key={idx} className="flex items-center justify-between p-5 bg-white rounded-3xl border border-gray-100 shadow-sm group">
                     <div className="flex items-center gap-5 text-left">
                       <div className="h-14 w-20 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-100">
-                        <span className="font-black text-[#1e3a8a]">{format(new Date(ag.data_inicio), "HH:mm")}</span>
+                        <span className="font-black text-[#1e3a8a]">{format(criarDataLocalSemFuso(ag.data_inicio), "HH:mm")}</span>
                       </div>
                       <div className="flex flex-col text-left">
                         <span className="font-black text-[15px] uppercase text-gray-800 leading-tight">{ag.paciente_nome}</span>
