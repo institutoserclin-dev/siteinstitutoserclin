@@ -1,4 +1,3 @@
-
 import SignatureCanvas from 'react-signature-canvas';
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -280,14 +279,14 @@ export function Dashboard() {
     try {
       await supabase.from('agendamentos').delete().eq('id', eventoSelecionadoId);
       toast.success("Removido!");
-      setIsAgendamentoOpen(false); fetchData();
+      setIsAgendamentoOpen(false); 
+      await fetchData(); // 👈 Garante o refresh imediato
     } catch (err) { toast.error("Erro."); } finally { setLoading(false); }
   };
 
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validações de segurança
     if (!form.profissional || !form.inicio) return toast.error("Preencha o profissional e o horário.");
     if (!buscaPaciente && !form.paciente_id) return toast.error("Informe o nome do paciente.");
     
@@ -296,17 +295,13 @@ export function Dashboard() {
       const dInicio = new Date(form.inicio);
       const dFim = addMinutes(dInicio, parseInt(form.duracao));
 
-      // =========================================================================
-      // 🌟 VALIDAÇÃO DE DIAS E HORÁRIOS DA CENTRAL DE CONFIGURAÇÃO (NÃO REMOVER)
-      // =========================================================================
+      // --- VALIDAÇÃO DE DIAS E HORÁRIOS DA CENTRAL ---
       const diasSemanaMap = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
-      const diaDaSemanaDesejado = diasSemanaMap[dInicio.getDay()]; // Retorna 'DOM', 'SEG', etc.
+      const diaDaSemanaDesejado = diasSemanaMap[dInicio.getDay()];
 
-      // Encontra as regras do profissional atual dentro do estado 'equipe' do seu Dashboard
       const profissionalConfig = equipe.find(p => p.nome?.trim().toLowerCase() === form.profissional?.trim().toLowerCase());
 
       if (profissionalConfig) {
-        // 1. Validar Dias Permitidos
         let diasPermitidos: string[] = [];
         if (Array.isArray(profissionalConfig.dias_atendimento)) {
           diasPermitidos = profissionalConfig.dias_atendimento;
@@ -315,7 +310,6 @@ export function Dashboard() {
           catch { diasPermitidos = profissionalConfig.dias_atendimento.split(','); }
         }
 
-        // Se o gestor configurou os dias na central, valida se o dia atual está liberado
         if (diasPermitidos.length > 0 && !diasPermitidos.includes(diaDaSemanaDesejado)) {
           setLoading(false);
           return toast.error(`Este profissional não está configurado para atender na ${diaDaSemanaDesejado}.`, {
@@ -323,7 +317,6 @@ export function Dashboard() {
           });
         }
 
-        // 2. Validar Limites de Horário (Início e Fim)
         if (profissionalConfig.hora_inicio && profissionalConfig.hora_fim) {
           const horaMinutosAgendamento = format(dInicio, "HH:mm:ss");
           const horaMinutosFimAgendamento = format(dFim, "HH:mm:ss");
@@ -336,11 +329,9 @@ export function Dashboard() {
           }
         }
       }
-      // =========================================================================
 
       let idDoPaciente = form.paciente_id;
 
-      // 1. Lógica de Auto-cadastro de Paciente (Neuropsicologia costuma ter muitos novos)
       if (!idDoPaciente) {
         const { data: novoPac, error: pacErr } = await supabase
           .from("pacientes")
@@ -356,13 +347,11 @@ export function Dashboard() {
         if (novoPac) idDoPaciente = novoPac.id;
       }
 
-      // 2. Processamento da Assinatura (Digitalização SerClin)
       let assinaturaBase64 = form.assinatura_url;
       if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
         assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
       }
 
-      // 3. Sanitização Financeira (Trata 1.200,50 ou 1200.50)
       const valorLimpo = parseFloat(
         form.valor_atendimento
           .toString()
@@ -370,37 +359,31 @@ export function Dashboard() {
           .replace(",", ".")
       ) || 0;
 
-      // --- SANITIZAÇÃO E BLINDAGEM DE TIPOS PARA EVITAR ERRO 400 ---
       const salaNumero = parseInt(form.sala) || 1;
 
       const payload = {
         sala_id: salaNumero,
         profissional_nome: form.profissional,
         paciente_nome: buscaPaciente.toUpperCase(),
-        paciente_id: idDoPaciente || null, // Garante null válido se não houver ID
+        paciente_id: idDoPaciente || null,
         paciente_telefone: form.telefone || "",
         data_inicio: dInicio.toISOString(),
         data_fim: dFim.toISOString(),
         status: mapearStatusParaBanco(form.status),
-        assinatura_url: assinaturaBase64 || null, // Evita undefined se estiver vazio
+        assinatura_url: assinaturaBase64 || null,
         valor_atendimento: valorLimpo,
         forma_pagamento: form.forma_pagamento || "Pix"
       };
 
-      // 4. Update ou Insert do Agendamento
       const { error } = eventoSelecionadoId 
         ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId) 
         : await supabase.from('agendamentos').insert([payload]);
 
-      // 🌟 DIAGNÓSTICO ATIVO: Mostra a coluna exata que quebrou no console F12
       if (error) {
         console.error("Erro detalhado do Supabase na tabela agendamentos:", error);
         throw new Error(`Erro no banco: ${error.message} (Código: ${error.code})`);
       }
 
-      // =========================================================================
-      // 🌟 REGISTRO AUTOMÁTICO DE EVOLUÇÃO DIÁRIA POR COMPARECIMENTO
-      // =========================================================================
       if (mapearStatusParaBanco(form.status) === 'Presenca' && idDoPaciente) {
         const dataHoje = new Date();
         const dataFormatada = dataHoje.toLocaleDateString('pt-BR');
@@ -426,18 +409,16 @@ export function Dashboard() {
           console.error("Erro detalhado ao gerar evolução automática:", erroProntuario);
         }
       }
-      // =========================================================================
-         
-      // 5. Feedback e Refresh
+          
+      // 🌟 Atualização garantida antes de fechar o modal
+      await fetchData();
       setIsAgendamentoOpen(false);
       setEventoSelecionadoId(null);
-      fetchData(); // Certifique-se que sua função de carregar se chama fetchData
       toast.success(eventoSelecionadoId ? "Agendamento atualizado!" : "Paciente agendado com sucesso!");
 
     } catch (err: any) {
       console.error("Erro SerClin Save:", err);
       
-      // Mapeia o erro de choque de horário do banco de dados para a secretária entender
       if (err.toString().includes("no_profissional_overlap") || (err.message && err.message.includes("no_profissional_overlap"))) {
         toast.error("⚠️ CHOQUE DE HORÁRIO DETECTADO!", {
           description: "O(A) profissional selecionado(a) já possui outro atendimento agendado nesta mesma faixa de horário. Escolha outro horário ou verifique a agenda deste profissional.",
@@ -451,15 +432,11 @@ export function Dashboard() {
     }
   };
 
-  // Filtro de Agendamentos de Amanhã (Para o botão do Header)
-
-  // Filtro de Agendamentos de Amanhã (Para o botão do Header)
   const agendamentosAmanha = events
     .filter((e: any) => isSameDay(new Date(e.start), addDays(new Date(), 1)))
-    .map((e: any) => e.original || e) // Garante compatibilidade com o formato do BigCalendar
+    .map((e: any) => e.original || e)
     .sort((a: any, b: any) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime());
 
-  // Limites do Calendário (7h às 20h)
   const minTime = new Date(2024, 0, 1, 7, 0, 0); 
   const maxTime = new Date(2024, 0, 1, 20, 0, 0);
 
@@ -483,11 +460,10 @@ export function Dashboard() {
         }
       `}</style>
 
-     {/* HEADER INTEGRAL SERCLIN - AJUSTADO PARA MOBILE LIMPO */}
+      {/* HEADER INTEGRAL */}
       <header className="bg-white border-b px-4 md:px-8 shadow-sm z-50 sticky top-0 w-full pt-[var(--safe-top)]">
         <div className="flex justify-between items-center h-[95px] max-w-[1800px] mx-auto">
           
-          {/* ESQUERDA: LOGO AMPLIADO (PC E MOBILE) */}
           <div className="flex items-center gap-3 shrink-0 cursor-pointer" onClick={() => navigate('/')}>
             <img src={logoSer2} className="w-12 h-12 md:w-16 md:h-16 object-contain" alt="SerClin" />
             <div className="hidden sm:flex flex-col text-left">
@@ -500,10 +476,7 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* CENTRO: GRADE COMPLETA DE BOTÕES (SÓ NO PC) */}
           <div className="hidden md:flex items-center gap-5 flex-1 justify-center px-4 overflow-x-auto no-scrollbar">
-            
-            {/* 1. PACIENTES */}
             <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/pacientes')}>
               <Button variant="ghost" size="icon" className="text-blue-700 hover:bg-blue-50 h-10 w-10">
                 <Users size={24}/>
@@ -534,13 +507,12 @@ export function Dashboard() {
                   <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-blue-600">Repasses</span>
                 </div>
 
-                {/* 🌟 BOTÃO CALCULADORA NO HEADER DESKTOP */}
-          <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/taxas')}>
-        <Button variant="ghost" size="icon" className="text-amber-500 hover:bg-amber-50 h-10 w-10">
-         <Calculator size={24} className="text-amber-500" />
-        </Button>
-        <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-amber-500">Taxas</span>
-            </div>    
+                <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/taxas')}>
+                  <Button variant="ghost" size="icon" className="text-amber-500 hover:bg-amber-50 h-10 w-10">
+                    <Calculator size={24} className="text-amber-500" />
+                  </Button>
+                  <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-amber-500">Taxas</span>
+                </div>    
 
                 <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/fechamento')}>
                   <Button variant="ghost" size="icon" className="text-indigo-600 hover:bg-indigo-50 h-10 w-10">
@@ -572,7 +544,6 @@ export function Dashboard() {
               </div>
             )}
 
-            {/* 7. GERENCIAR EQUIPE UNIFICADO (PC) */}
             {(isAdmin || isGestorSeguro) && (
               <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/permissoes')}>
                 <Button variant="ghost" size="icon" className="text-purple-600 hover:bg-purple-50 h-10 w-10">
@@ -590,10 +561,7 @@ export function Dashboard() {
             </div>
           </div>
 
-         {/* DIREITA: STATUS, AGENDAR (PC) E MENU (MOBILE) */}
           <div className="flex items-center gap-4 shrink-0">
-            
-            {/* BOTÃO RETORNAR AO SITE PRINCIPAL (PC) */}
             <Button
               variant="ghost"
               onClick={async () => {
@@ -611,7 +579,6 @@ export function Dashboard() {
               <span>Sair</span>
             </Button>
             
-            {/* Online Status: Só PC */}
             <div className="hidden md:flex flex-col items-end mr-1">
               <span className="text-[12px] font-black text-gray-800 uppercase leading-none">{nomeLogado?.split(' ')[0]}</span>
               <div className="flex items-center gap-1 mt-1">
@@ -619,38 +586,39 @@ export function Dashboard() {
                 <span className="text-[9px] text-green-600 font-bold uppercase">Online</span>
               </div>
             </div>
-
             
-            {/* Botão Agendar: Só PC */}
             <Button 
-              onClick={() => { setEventoSelecionadoId(null); setIsAgendamentoOpen(true); }}
+              onClick={() => { 
+                setEventoSelecionadoId(null); 
+                setBuscaPaciente("");
+                setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" });
+                setIsAgendamentoOpen(true); 
+              }}
               className="hidden md:flex bg-[#1e3a8a] hover:bg-black text-white rounded-xl h-11 px-6 shadow-lg items-center gap-2 transition-all active:scale-95"
             >
               <Plus size={20} strokeWidth={3} />
               <span className="text-[10px] font-black uppercase">AGENDAR</span>
             </Button>
 
-            {/* BOTÃO CONFIRMAR AMANHÃ (LÓGICA DE FIM DE SEMANA) */}
-{meuPerfil?.permissao_confirmacao_amanha && (
-  <div 
-    className="flex flex-col items-center gap-1 cursor-pointer group relative" 
-    onClick={() => setIsConfirmacaoAmanhaOpen(true)}
-  >
-    <Button variant="ghost" size="icon" className="text-emerald-700 hover:bg-emerald-50 h-10 w-10">
-      <Send size={24}/>
-      {agendamentosAmanha.length > 0 && (
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
-          {agendamentosAmanha.length}
-        </span>
-      )}
-    </Button>
-    <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-emerald-700">
-      {new Date().getDay() === 5 ? 'Confirmar Segunda' : 'Confirmar Amanhã'}
-    </span>
-  </div>
-)}
+            {meuPerfil?.permissao_confirmacao_amanha && (
+              <div 
+                className="flex flex-col items-center gap-1 cursor-pointer group relative" 
+                onClick={() => setIsConfirmacaoAmanhaOpen(true)}
+              >
+                <Button variant="ghost" size="icon" className="text-emerald-700 hover:bg-emerald-50 h-10 w-10">
+                  <Send size={24}/>
+                  {agendamentosAmanha.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
+                      {agendamentosAmanha.length}
+                    </span>
+                  )}
+                </Button>
+                <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-emerald-700">
+                  {new Date().getDay() === 5 ? 'Confirmar Segunda' : 'Confirmar Amanhã'}
+                </span>
+              </div>
+            )}
 
-            {/* MENU HAMBÚRGUER: AGORA NA DIREITA E SÓ NO MOBILE */}
             <Button 
               variant="ghost" 
               size="icon" 
@@ -661,90 +629,9 @@ export function Dashboard() {
             </Button>
           </div>
         </div>
-
-        {/* GAVETA MOBILE (DRAWER) - ABRINDO DA DIREITA PARA A ESQUERDA */}
-        {isMenuMobileOpen && (
-          <div className="md:hidden fixed inset-0 z-[100] bg-black/60 flex justify-end backdrop-blur-sm" onClick={() => setIsMenuMobileOpen(false)}>
-            <div className="w-[85%] max-w-[310px] bg-white h-full shadow-2xl flex flex-col pt-[calc(env(safe-area-inset-top,0px)+16px)] animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center px-6 pb-6 border-b">
-                <span className="font-black text-[#1e3a8a] uppercase text-lg">Menu SerClin</span>
-                <X size={26} onClick={() => setIsMenuMobileOpen(false)} className="text-gray-400" />
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-1 flex flex-col">
-                <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/pacientes'); setIsMenuMobileOpen(false); }}>
-                  <Users size={20} className="text-blue-700"/> Prontuários
-                </Button>
-                
-                {meuPerfil?.permissao_financeiro && (
-                  <>
-                    <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/planos'); setIsMenuMobileOpen(false); }}>
-                      <Wallet size={20} className="text-emerald-600"/> Planos
-                    </Button>
-                    <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/despesas'); setIsMenuMobileOpen(false); }}>
-                      <Receipt size={20} className="text-red-600"/> Despesas
-                    </Button>
-                    <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/repasses'); setIsMenuMobileOpen(false); }}>
-                      <Calculator size={20} className="text-blue-600"/> Repasses
-                    </Button>
-         
-                                        <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/fechamento'); setIsMenuMobileOpen(false); }}>
-                      <Scale size={20} className="text-indigo-600"/> Caixa
-                    </Button>
-                  </>
-                )}
-
-                <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/relatorios'); setIsMenuMobileOpen(false); }}>
-                  <Search size={20} className="text-amber-600"/> Relatórios
-                </Button>
-
-                {/* BOTÃO CONFIRMAR NA GAVETA */}
-{meuPerfil?.permissao_confirmacao_amanha && (
-  <Button 
-    variant="ghost" 
-    className="w-full justify-start gap-4 text-emerald-700 h-12 rounded-xl font-bold uppercase text-[11px] bg-emerald-50/50" 
-    onClick={() => { setIsMenuMobileOpen(false); setIsConfirmacaoAmanhaOpen(true); }}
-  >
-    <Send size={18} /> 
-    {new Date().getDay() === 5 ? 'Confirmar Segunda' : 'Confirmar Amanhã'}
-    {agendamentosAmanha.length > 0 && (
-      <span className="ml-auto bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px]">
-        {agendamentosAmanha.length}
-      </span>
-    )}
-  </Button>
-)}  
-
-                {(isAdmin || isGestorSeguro) && (
-                  <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/usuarios'); setIsMenuMobileOpen(false); }}>
-                    <User size={20} className="text-purple-600"/> Gerenciar Acesso
-                  </Button>
-                )}
-                
-                <div className="mt-auto border-t pt-4">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-4 h-12 font-bold uppercase text-[11px] text-red-500"
-                    onClick={async () => {
-                      try {
-                        await supabase.auth.signOut();
-                      } catch (e) {
-                        console.error(e);
-                      } finally {
-                        window.location.href = "https://institutoserclin.vercel.app";
-                      }
-                    }}
-                  >
-                    <LogOut size={20} /> Sair do Sistema
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </header>
 
-      {/* MENU MOBILE (GAVETA) - VERSÃO DEFINITIVA SERCLIN */}
+      {/* MENU MOBILE (GAVETA) */}
       {isMenuMobileOpen && (
         <div className="md:hidden fixed inset-0 z-[100] bg-black/60 flex justify-start backdrop-blur-sm transition-opacity" onClick={() => setIsMenuMobileOpen(false)}>
           <div className="w-[85%] max-w-[310px] bg-white h-full shadow-2xl flex flex-col pt-[calc(env(safe-area-inset-top,0px)+16px)] animate-in slide-in-from-left duration-300" onClick={(e) => e.stopPropagation()}>
@@ -760,16 +647,15 @@ export function Dashboard() {
             <div className="flex-1 overflow-y-auto p-4 space-y-1 text-left flex flex-col no-scrollbar">
 
               {(isAdmin || isGestorSeguro) && (
-  <Button 
-                variant="ghost" 
-                className="justify-start gap-4 h-12 font-bold uppercase text-[11px] w-full" 
-                onClick={() => { navigate('/sistema/usuarios'); setIsMenuMobileOpen(false); }}
-              >
-                <User size={20} className="text-purple-600"/> Gerenciar Acesso
-              </Button>
-            )}
+                <Button 
+                  variant="ghost" 
+                  className="justify-start gap-4 h-12 font-bold uppercase text-[11px] w-full" 
+                  onClick={() => { navigate('/sistema/usuarios'); setIsMenuMobileOpen(false); }}
+                >
+                  <User size={20} className="text-purple-600"/> Gerenciar Acesso
+                </Button>
+              )}
               
-              {/* ATENDIMENTO */}
               <div className="mb-2 px-2 mt-2">
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Atendimento</span>
               </div>
@@ -782,7 +668,6 @@ export function Dashboard() {
                 <GraduationCap size={18} /> Triagem Unimeta
               </Button>
 
-              {/* FINANCEIRO COMPLETO */}
               {meuPerfil?.permissao_financeiro && (
                 <>
                   <div className="mt-6 mb-2 px-2 border-t pt-4">
@@ -796,7 +681,6 @@ export function Dashboard() {
                 </>
               )}
 
-            {/* GESTÃO E ACESSOS */}
               <div className="mt-6 mb-2 px-2 border-t pt-4">
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gestão</span>
               </div>
@@ -805,16 +689,6 @@ export function Dashboard() {
                 <Search size={18} /> Relatórios
               </Button>
               
-              {/* GESTÃO E ACESSOS */}
-              <div className="mt-6 mb-2 px-2 border-t pt-4">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gestão</span>
-              </div>
-
-              <Button variant="ghost" className="w-full justify-start gap-4 text-orange-500 h-11 rounded-xl font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/relatorios'); setIsMenuMobileOpen(false); }}>
-                <Search size={18} /> Relatórios
-              </Button>
-              
-              {/* 7. GERENCIAR EQUIPE UNIFICADO (SUBSTITUI OS DOIS ANTERIORES) */}
               {(isAdmin || isGestorSeguro) && (
                 <Button 
                   variant="ghost" 
@@ -825,7 +699,6 @@ export function Dashboard() {
                 </Button>
               )}
 
-              {/* SAIR */}
               <div className="mt-auto pt-6 border-t pb-8">
                 <Button
                   onClick={async () => {
@@ -850,65 +723,102 @@ export function Dashboard() {
       {/* ÁREA PRINCIPAL DO DASHBOARD */}
       <main className="flex-1 p-2 md:p-4 overflow-hidden text-left flex flex-col relative">
 
-          {isGestorSeguro && (
-            <div className="mb-3 flex justify-end z-10 shrink-0">
-              <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
-                <SelectTrigger className="bg-white border border-gray-100 text-[#1e3a8a] font-black h-11 text-xs rounded-2xl px-4 shadow-sm w-full md:w-[250px]">
-                  <div className="flex items-center gap-2 uppercase tracking-widest">
-                    <Filter size={16} className="text-emerald-500" />
-                    <SelectValue placeholder="Filtrar Agenda" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="z-[100]">
-                  <SelectItem value="geral" className="font-black uppercase text-xs text-blue-700">Visão Geral (Todos)</SelectItem>
-                  {equipe.map((p: any) => (
-                    <SelectItem key={p.id} value={p.nome} className="font-bold uppercase text-xs text-gray-600">
-                      {p.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+        {isGestorSeguro && (
+          <div className="mb-3 flex justify-end z-10 shrink-0">
+            <Select value={filtroProfissional} onValueChange={setFiltroProfissional}>
+              <SelectTrigger className="bg-white border border-gray-100 text-[#1e3a8a] font-black h-11 text-xs rounded-2xl px-4 shadow-sm w-full md:w-[250px]">
+                <div className="flex items-center gap-2 uppercase tracking-widest">
+                  <Filter size={16} className="text-emerald-500" />
+                  <SelectValue placeholder="Filtrar Agenda" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="z-[100]">
+                <SelectItem value="geral" className="font-black uppercase text-xs text-blue-700">Visão Geral (Todos)</SelectItem>
+                {equipe.map((p: any) => (
+                  <SelectItem key={p.id} value={p.nome} className="font-bold uppercase text-xs text-gray-600">
+                    {p.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-          <Card className="flex-1 border-none shadow-sm bg-white rounded-[2rem] overflow-hidden flex flex-col">
-            <CardContent className="p-0 flex-1 min-h-[500px]">
-              <Calendar 
-                style={{ height: '100%', minHeight: '65vh' }}
-                localizer={localizer} culture='pt-BR' messages={mensagensPortugues}
-                events={filtroProfissional === "geral" ? events : events.filter((e: any) => e.original?.profissional_nome === filtroProfissional)} 
-                view={view} onView={setView} date={date} onNavigate={setDate} 
-                views={['day', 'week', 'month', 'agenda']} 
-                min={minTime} 
-                max={maxTime} 
-                components={{ event: EventoCustomizado }} 
-                eventPropGetter={(event: any) => ({ style: { backgroundColor: event.color, color: 'white', border: 'none', borderRadius: '6px', opacity: event.original?.status === 'Falta' ? 0.5 : 1 } })}
-                onSelectEvent={(e) => { 
-                  const evt = e.original; 
-                  setEventoSelecionadoId(evt.id); 
-                  setBuscaPaciente(evt.paciente_nome); 
-                  setForm({ ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), sala: evt.sala_id?.toString() || '1', inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), duracao: evt.original?.duracao || '40', assinatura_url: evt.assinatura_url || null, valor_atendimento: aplicarMascaraMoeda(evt.valor_atendimento?.toString() || "0"), forma_pagamento: evt.forma_pagamento || "Pix" }); 
-                  setIsAgendamentoOpen(true); 
-                }} 
-              />
-            </CardContent>
-          </Card>
-
-          {meuPerfil?.permissao_agendar && (
-            <button 
-              onClick={() => { 
-                setEventoSelecionadoId(null); 
-                setBuscaPaciente(""); 
-                setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
+        <Card className="flex-1 border-none shadow-sm bg-white rounded-[2rem] overflow-hidden flex flex-col">
+          <CardContent className="p-0 flex-1 min-h-[500px]">
+            <Calendar 
+              style={{ height: '100%', minHeight: '65vh' }}
+              localizer={localizer} 
+              culture='pt-BR' 
+              messages={mensagensPortugues}
+              events={filtroProfissional === "geral" ? events : events.filter((e: any) => e.original?.profissional_nome?.trim().toLowerCase() === filtroProfissional?.trim().toLowerCase())} 
+              view={view} 
+              onView={setView} 
+              date={date} 
+              onNavigate={setDate} 
+              views={['day', 'week', 'month', 'agenda']} 
+              min={minTime} 
+              max={maxTime} 
+              components={{ event: EventoCustomizado }} 
+              eventPropGetter={(event: any) => ({ 
+                style: { 
+                  backgroundColor: event.color || '#1e3a8a', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  opacity: event.original?.status === 'Falta' ? 0.5 : 1 
+                } 
+              })}
+              onSelectEvent={(e) => { 
+                const evt = e.original; 
+                setEventoSelecionadoId(evt.id); 
+                setBuscaPaciente(evt.paciente_nome); 
+                setForm({ 
+                  ...form, 
+                  profissional: evt.profissional_nome, 
+                  paciente_nome: evt.paciente_nome, 
+                  paciente_id: evt.paciente_id, 
+                  telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), 
+                  sala: evt.sala_id?.toString() || '1', 
+                  inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), 
+                  status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), 
+                  duracao: evt.original?.duracao || '40', 
+                  assinatura_url: evt.assinatura_url || null, 
+                  valor_atendimento: aplicarMascaraMoeda(evt.valor_atendimento?.toString() || "0"), 
+                  forma_pagamento: evt.forma_pagamento || "Pix" 
+                }); 
                 setIsAgendamentoOpen(true); 
               }} 
-              className="md:hidden fixed bottom-6 right-6 z-[45] bg-blue-600 hover:bg-blue-700 text-white rounded-full h-14 px-6 flex items-center justify-center shadow-[0_8px_30px_rgb(37,99,235,0.4)] active:scale-95 transition-transform"
-            >
-              <Plus size={20} className="mr-1.5" />
-              <span className="font-black text-[13px] uppercase tracking-widest">Agendar</span>
-            </button>
-          )}
-        </main>
+            />
+          </CardContent>
+        </Card>
+
+        {meuPerfil?.permissao_agendar && (
+          <button 
+            onClick={() => { 
+              setEventoSelecionadoId(null); 
+              setBuscaPaciente(""); 
+              setForm({ 
+                ...form, 
+                profissional: isGestorSeguro ? '' : nomeLogado, 
+                paciente_id: null, 
+                status: 'Agendado', 
+                duracao: '40', 
+                assinatura_url: null, 
+                inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), 
+                telefone: "", 
+                valor_atendimento: "0,00", 
+                forma_pagamento: "Pix" 
+              }); 
+              setIsAgendamentoOpen(true); 
+            }} 
+            className="md:hidden fixed bottom-6 right-6 z-[45] bg-blue-600 hover:bg-blue-700 text-white rounded-full h-14 px-6 flex items-center justify-center shadow-[0_8px_30px_rgb(37,99,235,0.4)] active:scale-95 transition-transform"
+          >
+            <Plus size={20} className="mr-1.5" />
+            <span className="font-black text-[13px] uppercase tracking-widest">Agendar</span>
+          </button>
+        )}
+      </main>
 
       {/* MODAL DE CONFIRMAÇÃO DE AMANHÃ */}
       {isConfirmacaoAmanhaOpen && (
