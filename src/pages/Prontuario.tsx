@@ -9,7 +9,8 @@ import {
   Paperclip, FileText, Trash2, 
   Calendar as CalendarIcon, X, RefreshCw, Clock,
   FileEdit, ClipboardList, History, Brain, Plus, Activity,
-  Bold, Italic, Underline, AlignLeft, AlignCenter, Palette, Type, CheckCircle2, Layout
+  Bold, Italic, Underline, AlignLeft, AlignCenter, Palette, Type, CheckCircle2, Layout,
+  Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -124,15 +125,15 @@ export function Prontuario() {
   };
 
   const espelharParaPortal = async (nome: string, url: string, tipo: string) => {
-  try {
-    await supabase.from('pacientes_arquivos').insert([{
-      paciente_id: id,
-      nome_arquivo: nome,
-      url_arquivo: url,
-      tipo_documento: tipo
-    }]);
-  } catch (err) { console.error("Erro espelhamento Portal:", err); }
-};
+    try {
+      await supabase.from('pacientes_arquivos').insert([{
+        paciente_id: id,
+        nome_arquivo: nome,
+        url_arquivo: url,
+        tipo_documento: tipo
+      }]);
+    } catch (err) { console.error("Erro espelhamento Portal:", err); }
+  };
 
   const carregarLogs = async () => {
     if (!id || !meuPerfil?.permissao_auditoria) return;
@@ -183,8 +184,7 @@ export function Prontuario() {
     } catch (err) { toast.error("Erro."); } finally { setLoading(false); }
   };
 
-const handleSalvarRegistro = async () => {
-    // Validação: permite salvar se tiver descrição OU se tiver arquivo anexado
+  const handleSalvarRegistro = async () => {
     if (!novoRegistro.descricao && novoRegistro.tipo !== "Laudo Estruturado" && !arquivoSelecionado) {
       return toast.warning("Descreva o atendimento ou anexe um arquivo.");
     }
@@ -197,25 +197,20 @@ const handleSalvarRegistro = async () => {
       let arquivoNome: string | null = null;
 
       if (arquivoSelecionado) {
-        // --- INÍCIO DA LIMPEZA DO NOME (SANATIZAÇÃO) ---
         const nomeOriginal = arquivoSelecionado.name;
-const nomeLimpo = nomeOriginal
-  .normalize("NFD")               // Decompõe caracteres acentuados
-  .replace(/[\u0300-\u036f]/g, "") // Remove os acentos
-  .replace(/[^\w.-]/g, "_");       // Substitui espaços e especiais por "_"
+        const nomeLimpo = nomeOriginal
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^\w.-]/g, "_");
 
-// Agora o fileName usará o nome sem erros:
-const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
-        // -----------------------------------------------
-
+        const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
         const { error: upErr } = await supabase.storage.from('documentos').upload(fileName, arquivoSelecionado);
         if (upErr) throw upErr;
         
         const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(fileName);
         arquivoUrl = publicUrl; 
-        arquivoNome = nomeOriginal; // No banco de dados, guardamos o nome original (com acento) para visualização
+        arquivoNome = nomeOriginal;
 
-        // Espelhamento para o Portal do Paciente
         if (!novoRegistro.tipo.includes("Sessão")) {
           await supabase.from('pacientes_arquivos').insert([{
             paciente_id: id,
@@ -226,7 +221,6 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
         }
       }
 
-      // Salva no Prontuário Interno
       await supabase.from("prontuarios").insert([{
         paciente_id: id, 
         tipo_registro: novoRegistro.tipo, 
@@ -251,7 +245,45 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
     }
   };
 
-  // --- INJEÇÃO: FUNÇÕES DO EDITOR WORD-STYLE ---
+  const dispararContratoWhatsapp = async () => {
+    if (!paciente) return toast.error("Dados do paciente não carregados.");
+
+    try {
+      const { data: novoContrato, error } = await supabase
+        .from('contratos')
+        .insert([{
+          paciente_nome: paciente.nome,
+          paciente_cpf: paciente.cpf || null,
+          paciente_telefone: paciente.telefone ? paciente.telefone.replace(/\D/g, '') : null,
+          profissional_nome: meuPerfil?.nome || 'HELENARA CHAVES',
+          profissional_crp: meuPerfil?.conselho || 'CRP 24/01234',
+          valor: 1200.00,
+          status: 'Pendente'
+        }])
+        .select('id')
+        .single();
+
+      if (error || !novoContrato) {
+        throw new Error(error?.message || "Falha ao gerar contrato.");
+      }
+
+      const linkAssinatura = `${window.location.origin}/assinar/${novoContrato.id}`;
+
+      if (paciente.telefone) {
+        const foneLimpo = paciente.telefone.replace(/\D/g, '');
+        const mensagem = `Olá, ${paciente.nome}! Segue o link para conferência e assinatura eletrônica do seu Contrato Terapêutico no Instituto SerClin:\n\n${linkAssinatura}`;
+        window.open(`https://wa.me/55${foneLimpo}?text=${encodeURIComponent(mensagem)}`, '_blank');
+      }
+
+      await navigator.clipboard.writeText(linkAssinatura);
+      toast.success("Contrato gerado! Link enviado para o WhatsApp e copiado para a área de transferência.");
+
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao gerar contrato automático.");
+    }
+  };
+
   const formatDoc = (cmd: string, val: string = "") => {
     document.execCommand(cmd, false, val);
   };
@@ -264,7 +296,6 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
       const m = 20;
       let y = 30;
 
-      // Brasão Instituto SerClin
       doc.setFont("times", "bold"); doc.setFontSize(22); doc.setTextColor(30, 58, 138);
       doc.text("INSTITUTO SERCLIN", 105, y, { align: "center" });
       y += 8;
@@ -274,19 +305,16 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
       doc.setDrawColor(30, 58, 138); doc.setLineWidth(0.5); doc.line(20, y, 190, y);
       y += 20;
 
-      // Conteúdo processado do editor
       doc.setFont("times", "normal"); doc.setFontSize(11); doc.setTextColor(0);
       const textContent = editorRef.current.innerText;
       const splitText = doc.splitTextToSize(textContent, 170);
       
-      // Paginação simples
       for(let i=0; i < splitText.length; i++) {
           if (y > 270) { doc.addPage(); y = 20; }
           doc.text(splitText[i], m, y);
           y += 6;
       }
 
-      // Rodapé: Assinatura e QR Code
       if (y > 240) { doc.addPage(); y = 20; }
       const pH = doc.internal.pageSize.getHeight();
       y = pH - 50;
@@ -321,7 +349,6 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
       toast.error("Erro ao gerar PDF Premium."); 
     } finally { setGerandoPdf(false); }
   };
-  // --- FIM DA INJEÇÃO DAS FUNÇÕES DO EDITOR ---
 
   const gerarESalvarLaudoPDF = async () => {
     setGerandoPdf(true);
@@ -444,6 +471,7 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
   return (
     <div className="min-h-screen bg-gray-50 p-2 md:p-10 font-sans text-left pb-20">
       
+      {/* HEADER MOBILE */}
       <header className="bg-white border-b p-4 flex items-center justify-between sticky top-0 z-40 shadow-sm pt-[calc(env(safe-area-inset-top,0px)+12px)] min-h-[calc(70px+env(safe-area-inset-top,0px))] -m-2 mb-4 md:hidden">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate("/sistema/pacientes")} className="p-2 -ml-2 text-gray-400"><ArrowLeft size={24} /></button>
@@ -453,15 +481,30 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
           </div>
         </div>
         <div className="flex gap-2">
-           {meuPerfil?.permissao_agendar && <Button onClick={() => setIsAgendamentoOpen(true)} size="icon" className="bg-blue-600 rounded-xl h-10 w-10 shadow-md"><CalendarIcon size={18} /></Button>}
+          <Button 
+            onClick={dispararContratoWhatsapp} 
+            size="icon" 
+            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-10 w-10 shadow-md"
+            title="Emitir Contrato via WhatsApp"
+          >
+            <Send size={16} />
+          </Button>
+          {meuPerfil?.permissao_agendar && <Button onClick={() => setIsAgendamentoOpen(true)} size="icon" className="bg-blue-600 rounded-xl h-10 w-10 shadow-md"><CalendarIcon size={18} /></Button>}
         </div>
       </header>
 
       <div className="max-w-6xl mx-auto space-y-4 md:space-y-8">
         
+        {/* HEADER DESKTOP */}
         <div className="hidden md:flex justify-between items-center gap-2">
           <Button variant="ghost" onClick={() => navigate("/sistema/pacientes")} className="gap-2 text-gray-500 font-black uppercase text-xs"><ArrowLeft size={18} /> Voltar</Button>
           <div className="flex gap-2">
+            <Button 
+              onClick={dispararContratoWhatsapp}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-[10px] px-6 rounded-full h-10 shadow-md flex items-center gap-2"
+            >
+              <FileText size={14} /> Emitir Contrato
+            </Button>
             {meuPerfil?.permissao_agendar && <Button onClick={() => setIsAgendamentoOpen(true)} className="bg-[#1e3a8a] text-white font-black uppercase text-[10px] px-6 rounded-full h-10 shadow-md"><CalendarIcon size={14} className="mr-2" /> Agendar</Button>}
           </div>
         </div>
@@ -597,13 +640,11 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
                       <textarea className="w-full rounded-xl bg-gray-50 p-4 text-sm border-none h-28 outline-none resize-none" value={formLaudo.conclusao} onChange={e => setFormLaudo({...formLaudo, conclusao: e.target.value})} />
                     </div>
 
-                    {/* --- INÍCIO DA INJEÇÃO: BOTÃO DO EDITOR WORD --- */}
                     <Button onClick={() => setIsEditorOpen(true)} variant="outline" className="w-full border-2 border-blue-600 text-blue-600 font-black uppercase text-sm h-14 rounded-2xl flex items-center justify-center gap-3 mt-4 mb-4 hover:bg-blue-50">
                       <Layout size={20}/> Abrir Editor Word (Premium)
                     </Button>
-                    {/* --- FIM DA INJEÇÃO --- */}
 
-                 <Button 
+                    <Button 
                       onClick={gerarESalvarLaudoPDF} 
                       disabled={gerandoPdf} 
                       className="w-full bg-[#1e3a8a] text-white font-black uppercase text-sm h-16 rounded-2xl shadow-2xl transition-all flex items-center justify-center gap-3"
@@ -664,17 +705,14 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
                     <span className="text-[11px] font-black text-gray-800 uppercase">{reg.profissional_nome}</span>
                   </div>
                   <div className="flex gap-2">
-                    {/* BOTÃO EXCLUIR AJUSTADO PARA LIMPAR O PORTAL TAMBÉM */}
                     {meuPerfil?.permissao_excluir && (
                       <button 
                         onClick={async () => { 
                           if(confirm("Deseja apagar este registro e remover o acesso do paciente ao documento?")) { 
                             setLoading(true);
                             try {
-                              // 1. Apaga do Prontuário Interno
                               await supabase.from("prontuarios").delete().eq("id", reg.id);
                               
-                              // 2. Apaga do Portal do Paciente (Se houver arquivo)
                               if (reg.arquivo_url) {
                                 await supabase.from("pacientes_arquivos").delete().eq("url_arquivo", reg.arquivo_url);
                               }
@@ -708,7 +746,7 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
         </div>
       </div>
 
-      {/* --- INÍCIO DA INJEÇÃO: MODAL DO EDITOR WORD-STYLE --- */}
+      {/* MODAL DO EDITOR WORD-STYLE */}
       {isEditorOpen && (
         <div className="fixed inset-0 bg-black/90 z-[9999] flex items-start justify-center p-2 md:p-8 pt-10 backdrop-blur-md overflow-y-auto">
           <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl flex flex-col mb-20 relative overflow-hidden">
@@ -772,9 +810,7 @@ const fileName = `${id}/${Date.now()}_${nomeLimpo}`;
           </div>
         </div>
       )}
-      {/* --- FIM DA INJEÇÃO DO MODAL --- */}
 
-      {/* MODAL AGENDAMENTO E EDITAR PACIENTE (PRESERVADOS) */}
       {/* MODAL AGENDAMENTO */}
       {isAgendamentoOpen && (
         <div className="fixed inset-0 bg-black/60 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsAgendamentoOpen(false)}>
