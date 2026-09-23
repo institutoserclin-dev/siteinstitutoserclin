@@ -393,8 +393,7 @@ export function Dashboard() {
           .from("pacientes")
           .insert([{ 
             nome: buscaPaciente.toUpperCase(), 
-            telefone: form.telefone, 
-            convenio: "Particular" 
+            telefone: form.telefone 
           }])
           .select('id')
           .single();
@@ -635,7 +634,7 @@ export function Dashboard() {
               <Button variant="ghost" size="icon" className="text-emerald-600 hover:bg-emerald-50 h-10 w-10">
                 <GraduationCap size={24}/>
               </Button>
-              <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-emerald-600">Unimeta</span>
+              <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-emerald-600">Encaminhamentos</span>
             </div>
           </div>
 

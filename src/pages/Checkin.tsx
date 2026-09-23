@@ -631,10 +631,6 @@ export function Checkin() {
                         : 'Não informado'}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Convênio</p>
-                    <p className="text-sm font-bold text-gray-700">{paciente.convenio || 'Particular'}</p>
-                  </div>
                 </div>
               </div>
             )}

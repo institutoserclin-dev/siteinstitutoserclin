@@ -153,7 +153,6 @@ export function DashboardCorporativo() {
         .insert([{
           nome: form.nome.toUpperCase(),
           telefone: form.telefone,
-          convenio: `Corporativo - ${form.tipo} (${empresaNome})`,
           observacoes: `[RH Araújo] Unidade: ${form.unidade}. Motivo: ${form.observacao}`
         }]);
 

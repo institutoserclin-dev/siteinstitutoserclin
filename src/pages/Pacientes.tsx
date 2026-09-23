@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePerfil } from "@/hooks/usePerfil";
 import { format, differenceInDays, isSameDay, parseISO } from "date-fns";
 
@@ -40,8 +39,6 @@ async function getCroppedImg(imageSrc: string, pixelCrop: any): Promise<Blob | n
   });
 }
 
-const CONVENIOS = ["Particular", "SINODONTO", "SINPROAC", "SINTEAC", "COMUNIDADE", "IGREJAS"];
-
 export function Pacientes() {
   const navigate = useNavigate();
   const { isAdmin, isSecretaria } = usePerfil();
@@ -63,7 +60,7 @@ export function Pacientes() {
 
   const [form, setForm] = useState({
     id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", 
-    endereco: "", telefone: "", convenio: "Particular", foto_url: "",
+    endereco: "", telefone: "", foto_url: "",
     responsavel_nome: "", responsavel_cpf: "",
     anamnese: "", observacoes: ""
   });
@@ -209,7 +206,7 @@ export function Pacientes() {
 
   const limparModal = () => {
     setIsModalOpen(false); setIsCropping(false); setFotoFinal(null); setPreviewUrl(null); setImageSrc(null);
-    setForm({id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", endereco: "", telefone: "", convenio: "Particular", foto_url: "", responsavel_nome: "", responsavel_cpf: "", anamnese: "", observacoes: ""});
+    setForm({id: null, nome: "", cpf: "", data_nascimento: "", genero: "Feminino", endereco: "", telefone: "", foto_url: "", responsavel_nome: "", responsavel_cpf: "", anamnese: "", observacoes: ""});
   };
 
   const inputClass = "flex w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium transition-all";
@@ -261,7 +258,6 @@ export function Pacientes() {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-black text-gray-800 uppercase text-md md:text-lg leading-tight truncate mb-1">{p.nome}</h3>
                       <div className="flex flex-wrap gap-1.5 mb-3">
-                          <span className="text-[9px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded uppercase">{p.convenio}</span>
                           {eAniversariante && <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase flex items-center gap-1"><Cake size={10}/> Níver!</span>}
                       </div>
                       
@@ -299,7 +295,6 @@ export function Pacientes() {
                           genero: p.genero || "Feminino", 
                           endereco: p.endereco || "", 
                           telefone: p.telefone || "", 
-                          convenio: p.convenio || "Particular", 
                           foto_url: p.foto_url || "", 
                           responsavel_nome: p.responsavel_nome || "", 
                           responsavel_cpf: p.responsavel_cpf || "", 
@@ -386,14 +381,6 @@ export function Pacientes() {
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Telefone</label>
                       <input value={form.telefone} onChange={handleTelefone} className={inputClass} placeholder="(00) 00000-0000" />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Convênio</label>
-                      <Select value={form.convenio} onValueChange={v => setForm({...form, convenio: v})}>
-                        <SelectTrigger className="bg-white h-[52px] rounded-xl border-gray-200"><SelectValue /></SelectTrigger>
-                        <SelectContent>{CONVENIOS.map(c => <SelectItem key={c} value={c} className="font-bold uppercase text-xs">{c}</SelectItem>)}</SelectContent>
-                      </Select>
                     </div>
 
                     <div className="md:col-span-2 space-y-1">

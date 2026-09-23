@@ -25,7 +25,6 @@ export function Navbar() {
     { name: "Planos", href: "#planos" },
     { name: "Portais", href: "#portais" },
     { name: "Contato", href: "#contato" },
-    { name: "Convênios", href: "#convenios" },
   ];
 
   return (

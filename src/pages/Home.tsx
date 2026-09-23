@@ -5,7 +5,6 @@ import { Hero } from "@/components/Hero";
 import { Services } from "@/components/Services";
 import { About } from "@/components/About";
 import { Plans } from "@/components/Plans";
-import { Covenants } from "@/components/Covenants";
 import { Footer } from "@/components/Footer";
 import { ClubSection } from "@/components/ClubSection";
 import { GrupoSection } from "../components/GrupoSection";
@@ -214,19 +213,6 @@ export default function Home() {
                 </form>
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* 8. CONVÊNIOS */}
-        <section id="convenios" className="py-40 bg-primary text-white scroll-mt-24">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto text-center mb-20 space-y-4">
-              <span className="text-[10px] font-black uppercase tracking-[0.5em] text-secondary">Parcerias</span>
-              <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic leading-[0.8] text-white font-serif">
-                Nossos <span className="font-sans font-light text-white/40 not-italic lowercase">Convênios</span>
-              </h2>
-            </div>
-            <Covenants />
           </div>
         </section>
 
