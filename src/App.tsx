@@ -16,9 +16,11 @@ import { Checkin } from './pages/Checkin';
 import { Prontuario } from './pages/Prontuario';
 import { Validar } from './pages/Validar'; 
 import { Encaminhamentos } from './pages/Encaminhamentos';
+import { ContratoPage } from './pages/ContratoPage';
+import { Assinar } from './pages/Assinar';
 
 // --- CENTRAL UNIFICADA (CHAVES, DIAS E HORÁRIOS) ---
-import { Permissoes } from './pages/Permissoes'; // 🌟 Centro de comando único da equipe
+import { Permissoes } from './pages/Permissoes';
 
 // --- OUTRAS IMPORTAÇÕES DO FINANCEIRO ---
 import { Planos } from './pages/Planos';
@@ -28,13 +30,10 @@ import { Fechamento } from './pages/Fechamento';
 import { CadastroUsuario } from './pages/CadastroUsuario'; 
 
 // ========================================================
-// 🌟 NOVAS IMPORTAÇÕES: NOVAS CATEGORIAS DE MERCADO
+// 🌟 MÓDULOS DE MERCADO
 // ========================================================
-// Módulo 1: Hub de Engenharia Neuroeducacional (Escolas)
 import { DashboardEscola } from './pages/Escola/DashboardEscola';
 import { AlertaProfessor } from './pages/Escola/AlertaProfessor';
-
-// Módulo 2: Blindagem Corporativa e Neurocognitiva (Varejo / Empresas)
 import { DashboardCorporativo } from './pages/corporativo/DashboardCorporativo';
 
 // --- COMPONENTE DE SEGURANÇA (ROTA PRIVADA) ---
@@ -70,19 +69,20 @@ function PrivateRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function App() {
+export function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-center" richColors />
       
       <Routes>
         {/* ==========================================
-            ROTAS PÚBLICAS
+            ROTAS PÚBLICas
             ========================================== */}
         <Route path="/" element={<Home />} /> 
         <Route path="/login" element={<Login />} />
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/validar/:id" element={<Validar />} />
+        <Route path="/assinar/:id" element={<Assinar />} />
 
         {/* ==========================================
             ROTAS PRIVADAS (Gestão SerClin Interna) 
@@ -92,9 +92,12 @@ function App() {
         <Route path="/sistema/pacientes/:id" element={ <PrivateRoute><Prontuario /></PrivateRoute> } />
         <Route path="/sistema/pacientes" element={ <PrivateRoute><Pacientes /></PrivateRoute> } />
         <Route path="/sistema/relatorios" element={ <PrivateRoute><Relatorios /></PrivateRoute> } />
-        <Route path="/sistema/encaminhamentos" element={ <PrivateRoute><Encaminhamentos /></PrivateRoute> } />
+        <Route path="/sistema/encaminhamentos" element={<PrivateRoute><Encaminhamentos /></PrivateRoute>} />
+        
+        {/* 📄 ROTA DO CONTRATO TERAPÊUTICO */}
+        <Route path="/sistema/contrato" element={ <PrivateRoute><ContratoPage /></PrivateRoute> } />
 
-        {/* 🌟 CENTRAL UNIFICADA: Redireciona as 3 rotas antigas para o componente definitivo */}
+        {/* 🌟 CENTRAL UNIFICADA */}
         <Route path="/sistema/permissoes" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
         <Route path="/sistema/gestao" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
         <Route path="/sistema/usuarios" element={ <PrivateRoute><Permissoes /></PrivateRoute> } />
@@ -104,11 +107,11 @@ function App() {
         <Route path="/sistema/despesas" element={ <PrivateRoute><Despesas /></PrivateRoute> } />
         <Route path="/sistema/repasses" element={ <PrivateRoute><Repasses /></PrivateRoute> } />
         <Route path="/sistema/fechamento" element={ <PrivateRoute><Fechamento /></PrivateRoute> } />
-         <Route path="/sistema/taxas" element={
-  <div className="min-h-screen bg-slate-50 p-6 md:p-12 flex items-center justify-center">
-    <CalculadoraTaxas />
-  </div>
-} />
+        <Route path="/sistema/taxas" element={
+          <div className="min-h-screen bg-slate-50 p-6 md:p-12 flex items-center justify-center">
+            <CalculadoraTaxas />
+          </div>
+        } />
 
         {/* FORMULÁRIO DE NOVO CADASTRO DE PROFISSIONAL */}
         <Route path="/sistema/usuarios/novo" element={ <PrivateRoute><CadastroUsuario /></PrivateRoute> } />
@@ -119,19 +122,13 @@ function App() {
         {/* ==========================================
             🚀 PORTAL 1: HUB NEUROEDUCACIONAL (ESCOLAS)
             ========================================== */}
-        {/* Painel Geral da Coordenação da Escola (Protegido por Login) */}
         <Route path="/escola" element={ <PrivateRoute><DashboardEscola /></PrivateRoute> } />
-        
-        {/* Formulário rápido para o Professor disparar Alerta de Risco (LIVRE DE LOGIN) */}
         <Route path="/escola/alerta" element={<AlertaProfessor />} />
 
         {/* ==========================================
             🚀 PORTAL 2: BLINDAGEM CORPORATIVA (EMPRESAS / VAREJO)
             ========================================== */}
-        {/* Painel do RH e Diretoria Corporativa (Protegido por Login) */}
         <Route path="/corporativo" element={ <PrivateRoute><DashboardCorporativo /></PrivateRoute> } />
-        
-        {/* Formulário de Sobrecarga para os colaboradores (LIVRE DE LOGIN) */}
         <Route path="/corporativo/alerta" element={<FormularioAlerta />} />
 
         {/* Rota Coringa */}
