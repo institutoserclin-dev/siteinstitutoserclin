@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { ShieldCheck, KeyRound, Download, MessageCircle, Mail, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, Download, MessageCircle, Mail, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
@@ -64,7 +64,7 @@ export function Assinar() {
     setLoading(true);
     const { data, error } = await supabase.from('contratos').select('*').eq('id', id).single();
     if (error || !data) {
-      toast.error('Contrato nÃ£o localizado.');
+      toast.error('Contrato não localizado.');
     } else {
       const crpFinal = obterCrpProfissional(data.profissional_nome, data.profissional_crp);
       setContrato({ ...data, profissional_crp: crpFinal });
@@ -91,7 +91,7 @@ export function Assinar() {
     if (!contrato) return;
     const foneLimpo = telefoneDestino.replace(/\D/g, '');
     if (foneLimpo.length < 10) {
-      return toast.error('Informe um WhatsApp vÃ¡lido com DDD.');
+      return toast.error('Informe um WhatsApp válido com DDD.');
     }
 
     setProcessando(true);
@@ -111,13 +111,13 @@ export function Assinar() {
       setContrato((prev: any) => ({ ...prev, ...payloadUpdate }));
 
       const nomeFormatado = (contrato.paciente_nome || '').trim().toUpperCase();
-      const mensagem = `OlÃ¡, *${nomeFormatado}*! O seu cÃ³digo de seguranÃ§a para assinar o Contrato TerapÃªutico do Instituto SerClin Ã©: *${codigoOtp}*. VÃ¡lido por 15 minutos.`;
+      const mensagem = `Olá, *${nomeFormatado}*! O seu código de segurança para assinar o Contrato Terapêutico do Instituto SerClin é: *${codigoOtp}*. Válido por 15 minutos.`;
       window.open(`https://wa.me/55${foneLimpo}?text=${encodeURIComponent(mensagem)}`, '_blank');
 
       setTokenEnviado(true);
-      toast.success('CÃ³digo enviado para o WhatsApp!');
+      toast.success('Código enviado para o WhatsApp!');
     } catch (e: any) {
-      toast.error('Erro ao gerar cÃ³digo de seguranÃ§a.');
+      toast.error('Erro ao gerar código de segurança.');
     } finally {
       setProcessando(false);
     }
@@ -126,7 +126,7 @@ export function Assinar() {
   const enviarTokenEmail = async () => {
     if (!contrato) return;
     if (!emailDestino || !emailDestino.includes('@')) {
-      return toast.error('Informe um E-mail vÃ¡lido cadastrado.');
+      return toast.error('Informe um E-mail válido cadastrado.');
     }
 
     setProcessando(true);
@@ -145,17 +145,17 @@ export function Assinar() {
 
       setContrato((prev: any) => ({ ...prev, ...payloadUpdate }));
 
-      toast.success(`CÃ³digo OTP enviado para o e-mail: ${emailDestino}`);
+      toast.success(`Código OTP enviado para o e-mail: ${emailDestino}`);
       setTokenEnviado(true);
     } catch (e: any) {
-      toast.error('Erro ao gerar cÃ³digo para o e-mail.');
+      toast.error('Erro ao gerar código para o e-mail.');
     } finally {
       setProcessando(false);
     }
   };
 
   const confirmarAssinatura = async () => {
-    if (tokenDigitado.length !== 6) return toast.error('Digite o cÃ³digo de 6 dÃ­gitos.');
+    if (tokenDigitado.length !== 6) return toast.error('Digite o código de 6 dígitos.');
     setProcessando(true);
 
     try {
@@ -176,7 +176,7 @@ export function Assinar() {
 
       if (!tokenEsperado || tokenDigitado.trim() !== tokenEsperado.trim() || expirou) {
         setProcessando(false);
-        return toast.error('CÃ³digo invÃ¡lido ou expirado.');
+        return toast.error('Código inválido ou expirado.');
       }
 
       let ipOrigem = 'Auditado';
@@ -185,7 +185,7 @@ export function Assinar() {
         const dataIp = await resIp.json();
         ipOrigem = dataIp.ip;
       } catch (err) {
-        console.warn('IP nÃ£o identificado:', err);
+        console.warn('IP não identificado:', err);
       }
 
       const agora = new Date().toISOString();
@@ -194,7 +194,7 @@ export function Assinar() {
         paciente_assinado_em: agora,
         paciente_ip: ipOrigem,
         token_paciente: null,
-        status: 'ConcluÃ­do'
+        status: 'Concluído'
       };
 
       const { error: errUpdate } = await supabase.from('contratos').update(updateData).eq('id', contrato.id);
@@ -209,210 +209,223 @@ export function Assinar() {
     }
   };
 
+  // 🌟 GERAÇÃO DE PDF COM FONTE AMPLIADA E ALTA LEGIBILIDADE (SENIOR / IDOSOS)
   const baixarPdfOficial = () => {
     if (!contrato) return;
     try {
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const margemEsquerda = 20;
-      const larguraUtil = 170;
-      let y = 14;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const margemEsquerda = 18;
+      const larguraUtil = 174;
+      const larguraTexto = larguraUtil - 4;
+      let y = 11;
 
+      // 1. Cabeçalho Institucional
       try {
-        doc.addImage(logoSer2, "PNG", margemEsquerda, y, 32, 22);
+        doc.addImage(logoSer2, 'PNG', margemEsquerda, y, 28, 18);
       } catch (e) {
-        console.warn("Logo nÃ£o carregada:", e);
+        console.warn('Logo não carregada:', e);
       }
 
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
-      doc.setTextColor(30, 58, 138);
-      doc.text("INSTITUTO SERCLIN", margemEsquerda + 36, y + 7);
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9.5);
-      doc.setTextColor(100, 116, 139);
-      doc.text("ClÃ­nica de Psicologia & Neuropsicologia Integrada", margemEsquerda + 36, y + 12.5);
-      doc.text("Rio Branco - Acre | Atendimento Especializado", margemEsquerda + 36, y + 17.5);
-
-      y += 28;
-      doc.setDrawColor(226, 232, 240);
-      doc.setLineWidth(0.6);
-      doc.line(margemEsquerda, y, margemEsquerda + larguraUtil, y);
-
-      y += 8;
-      doc.setFont("helvetica", "bold");
+      doc.setFont('helvetica', 'bold');
       doc.setFontSize(13);
       doc.setTextColor(30, 58, 138);
-      doc.text("CONTRATO TERAPÃŠUTICO / TERMO DE CIÃŠNCIA", 105, y, { align: "center" });
+      doc.text('INSTITUTO SERCLIN', margemEsquerda + 32, y + 6);
 
-      y += 8;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Clínica de Psicologia & Neuropsicologia Integrada', margemEsquerda + 32, y + 11);
+      doc.text('Rio Branco - Acre | Atendimento Especializado', margemEsquerda + 32, y + 15.5);
+
+      y += 21;
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(margemEsquerda, y, margemEsquerda + larguraUtil, y);
+
+      // 2. Título do Termo
+      y += 6;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11.5);
+      doc.setTextColor(30, 58, 138);
+      doc.text('CONTRATO TERAPÊUTICO / TERMO DE CIÊNCIA', 105, y, { align: 'center' });
+
+      // 3. Bloco do Paciente
+      y += 5;
       doc.setFillColor(248, 250, 252);
-      doc.roundedRect(margemEsquerda, y, larguraUtil, 15, 2, 2, "F");
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(margemEsquerda, y, larguraUtil, 14, 2, 2, 'FD');
 
-      doc.setFontSize(10);
+      doc.setFontSize(9.5);
       doc.setTextColor(30, 41, 59);
-      doc.setFont("helvetica", "bold");
-      doc.text("PACIENTE:", margemEsquerda + 4, y + 6);
-      doc.setFont("helvetica", "normal");
-      doc.text((contrato.paciente_nome || "").toUpperCase(), margemEsquerda + 28, y + 6);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PACIENTE:', margemEsquerda + 4, y + 5.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text((contrato.paciente_nome || '').toUpperCase(), margemEsquerda + 27, y + 5.5);
 
-      doc.setFont("helvetica", "bold");
-      doc.text("CPF:", margemEsquerda + 4, y + 11.5);
-      doc.setFont("helvetica", "normal");
-      doc.text(contrato.paciente_cpf || "NÃ£o informado", margemEsquerda + 15, y + 11.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CPF:', margemEsquerda + 4, y + 10.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(contrato.paciente_cpf || 'Não informado', margemEsquerda + 16, y + 10.5);
 
-      y += 20;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(30, 41, 59);
-      doc.text("Declaro estar ciente e de acordo com as condiÃ§Ãµes recÃ­procas para realizaÃ§Ã£o da AvaliaÃ§Ã£o NeuropsicolÃ³gica no Instituto SerClin:", margemEsquerda, y, { maxWidth: larguraUtil, align: "justify" });
+      // 4. Declaração Inicial
+      y += 19;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.8);
+      doc.setTextColor(31, 41, 55);
+      doc.text(
+        'Declaro estar ciente e de acordo com as condições recíprocas para realização da Avaliação Neuropsicológica no Instituto SerClin:',
+        margemEsquerda,
+        y,
+        { maxWidth: larguraUtil, align: 'justify' }
+      );
 
-      y += 8;
+      // 5. Cláusulas Padronizadas e Legíveis
+      y += 6.5;
       const clausulas = [
         {
-          titulo: "â€¢ Valor e Pagamento:",
-          texto: `R$ ${(contrato.valor || 1300).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} Ã  vista ou via Pix. No cartÃ£o de crÃ©dito, acrescido da taxa da mÃ¡quina em atÃ© 12x.`
+          titulo: '• Valor e Pagamento:',
+          texto: `R$ ${(contrato.valor || 1300).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} à vista ou via Pix. No cartão de crédito, acrescido da taxa da máquina em até 12x.`,
         },
         {
-          titulo: "â€¢ DuraÃ§Ã£o e Entrega:",
-          texto: "Aproximadamente 6 a 8 sessÃµes de ~40 minutos (1Âª anamnese, sessÃµes seguintes testes e Ãºltima devolutiva). Laudo entregue no prazo de 20 a 30 dias Ãºteis apÃ³s a finalizaÃ§Ã£o dos testes."
+          titulo: '• Duração e Entrega:',
+          texto: 'Aproximadamente 6 a 8 sessões de ~40 min (1ª anamnese, sessões seguintes testes e última devolutiva). Laudo entregue no prazo de 20 a 30 dias úteis após o término dos testes.',
         },
         {
-          titulo: "â€¢ Pontualidade e CompensaÃ§Ã£o de Atrasos (Bilateral):",
-          texto: "Os atendimentos ocorrem por hora marcada. O atraso do paciente nÃ£o serÃ¡ compensado ao final para nÃ£o prejudicar atendimentos subsequentes. Em caso de atraso decorrente do profissional/clÃ­nica, o tempo excedente serÃ¡ integralmente compensado ao final da mesma sessÃ£o ou reposto posteriormente."
+          titulo: '• Pontualidade e Compensação de Atrasos (Bilateral):',
+          texto: 'Os atendimentos ocorrem por hora marcada. O atraso por parte do paciente não será compensado ao final. Em caso de atraso decorrente do profissional/clínica, o tempo excedente será integralmente compensado ao final da mesma sessão ou reposto posteriormente.',
         },
         {
-          titulo: "â€¢ RemarcaÃ§Ãµes e ManutenÃ§Ã£o da Agenda:",
-          texto: "O paciente manterÃ¡ o mesmo horÃ¡rio fixo atÃ© a conclusÃ£o. Em caso de remarcaÃ§Ã£o por parte da clÃ­nica por imprevistos, o paciente tem prioridade e garantia de cumprimento de todas as sessÃµes previstas."
+          titulo: '• Remarcações e Manutenção da Agenda:',
+          texto: 'O paciente manterá o mesmo horário fixo até a conclusão. Em caso de remarcação por parte da clínica por imprevistos, o paciente tem prioridade e garantia de cumprimento de todas as sessões.',
         },
         {
-          titulo: "â€¢ ClÃ¡usula de Cancelamento e RescisÃ£o:",
-          texto: "O PACIENTE poderÃ¡ rescindir este contrato a qualquer momento, mediante aviso prÃ©vio por escrito.\n" +
-                 "ParÃ¡grafo Primeiro: Em desistÃªncia anterior ao inÃ­cio da 1Âª sessÃ£o de avaliaÃ§Ã£o, haverÃ¡ a retenÃ§Ã£o de 10% do valor total a tÃ­tulo de taxas administrativas e reserva de agenda.\n" +
-                 "ParÃ¡grafo Segundo: Em desistÃªncia apÃ³s o inÃ­cio das sessÃµes, o PACIENTE pagarÃ¡ o valor proporcional exato das sessÃµes jÃ¡ realizadas (Valor Total Ã· NÂº Total de SessÃµes).\n" +
-                 "ParÃ¡grafo Terceiro: Sobre o saldo financeiro das sessÃµes contratadas e nÃ£o realizadas, incidirÃ¡ multa rescisÃ³ria de 15%, sendo o valor restante integralmente reembolsado em atÃ© 15 dias Ãºteis via Pix."
-        }
+          titulo: '• Cláusula de Cancelamento e Rescisão:',
+          texto:
+            'O PACIENTE poderá rescindir este contrato a qualquer momento, mediante aviso prévio por escrito.\n' +
+            'Parágrafo Primeiro: Em desistência anterior à 1ª sessão, retenção de 10% do valor total para taxas administrativas e reserva de agenda.\n' +
+            'Parágrafo Segundo: Em desistência após o início, o PACIENTE pagará o valor proporcional exato das sessões realizadas (Valor Total ÷ Nº Total de Sessões).\n' +
+            'Parágrafo Terceiro: Sobre o saldo das sessões não realizadas, incidirá multa rescisória de 15%, sendo o restante reembolsado em até 15 dias úteis via Pix.',
+        },
       ];
 
       clausulas.forEach(c => {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
         doc.setTextColor(30, 58, 138);
         doc.text(c.titulo, margemEsquerda, y);
-        y += 5;
+        y += 4.2;
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(51, 65, 85);
-        const l = doc.splitTextToSize(c.texto, larguraUtil);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.8);
+        doc.setTextColor(31, 41, 55);
+        const l = doc.splitTextToSize(c.texto, larguraTexto);
         doc.text(l, margemEsquerda + 2, y);
-        y += (l.length * 4.5) + 3.5;
+        y += (l.length * 3.6) + 2.2;
       });
 
-      y += 2;
+      // 6. Data Atualizada
+      y += 1.5;
       const hoje = format(new Date(), "'Rio Branco - AC,' dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
       doc.setTextColor(30, 41, 59);
-      doc.text(hoje, 105, y, { align: "center" });
+      doc.text(hoje, 105, y, { align: 'center' });
 
-      y += 8;
-      const largBox = 80;
+      // 7. Área de Assinatura com textos ampliados
+      y += 5;
+      const largBox = 82;
       const posX1 = margemEsquerda + 2;
       const posX2 = margemEsquerda + larguraUtil - largBox - 2;
 
       if (contrato.paciente_assinado) {
         doc.setDrawColor(202, 138, 4);
         doc.setFillColor(254, 252, 232);
-        doc.roundedRect(posX1, y, largBox, 32, 2.5, 2.5, "FD");
+        doc.roundedRect(posX1, y, largBox, 28, 2, 2, 'FD');
 
         doc.setFontSize(7.5);
-        doc.setFont("helvetica", "bold");
+        doc.setFont('helvetica', 'bold');
         doc.setTextColor(133, 77, 14);
-        doc.text("ASSINATURA DO(A) PACIENTE/RESPONSÃVEL", posX1 + (largBox / 2), y + 5.5, { align: "center" });
+        doc.text('ASSINATURA DO(A) PACIENTE/RESPONSÁVEL', posX1 + (largBox / 2), y + 5, { align: 'center' });
 
-        doc.setFont("helvetica", "normal");
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
         doc.setTextColor(74, 54, 20);
-        doc.text((contrato.paciente_nome || "").toUpperCase(), posX1 + (largBox / 2), y + 10, { align: "center" });
+        doc.text((contrato.paciente_nome || '').toUpperCase(), posX1 + (largBox / 2), y + 9.5, { align: 'center' });
 
-        doc.setFont("helvetica", "bold");
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(7.5);
         doc.setTextColor(180, 83, 9);
-        doc.text("ASSINADO ELETRONICAMENTE", posX1 + (largBox / 2), y + 16, { align: "center" });
-        doc.text("(AUTENTICAÃ‡ÃƒO VIA TOKEN OTP)", posX1 + (largBox / 2), y + 20, { align: "center" });
+        doc.text('ASSINADO ELETRONICAMENTE', posX1 + (largBox / 2), y + 14.5, { align: 'center' });
+        doc.text('(AUTENTICAÇÃO VIA TOKEN OTP)', posX1 + (largBox / 2), y + 18.5, { align: 'center' });
 
-        doc.setFontSize(7);
-        doc.setFont("helvetica", "normal");
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(113, 63, 18);
         const dataAssinatura = contrato.paciente_assinado_em 
           ? format(new Date(contrato.paciente_assinado_em), 'dd/MM/yyyy HH:mm') 
           : format(new Date(), 'dd/MM/yyyy HH:mm');
-        doc.text(`Data: ${dataAssinatura}`, posX1 + (largBox / 2), y + 24.5, { align: "center" });
-        doc.text(`IP: ${contrato.paciente_ip || 'Auditado'}`, posX1 + (largBox / 2), y + 28.5, { align: "center" });
+        doc.text(`Data: ${dataAssinatura} | IP: ${contrato.paciente_ip || 'Auditado'}`, posX1 + (largBox / 2), y + 23.5, { align: 'center' });
 
         const crpExibicao = obterCrpProfissional(contrato.profissional_nome, contrato.profissional_crp);
 
         doc.setDrawColor(30, 58, 138);
         doc.setFillColor(30, 58, 138);
-        doc.roundedRect(posX2, y, largBox, 32, 2.5, 2.5, "FD");
+        doc.roundedRect(posX2, y, largBox, 28, 2, 2, 'FD');
 
         doc.setFontSize(7.5);
-        doc.setFont("helvetica", "bold");
+        doc.setFont('helvetica', 'bold');
         doc.setTextColor(255, 255, 255);
-        doc.text("PROFISSIONAL RESPONSÃVEL", posX2 + (largBox / 2), y + 5.5, { align: "center" });
+        doc.text('PROFISSIONAL RESPONSÁVEL', posX2 + (largBox / 2), y + 5, { align: 'center' });
 
-        doc.setFont("helvetica", "normal");
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
         doc.setTextColor(224, 231, 255);
-        doc.text((contrato.profissional_nome || "").toUpperCase(), posX2 + (largBox / 2), y + 11.5, { align: "center" });
-        doc.text(crpExibicao, posX2 + (largBox / 2), y + 16, { align: "center" });
+        doc.text((contrato.profissional_nome || '').toUpperCase(), posX2 + (largBox / 2), y + 10.5, { align: 'center' });
+        doc.text(crpExibicao, posX2 + (largBox / 2), y + 15, { align: 'center' });
 
-        doc.setFont("helvetica", "bold");
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(6.5);
         doc.setTextColor(191, 219, 254);
-        doc.text("EMISSÃƒO ELETRÃ”NICA OFICIAL", posX2 + (largBox / 2), y + 23, { align: "center" });
-        doc.setFontSize(6);
-        doc.text("INSTITUTO SERCLIN", posX2 + (largBox / 2), y + 27, { align: "center" });
+        doc.text('EMISSÃO ELETRÔNICA OFICIAL • INSTITUTO SERCLIN', posX2 + (largBox / 2), y + 22.5, { align: 'center' });
 
       } else {
-        const largLinha = 80;
-        const pX1 = margemEsquerda + 2;
-        const pX2 = margemEsquerda + larguraUtil - largLinha - 2;
+        const largLinha = 74;
+        const pX1 = margemEsquerda + 4;
+        const pX2 = margemEsquerda + larguraUtil - largLinha - 4;
 
         doc.setDrawColor(148, 163, 184);
         doc.setLineWidth(0.4);
-        doc.line(pX1, y + 12, pX1 + largLinha, y + 12);
+        doc.line(pX1, y + 10, pX1 + largLinha, y + 10);
 
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(30, 41, 59);
-        doc.text("ASSINATURA DO(A) PACIENTE/RESPONSÃVEL", pX1 + (largLinha / 2), y + 16.5, { align: "center" });
-
-        doc.setFont("helvetica", "normal");
         doc.setFontSize(7.5);
-        doc.setTextColor(71, 85, 105);
-        doc.text((contrato.paciente_nome || "").toUpperCase(), pX1 + (largLinha / 2), y + 21, { align: "center" });
-
-        doc.line(pX2, y + 12, pX2 + largLinha, y + 12);
-
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
+        doc.setFont('helvetica', 'bold');
         doc.setTextColor(30, 41, 59);
-        doc.text("PROFISSIONAL RESPONSÃVEL", pX2 + (largLinha / 2), y + 16.5, { align: "center" });
+        doc.text('ASSINATURA DO(A) PACIENTE/RESPONSÁVEL', pX1 + (largLinha / 2), y + 14, { align: 'center' });
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
         doc.setTextColor(71, 85, 105);
-        doc.text((contrato.profissional_nome || "").toUpperCase(), pX2 + (largLinha / 2), y + 21, { align: "center" });
-        doc.text(contrato.profissional_crp || "CRP", pX2 + (largLinha / 2), y + 25.5, { align: "center" });
+        doc.text((contrato.paciente_nome || '').toUpperCase(), pX1 + (largLinha / 2), y + 18, { align: 'center' });
+
+        doc.line(pX2, y + 10, pX2 + largLinha, y + 10);
+
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('PROFISSIONAL RESPONSÁVEL', pX2 + (largLinha / 2), y + 14, { align: 'center' });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(71, 85, 105);
+        doc.text((contrato.profissional_nome || '').toUpperCase(), pX2 + (largLinha / 2), y + 18, { align: 'center' });
+        doc.text(contrato.profissional_crp || 'CRP', pX2 + (largLinha / 2), y + 21.5, { align: 'center' });
       }
 
       doc.save(`Contrato_${contrato.paciente_nome.replace(/\s+/g, '_')}.pdf`);
-      toast.success("PDF do Contrato baixado com sucesso!");
+      toast.success('PDF do Contrato baixado com sucesso!');
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao gerar documento.");
+      toast.error('Erro ao gerar documento.');
     }
   };
 
@@ -428,7 +441,7 @@ export function Assinar() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <Card className="p-8 text-center max-w-md rounded-3xl">
-          <p className="font-bold text-red-500">Contrato nÃ£o encontrado ou cancelado.</p>
+          <p className="font-bold text-red-500">Contrato não encontrado ou cancelado.</p>
         </Card>
       </div>
     );
@@ -438,45 +451,45 @@ export function Assinar() {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
       <Card className="w-full max-w-[580px] bg-white rounded-[2.5rem] shadow-xl p-6 md:p-8 space-y-5 text-left border-none">
         
-        {/* CabeÃ§alho */}
+        {/* Cabeçalho */}
         <div className="flex items-center gap-4 border-b pb-4">
           <img src={logoSer2} className="w-14 h-14 object-contain" alt="SerClin" />
           <div>
             <h1 className="text-lg font-black text-[#1e3a8a] uppercase leading-tight">Assinatura do Paciente</h1>
-            <p className="text-[11px] text-gray-500 font-bold uppercase">Instituto SerClin â€¢ Contrato TerapÃªutico</p>
+            <p className="text-[11px] text-gray-500 font-bold uppercase">Instituto SerClin • Contrato Terapêutico</p>
           </div>
         </div>
 
         {/* Resumo */}
         <div className="bg-slate-50 p-4 rounded-2xl space-y-2 text-xs">
           <p className="text-gray-700"><strong>Paciente:</strong> {contrato.paciente_nome}</p>
-          <p className="text-gray-700"><strong>CPF:</strong> {contrato.paciente_cpf || 'NÃ£o informado'}</p>
+          <p className="text-gray-700"><strong>CPF:</strong> {contrato.paciente_cpf || 'Não informado'}</p>
           <p className="text-gray-700">
             <strong>Profissional:</strong> {contrato.profissional_nome} ({obterCrpProfissional(contrato.profissional_nome, contrato.profissional_crp)})
           </p>
           <p className="text-gray-700"><strong>Valor Global:</strong> R$ {(contrato.valor || 1300).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
 
-        {/* CondiÃ§Ãµes e ClÃ¡usula de RescisÃ£o */}
+        {/* Condições e Cláusula de Rescisão */}
         <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-2 text-xs text-amber-950 max-h-[35vh] overflow-y-auto custom-scrollbar">
           <p className="font-black text-[#854d0e] uppercase tracking-wide flex items-center gap-1.5 text-sm">
-            <ShieldAlert size={16} className="text-amber-600" /> CondiÃ§Ãµes Gerais & RescisÃ£o Bilateral
+            <ShieldAlert size={16} className="text-amber-600" /> Condições Gerais & Rescisão Bilateral
           </p>
-          <p className="leading-relaxed">â€¢ <strong>Agendamento & Atrasos:</strong> Atendimentos com hora marcada mantendo o mesmo horÃ¡rio fixo. O atraso do paciente nÃ£o serÃ¡ compensado ao fim da sessÃ£o. Em caso de atraso decorrente do profissional/clÃ­nica, o tempo excedente serÃ¡ integralmente compensado na mesma sessÃ£o ou reposto consensualmente em atendimento posterior.</p>
-          <p className="leading-relaxed">â€¢ <strong>RemarcaÃ§Ãµes pela ClÃ­nica:</strong> Em caso de imprevisto pela clÃ­nica, o paciente nÃ£o perde o atendimento e Ã© devidamente reagendado com prioridade.</p>
+          <p className="leading-relaxed">• <strong>Agendamento & Atrasos:</strong> Atendimentos com hora marcada mantendo o mesmo horário fixo. O atraso do paciente não será compensado ao fim da sessão. Em caso de atraso decorrente do profissional/clínica, o tempo excedente será integralmente compensado na mesma sessão ou reposto consensualmente em atendimento posterior.</p>
+          <p className="leading-relaxed">• <strong>Remarcações pela Clínica:</strong> Em caso de imprevisto pela clínica, o paciente não perde o atendimento e é devidamente reagendado com prioridade.</p>
           <div className="pt-2 border-t border-amber-200/60 space-y-1.5">
-            <p className="font-bold text-amber-900">ClÃ¡usula de Cancelamento e RescisÃ£o:</p>
-            <p className="leading-relaxed">O PACIENTE poderÃ¡ rescindir este contrato a qualquer momento, mediante aviso prÃ©vio por escrito.</p>
-            <p className="leading-relaxed"><strong>ParÃ¡grafo Primeiro:</strong> Em desistÃªncia anterior ao inÃ­cio da 1Âª sessÃ£o, retenÃ§Ã£o de 10% do valor do contrato para custos administrativos e reserva de agenda.</p>
-            <p className="leading-relaxed"><strong>ParÃ¡grafo Segundo:</strong> Em desistÃªncia apÃ³s o inÃ­cio, o PACIENTE pagarÃ¡ o valor proporcional exato das sessÃµes jÃ¡ realizadas (Valor Total Ã· NÂº Total de SessÃµes).</p>
-            <p className="leading-relaxed"><strong>ParÃ¡grafo Terceiro:</strong> Sobre o saldo financeiro das sessÃµes nÃ£o realizadas, incidirÃ¡ multa rescisÃ³ria de 15%, sendo o restante reembolsado em atÃ© 15 dias Ãºteis via Pix.</p>
+            <p className="font-bold text-amber-900">Cláusula de Cancelamento e Rescisão:</p>
+            <p className="leading-relaxed">O PACIENTE poderá rescindir este contrato a qualquer momento, mediante aviso prévio por escrito.</p>
+            <p className="leading-relaxed"><strong>Parágrafo Primeiro:</strong> Em desistência anterior ao início da 1ª sessão, retenção de 10% do valor do contrato para custos administrativos e reserva de agenda.</p>
+            <p className="leading-relaxed"><strong>Parágrafo Segundo:</strong> Em desistência após o início, o PACIENTE pagará o valor proporcional exato das sessões já realizadas (Valor Total ÷ Nº Total de Sessões).</p>
+            <p className="leading-relaxed"><strong>Parágrafo Terceiro:</strong> Sobre o saldo financeiro das sessões não realizadas, incidirá multa rescisória de 15%, sendo o restante reembolsado em até 15 dias úteis via Pix.</p>
           </div>
         </div>
 
         {/* Estado da Assinatura */}
         <div className={`p-4 rounded-2xl border text-xs flex items-center justify-between ${contrato.paciente_assinado ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
           <span className="font-bold uppercase tracking-wider">Status do Documento:</span>
-          <span className="font-black">{contrato.paciente_assinado ? 'âœ“ CONTRATO ASSINADO' : 'PENDENTE DE ASSINATURA'}</span>
+          <span className="font-black">{contrato.paciente_assinado ? '✓ CONTRATO ASSINADO' : 'PENDENTE DE ASSINATURA'}</span>
         </div>
 
         {/* Fluxo de Assinatura */}
@@ -484,7 +497,7 @@ export function Assinar() {
           <div className="space-y-4 pt-1">
             <div className="space-y-1.5 p-4 bg-gray-50 rounded-2xl space-y-3">
               <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
-                <MessageCircle size={15} className="text-emerald-600" /> Enviar CÃ³digo por WhatsApp
+                <MessageCircle size={15} className="text-emerald-600" /> Enviar Código por WhatsApp
               </label>
               <div className="flex gap-2">
                 <Input
@@ -505,7 +518,7 @@ export function Assinar() {
 
             <div className="space-y-1.5 p-4 bg-gray-50 rounded-2xl space-y-3">
               <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
-                <Mail size={15} className="text-blue-600" /> Enviar CÃ³digo por E-mail
+                <Mail size={15} className="text-blue-600" /> Enviar Código por E-mail
               </label>
               <div className="flex gap-2">
                 <Input
@@ -527,7 +540,7 @@ export function Assinar() {
             {tokenEnviado && (
               <div className="space-y-3 pt-2 border-t">
                 <label className="text-xs font-bold text-[#1e3a8a] uppercase block text-center">
-                  Digite os 6 dÃ­gitos recebidos no WhatsApp ou E-mail:
+                  Digite os 6 dígitos recebidos no WhatsApp ou E-mail:
                 </label>
                 <Input
                   maxLength={6}
@@ -548,8 +561,8 @@ export function Assinar() {
           </div>
         ) : (
           <div className="p-4 bg-emerald-50 rounded-2xl text-center space-y-1">
-            <p className="text-emerald-800 font-black text-sm uppercase">Assinatura ConcluÃ­da com Sucesso!</p>
-            <p className="text-emerald-600 text-xs font-bold">O documento possui plena validade jurÃ­dica digital.</p>
+            <p className="text-emerald-800 font-black text-sm uppercase">Assinatura Concluída com Sucesso!</p>
+            <p className="text-emerald-600 text-xs font-bold">O documento possui plena validade jurídica digital.</p>
           </div>
         )}
 

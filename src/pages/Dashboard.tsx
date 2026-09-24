@@ -77,28 +77,35 @@ const criarDataLocalSemFuso = (dataIsoString: string): Date => {
   return new Date(ano, (mes || 1) - 1, dia || 1, hora || 0, min || 0, seg || 0);
 };
 
-// --- VISUAL SUPER CLEAN E COMPACTO (EVITA SOBREPOSIÇÃO) ---
+// --- VISUAL LIMPO, PROPORCIONAL E SEM QUEBRA DE LINHA DESALINHADA ---
 const EventoCustomizado = ({ event }: any) => {
   const isPresenca = event.original?.status === 'Presenca' || event.original?.status === 'Presença';
   const isFalta = event.original?.status === 'Falta';
   
-  const nomeCompleto = event.original?.paciente_nome || event.title || "";
-  const primeiroNome = nomeCompleto.split(" ")[0];
-  const sala = event.original?.sala_id ? `(S${event.original.sala_id})` : "";
+  const nomeCompleto = (event.original?.paciente_nome || event.title || "").trim();
+  const partesNome = nomeCompleto.split(" ");
+  // Exibe o primeiro e segundo nome para identificação clara
+  const nomeExibicao = partesNome.slice(0, 2).join(" ");
+  const sala = event.original?.sala_id ? `S0${event.original.sala_id}` : "";
   const horarioInicio = format(new Date(event.start), "HH:mm");
   const horarioFim = format(new Date(event.end), "HH:mm");
 
   return (
     <div 
-      className="h-full w-full flex items-center justify-between px-1.5 overflow-hidden text-left relative group cursor-pointer"
-      title={`Paciente: ${nomeCompleto}\nHorário: ${horarioInicio} - ${horarioFim}\nProfissional: ${event.original?.profissional_nome}\nStatus: ${event.original?.status || 'Agendado'}`}
+      className="h-full w-full flex flex-col justify-center px-1.5 py-0.5 overflow-hidden text-left leading-tight cursor-pointer select-none"
+      title={`Paciente: ${nomeCompleto}\nHorário: ${horarioInicio} - ${horarioFim}\nSala: ${sala}\nProfissional: ${event.original?.profissional_nome}\nStatus: ${event.original?.status || 'Agendado'}`}
     >
-      <div className="flex items-center gap-1 overflow-hidden">
+      <div className="flex items-center justify-between gap-1 text-[10px] font-black text-white/95">
+        <span className="tabular-nums tracking-tight">{horarioInicio}–{horarioFim}</span>
+        {sala && <span className="bg-black/20 px-1 rounded text-[8.5px] font-bold shrink-0">{sala}</span>}
+      </div>
+
+      <div className="flex items-center gap-1 mt-0.5 overflow-hidden">
         {isPresenca && (
-          <CheckCircle size={12} className="text-white shrink-0" strokeWidth={3} />
+          <CheckCircle size={10} className="text-white shrink-0" strokeWidth={3} />
         )}
-        <span className={`text-white font-bold text-[11px] uppercase truncate leading-tight ${isFalta ? 'line-through opacity-75' : ''}`}>
-          {horarioInicio} - {primeiroNome} {sala}
+        <span className={`text-white font-bold text-[10.5px] uppercase truncate ${isFalta ? 'line-through opacity-70' : ''}`}>
+          {nomeExibicao}
         </span>
       </div>
     </div>
@@ -236,10 +243,11 @@ export function Dashboard() {
           setEvents(eventosFormatados);
         }
       }
-    } catch (err) { toast.error("Erro ao carregar dados."); }
+    } catch { 
+      toast.error("Erro ao carregar dados."); 
+    }
   };
 
-  // Carrega ao montar e recarrega sempre que navegar para outro mês/semana
   useEffect(() => { 
     fetchData(); 
   }, [date]);
@@ -269,8 +277,9 @@ export function Dashboard() {
   const enviarWhatsApp = (nome: string, fone: string, prof: string, inicio: string) => {
     if (!fone) return toast.error("Paciente sem telefone.");
     const foneLimpo = fone.replace(/\D/g, '');
-    const dataFormatada = format(new Date(inicio), "dd/MM/yyyy");
-    const horaFormatada = format(new Date(inicio), "HH:mm");
+    const dataObj = criarDataLocalSemFuso(inicio);
+    const dataFormatada = format(dataObj, "dd/MM/yyyy");
+    const horaFormatada = format(dataObj, "HH:mm");
     const mensagem = `Olá, ${nome}! Confirmamos sua consulta no *Instituto SerClin* com o(a) profissional ${prof} no dia *${dataFormatada}* às *${horaFormatada}*. Podemos confirmar sua presença?`;
     window.open(`https://wa.me/55${foneLimpo}?text=${encodeURIComponent(mensagem)}`, '_blank');
   };
@@ -299,7 +308,8 @@ export function Dashboard() {
       doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 138);
       doc.text("ATESTADO DE COMPARECIMENTO", 105, 60, { align: "center" });
       
-      const textoCorpo = `Declaramos para os devidos fins de comprovação que o(a) paciente ${form.paciente_nome.toUpperCase()} esteve presente no INSTITUTO SERCLIN para atendimento especializado no dia ${format(new Date(form.inicio), "dd/MM/yyyy")}. O atendimento teve início às ${format(new Date(form.inicio), "HH:mm")} sob a responsabilidade do(a) profissional ${form.profissional.toUpperCase()}.`;
+      const dComp = criarDataLocalSemFuso(form.inicio);
+      const textoCorpo = `Declaramos para os devidos fins de comprovação que o(a) paciente ${form.paciente_nome.toUpperCase()} esteve presente no INSTITUTO SERCLIN para atendimento especializado no dia ${format(dComp, "dd/MM/yyyy")}. O atendimento teve início às ${format(dComp, "HH:mm")} sob a responsabilidade do(a) profissional ${form.profissional.toUpperCase()}.`;
       
       doc.setFontSize(12); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
       doc.text(textoCorpo, 20, 85, { maxWidth: 170, align: "justify", lineHeightFactor: 1.5 });
@@ -332,8 +342,13 @@ export function Dashboard() {
     try {
       await supabase.from('agendamentos').delete().eq('id', eventoSelecionadoId);
       toast.success("Removido!");
-      setIsAgendamentoOpen(false); fetchData();
-    } catch (err) { toast.error("Erro."); } finally { setLoading(false); }
+      setIsAgendamentoOpen(false); 
+      fetchData();
+    } catch { 
+      toast.error("Erro."); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
@@ -387,13 +402,13 @@ export function Dashboard() {
 
       let idDoPaciente = form.paciente_id;
 
-      // 1. Lógica de Auto-cadastro de Paciente (Neuropsicologia costuma ter muitos novos)
       if (!idDoPaciente) {
         const { data: novoPac, error: pacErr } = await supabase
           .from("pacientes")
           .insert([{ 
             nome: buscaPaciente.toUpperCase(), 
-            telefone: form.telefone 
+            telefone: form.telefone,
+            convenio: "Particular"
           }])
           .select('id')
           .single();
@@ -402,13 +417,11 @@ export function Dashboard() {
         if (novoPac) idDoPaciente = novoPac.id;
       }
 
-      // 2. Processamento da Assinatura (Digitalização SerClin)
       let assinaturaBase64 = form.assinatura_url;
       if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
         assinaturaBase64 = sigCanvas.current.getCanvas().toDataURL('image/png');
       }
 
-      // 3. Sanitização Financeira (Trata 1.200,50 ou 1200.50)
       const valorLimpo = parseFloat(
         form.valor_atendimento
           .toString()
@@ -419,7 +432,6 @@ export function Dashboard() {
       const salaNumero = parseInt(form.sala) || 1;
 
       // 🌟 Grava no formato local 'YYYY-MM-DDTHH:mm:ss' (sem sufixo Z de UTC)
-      // Isso impede que o banco ou o navegador apliquem o desconto das 5 horas
       const dataInicioFormatada = format(dInicio, "yyyy-MM-dd'T'HH:mm:ss");
       const dataFimFormatada = format(dFim, "yyyy-MM-dd'T'HH:mm:ss");
 
@@ -437,7 +449,6 @@ export function Dashboard() {
         forma_pagamento: form.forma_pagamento || "Pix"
       };
 
-      // 4. Update ou Insert do Agendamento
       const { error } = eventoSelecionadoId 
         ? await supabase.from('agendamentos').update(payload).eq('id', eventoSelecionadoId) 
         : await supabase.from('agendamentos').insert([payload]);
@@ -475,9 +486,7 @@ export function Dashboard() {
           console.error("Erro detalhado ao gerar evolução automática:", erroProntuario);
         }
       }
-      // =========================================================================
-         
-      // 5. Feedback e Refresh
+          
       setIsAgendamentoOpen(false);
       setEventoSelecionadoId(null);
       fetchData();
@@ -509,28 +518,41 @@ export function Dashboard() {
 
   return (
     <div className="h-[100dvh] w-full bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
-      <style>{`
+     <style>{`
         .rbc-agenda-view table.rbc-agenda-table tbody > tr > td { color: #1f2937 !important; font-weight: 800 !important; font-size: 14px !important; }
         .rbc-agenda-view { background-color: #ffffff; border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
         .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: #1e3a8a !important; font-weight: 800 !important; }
         .rbc-toolbar button { color: #1e3a8a !important; font-weight: bold; }
         .rbc-toolbar button.rbc-active { background-color: #1e3a8a !important; color: white !important; }
-        .rbc-event-content { font-size: 11px !important; }
-        
-        /* 🌟 DISTRIBUIÇÃO LADO A LADO E VISUAL COMPACTO */
-        .rbc-event {
-          border-radius: 6px !important;
-          padding: 2px 4px !important;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+        /* 🌟 ALTURA ADEQUADA PARA OS INTERVALOS DE HORA */
+        .rbc-timeslot-group {
+          min-height: 64px !important; /* Espaço amplo para sessões de 40 min */
         }
         .rbc-time-slot {
-          min-height: 35px !important;
+          min-height: 32px !important;
         }
+
+        /* 🌟 DIVISÃO LATERAL SEM SOBREPOSIÇÃO */
+        .rbc-day-slot .rbc-events-container {
+          margin-right: 0px !important;
+          width: 100% !important;
+        }
+
+        .rbc-day-slot .rbc-event {
+          border-radius: 8px !important;
+          padding: 2px !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+          border: 1px solid rgba(255, 255, 255, 0.45) !important;
+          box-sizing: border-box !important;
+          overflow: hidden !important;
+        }
+
+        .rbc-event-label { display: none !important; }
 
         @media (max-width: 768px) {
           .rbc-toolbar { flex-direction: column; gap: 8px; height: auto !important; padding: 10px !important; }
-          .fixed.inset-0 .bg-white.rounded-\[2\.5rem\] { max-width: 100% !important; width: 100% !important; height: 100% !important; border-radius: 0 !important; margin: 0 !important; padding-top: env(safe-area-inset-top, 20px) !important; }
-          .sigCanvas { width: 100% !important; height: 120px !important; }
+          .rbc-timeslot-group { min-height: 52px !important; }
         }
       `}</style>
 
@@ -538,7 +560,6 @@ export function Dashboard() {
       <header className="bg-white border-b px-4 md:px-8 shadow-sm z-50 sticky top-0 w-full pt-[var(--safe-top)]">
         <div className="flex justify-between items-center h-[95px] max-w-[1800px] mx-auto">
           
-          {/* ESQUERDA: LOGO AMPLIADO (PC E MOBILE) */}
           <div className="flex items-center gap-3 shrink-0 cursor-pointer" onClick={() => navigate('/')}>
             <img src={logoSer2} className="w-12 h-12 md:w-16 md:h-16 object-contain" alt="SerClin" />
             <div className="hidden sm:flex flex-col text-left">
@@ -551,14 +572,22 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* CENTRO: GRADE COMPLETA DE BOTÕES (SÓ NO PC) */}
           <div className="hidden md:flex items-center gap-5 flex-1 justify-center px-4 overflow-x-auto no-scrollbar">
             
+            {/* 1. PACIENTES */}
             <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/pacientes')}>
               <Button variant="ghost" size="icon" className="text-blue-700 hover:bg-blue-50 h-10 w-10">
                 <Users size={24}/>
               </Button>
               <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-blue-700">Pacientes</span>
+            </div>
+
+            {/* 🌟 2. NOVO ATALHO: CONTRATOS (RESTABELECIDO NO TOPO DO PC) */}
+            <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/contrato')}>
+              <Button variant="ghost" size="icon" className="text-amber-600 hover:bg-amber-50 h-10 w-10">
+                <FileCheck size={24} className="text-amber-600" />
+              </Button>
+              <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-amber-600">Contratos</span>
             </div>
 
             {meuPerfil?.permissao_financeiro && (
@@ -638,7 +667,6 @@ export function Dashboard() {
             </div>
           </div>
 
-         {/* DIREITA: STATUS, AGENDAR (PC) E MENU (MOBILE) */}
           <div className="flex items-center gap-4 shrink-0">
             
             <Button
@@ -716,6 +744,10 @@ export function Dashboard() {
               <div className="flex-1 overflow-y-auto p-4 space-y-1 flex flex-col">
                 <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px]" onClick={() => { navigate('/sistema/pacientes'); setIsMenuMobileOpen(false); }}>
                   <Users size={20} className="text-blue-700"/> Prontuários
+                </Button>
+
+                <Button variant="ghost" className="justify-start gap-4 h-12 font-bold uppercase text-[11px] text-amber-600 bg-amber-50/50" onClick={() => { navigate('/sistema/contrato'); setIsMenuMobileOpen(false); }}>
+                  <FileCheck size={20} className="text-amber-600"/> Emitir Contrato
                 </Button>
                 
                 {meuPerfil?.permissao_financeiro && (
@@ -824,7 +856,24 @@ export function Dashboard() {
                   const evt = e.original; 
                   setEventoSelecionadoId(evt.id); 
                   setBuscaPaciente(evt.paciente_nome); 
-                  setForm({ ...form, profissional: evt.profissional_nome, paciente_nome: evt.paciente_nome, paciente_id: evt.paciente_id, telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), sala: evt.sala_id?.toString() || '1', inicio: format(new Date(evt.data_inicio), "yyyy-MM-dd'T'HH:mm"), status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), duracao: evt.original?.duracao || '40', assinatura_url: evt.assinatura_url || null, valor_atendimento: aplicarMascaraMoeda(evt.valor_atendimento?.toString() || "0"), forma_pagamento: evt.forma_pagamento || "Pix" }); 
+                  
+                  const dataInicioLocal = criarDataLocalSemFuso(evt.data_inicio);
+                  const valorInputInicio = format(dataInicioLocal, "yyyy-MM-dd'T'HH:mm");
+
+                  setForm({ 
+                    ...form, 
+                    profissional: evt.profissional_nome, 
+                    paciente_nome: evt.paciente_nome, 
+                    paciente_id: evt.paciente_id, 
+                    telefone: aplicarMascaraTelefone(evt.paciente_telefone || ''), 
+                    sala: evt.sala_id?.toString() || '1', 
+                    inicio: valorInputInicio, 
+                    status: evt.status === 'Presenca' ? 'Presença' : (evt.status || 'Agendado'), 
+                    duracao: evt.original?.duracao || '40', 
+                    assinatura_url: evt.assinatura_url || null, 
+                    valor_atendimento: aplicarMascaraMoeda(evt.valor_atendimento?.toString() || "0"), 
+                    forma_pagamento: evt.forma_pagamento || "Pix" 
+                  }); 
                   setIsAgendamentoOpen(true); 
                 }} 
               />
@@ -836,7 +885,18 @@ export function Dashboard() {
               onClick={() => { 
                 setEventoSelecionadoId(null); 
                 setBuscaPaciente(""); 
-                setForm({ ...form, profissional: isGestorSeguro ? '' : nomeLogado, paciente_id: null, status: 'Agendado', duracao: '40', assinatura_url: null, inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), telefone: "", valor_atendimento: "0,00", forma_pagamento: "Pix" }); 
+                setForm({ 
+                  ...form, 
+                  profissional: isGestorSeguro ? '' : nomeLogado, 
+                  paciente_id: null, 
+                  status: 'Agendado', 
+                  duracao: '40', 
+                  assinatura_url: null, 
+                  inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), 
+                  telefone: "", 
+                  valor_atendimento: "0,00", 
+                  forma_pagamento: "Pix" 
+                }); 
                 setIsAgendamentoOpen(true); 
               }} 
               className="md:hidden fixed bottom-6 right-6 z-[45] bg-blue-600 hover:bg-blue-700 text-white rounded-full h-14 px-6 flex items-center justify-center shadow-[0_8px_30px_rgb(37,99,235,0.4)] active:scale-95 transition-transform"
@@ -872,7 +932,7 @@ export function Dashboard() {
                   <div key={ag.id || idx} className="flex items-center justify-between p-5 bg-white rounded-3xl border border-gray-100 shadow-sm group">
                     <div className="flex items-center gap-5 text-left">
                       <div className="h-14 w-20 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-100">
-                        <span className="font-black text-[#1e3a8a]">{format(new Date(ag.data_inicio), "HH:mm")}</span>
+                        <span className="font-black text-[#1e3a8a]">{format(criarDataLocalSemFuso(ag.data_inicio), "HH:mm")}</span>
                       </div>
                       <div className="flex flex-col text-left">
                         <span className="font-black text-[15px] uppercase text-gray-800 leading-tight">{ag.paciente_nome}</span>
