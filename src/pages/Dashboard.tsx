@@ -84,7 +84,6 @@ const EventoCustomizado = ({ event }: any) => {
   
   const nomeCompleto = (event.original?.paciente_nome || event.title || "").trim();
   const partesNome = nomeCompleto.split(" ");
-  // Exibe o primeiro e segundo nome para identificação clara
   const nomeExibicao = partesNome.slice(0, 2).join(" ");
   const sala = event.original?.sala_id ? `S0${event.original.sala_id}` : "";
   const horarioInicio = format(new Date(event.start), "HH:mm");
@@ -359,7 +358,6 @@ export function Dashboard() {
     
     setLoading(true);
     try {
-      // 🌟 Cria a data baseada estritamente nos números do input local
       const dInicio = criarDataLocalSemFuso(form.inicio);
       const dFim = addMinutes(dInicio, parseInt(form.duracao || '40'));
 
@@ -518,7 +516,7 @@ export function Dashboard() {
 
   return (
     <div className="h-[100dvh] w-full bg-gray-50 flex flex-col font-sans overflow-hidden text-left">
-     <style>{`
+      <style>{`
         .rbc-agenda-view table.rbc-agenda-table tbody > tr > td { color: #1f2937 !important; font-weight: 800 !important; font-size: 14px !important; }
         .rbc-agenda-view { background-color: #ffffff; border-radius: 1.5rem; overflow: hidden; border: 1px solid #e5e7eb; }
         .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: #1e3a8a !important; font-weight: 800 !important; }
@@ -527,7 +525,7 @@ export function Dashboard() {
 
         /* 🌟 ALTURA ADEQUADA PARA OS INTERVALOS DE HORA */
         .rbc-timeslot-group {
-          min-height: 64px !important; /* Espaço amplo para sessões de 40 min */
+          min-height: 64px !important;
         }
         .rbc-time-slot {
           min-height: 32px !important;
