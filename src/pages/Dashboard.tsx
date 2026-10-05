@@ -60,20 +60,15 @@ const mapearStatusParaBanco = (statusVisual: string) => {
   return 'Agendado';
 };
 
-// 🌟 1. LEITURA BLINDADA CONTRA FUSO (NUNCA SUBTRAI 5 HORAS)
+// 🌟 LEITURA BLINDADA CONTRA FUSO
 const criarDataLocalSemFuso = (dataIsoString: string): Date => {
   if (!dataIsoString) return new Date();
-
-  // Limpa caracteres de UTC ou frações de segundo caso existam
   const limpa = dataIsoString.replace('Z', '').split('.')[0];
   const [dataPart, horaPart] = limpa.split('T');
-
   if (!dataPart || !horaPart) return new Date(dataIsoString);
 
   const [ano, mes, dia] = dataPart.split('-').map(Number);
   const [hora, min, seg] = horaPart.split(':').map(Number);
-
-  // Cria a instância de Date forçando os números locais exatos
   return new Date(ano, (mes || 1) - 1, dia || 1, hora || 0, min || 0, seg || 0);
 };
 
@@ -142,7 +137,8 @@ export function Dashboard() {
     telefone: '', sala: '1', inicio: '', duracao: '40', status: 'Agendado',
     assinatura_url: null as string | null,
     valor_atendimento: "0,00",
-    forma_pagamento: "Pix"
+    forma_pagamento: "Pix",
+    cid: ""
   });
 
   const fetchData = async () => {
@@ -308,7 +304,12 @@ export function Dashboard() {
       doc.text("ATESTADO DE COMPARECIMENTO", 105, 60, { align: "center" });
       
       const dComp = criarDataLocalSemFuso(form.inicio);
-      const textoCorpo = `Declaramos para os devidos fins de comprovação que o(a) paciente ${form.paciente_nome.toUpperCase()} esteve presente no INSTITUTO SERCLIN para atendimento especializado no dia ${format(dComp, "dd/MM/yyyy")}. O atendimento teve início às ${format(dComp, "HH:mm")} sob a responsabilidade do(a) profissional ${form.profissional.toUpperCase()}.`;
+
+      const textoCid = form.cid && form.cid.trim() !== '' 
+        ? ` Sob solicitação e expressa autorização do(a) paciente/responsável, declara-se a codificação diagnóstica ${form.cid.trim().toUpperCase()} (CID-10).` 
+        : '';
+
+      const textoCorpo = `Declaramos para os devidos fins de comprovação que o(a) paciente ${form.paciente_nome.toUpperCase()} esteve presente no INSTITUTO SERCLIN para atendimento especializado no dia ${format(dComp, "dd/MM/yyyy")}. O atendimento teve início às ${format(dComp, "HH:mm")} sob a responsabilidade do(a) profissional ${form.profissional.toUpperCase()}.${textoCid}`;
       
       doc.setFontSize(12); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
       doc.text(textoCorpo, 20, 85, { maxWidth: 170, align: "justify", lineHeightFactor: 1.5 });
@@ -361,9 +362,6 @@ export function Dashboard() {
       const dInicio = criarDataLocalSemFuso(form.inicio);
       const dFim = addMinutes(dInicio, parseInt(form.duracao || '40'));
 
-      // =========================================================================
-      // 🌟 VALIDAÇÃO DE DIAS E HORÁRIOS DA CENTRAL DE CONFIGURAÇÃO (PRESERVADA)
-      // =========================================================================
       const diasSemanaMap = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
       const diaDaSemanaDesejado = diasSemanaMap[dInicio.getDay()];
 
@@ -429,7 +427,6 @@ export function Dashboard() {
 
       const salaNumero = parseInt(form.sala) || 1;
 
-      // 🌟 Grava no formato local 'YYYY-MM-DDTHH:mm:ss' (sem sufixo Z de UTC)
       const dataInicioFormatada = format(dInicio, "yyyy-MM-dd'T'HH:mm:ss");
       const dataFimFormatada = format(dFim, "yyyy-MM-dd'T'HH:mm:ss");
 
@@ -456,9 +453,6 @@ export function Dashboard() {
         throw new Error(`Erro no banco: ${error.message} (Código: ${error.code})`);
       }
 
-      // =========================================================================
-      // 🌟 REGISTRO AUTOMÁTICO DE EVOLUÇÃO DIÁRIA (PRESERVADA)
-      // =========================================================================
       if (mapearStatusParaBanco(form.status) === 'Presenca' && idDoPaciente) {
         const dataHoje = new Date();
         const dataFormatada = dataHoje.toLocaleDateString('pt-BR');
@@ -523,7 +517,6 @@ export function Dashboard() {
         .rbc-toolbar button { color: #1e3a8a !important; font-weight: bold; }
         .rbc-toolbar button.rbc-active { background-color: #1e3a8a !important; color: white !important; }
 
-        /* 🌟 ALTURA ADEQUADA PARA OS INTERVALOS DE HORA */
         .rbc-timeslot-group {
           min-height: 64px !important;
         }
@@ -531,7 +524,6 @@ export function Dashboard() {
           min-height: 32px !important;
         }
 
-        /* 🌟 DIVISÃO LATERAL SEM SOBREPOSIÇÃO */
         .rbc-day-slot .rbc-events-container {
           margin-right: 0px !important;
           width: 100% !important;
@@ -572,7 +564,6 @@ export function Dashboard() {
 
           <div className="hidden md:flex items-center gap-5 flex-1 justify-center px-4 overflow-x-auto no-scrollbar">
             
-            {/* 1. PACIENTES */}
             <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/pacientes')}>
               <Button variant="ghost" size="icon" className="text-blue-700 hover:bg-blue-50 h-10 w-10">
                 <Users size={24}/>
@@ -580,7 +571,6 @@ export function Dashboard() {
               <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-blue-700">Pacientes</span>
             </div>
 
-            {/* 🌟 2. NOVO ATALHO: CONTRATOS (RESTABELECIDO NO TOPO DO PC) */}
             <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={() => navigate('/sistema/contrato')}>
               <Button variant="ghost" size="icon" className="text-amber-600 hover:bg-amber-50 h-10 w-10">
                 <FileCheck size={24} className="text-amber-600" />
@@ -870,7 +860,8 @@ export function Dashboard() {
                     duracao: evt.original?.duracao || '40', 
                     assinatura_url: evt.assinatura_url || null, 
                     valor_atendimento: aplicarMascaraMoeda(evt.valor_atendimento?.toString() || "0"), 
-                    forma_pagamento: evt.forma_pagamento || "Pix" 
+                    forma_pagamento: evt.forma_pagamento || "Pix",
+                    cid: ""
                   }); 
                   setIsAgendamentoOpen(true); 
                 }} 
@@ -893,7 +884,8 @@ export function Dashboard() {
                   inicio: format(new Date(), "yyyy-MM-dd'T'HH:mm"), 
                   telefone: "", 
                   valor_atendimento: "0,00", 
-                  forma_pagamento: "Pix" 
+                  forma_pagamento: "Pix",
+                  cid: ""
                 }); 
                 setIsAgendamentoOpen(true); 
               }} 
@@ -1083,6 +1075,34 @@ export function Dashboard() {
                   )}
                 </div>
               </div>
+
+              {/* 🌟 CAMPO OPCIONAL DE CID-10 PARA O ATESTADO */}
+              {eventoSelecionadoId && (
+                <div className="space-y-1.5 p-3.5 bg-blue-50/70 rounded-2xl border border-blue-100/80">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-black text-[#1e3a8a] uppercase tracking-wider">CID-10 no Atestado (Opcional)</label>
+                    <span className="text-[9px] font-bold text-gray-400">A pedido do paciente</span>
+                  </div>
+                  <Input 
+                    placeholder="Ex: F84.0, F90.0, Z00.0..." 
+                    value={form.cid} 
+                    onChange={e => setForm({ ...form, cid: e.target.value })} 
+                    className="bg-white border-blue-200 h-10 font-bold text-xs uppercase"
+                  />
+                  <div className="flex flex-wrap gap-1 pt-0.5">
+                    {['F84.0 (TEA)', 'F90.0 (TDAH)', 'F41.1 (Ansiedade)', 'Z00.0 (Geral)'].map((opcao) => (
+                      <button
+                        key={opcao}
+                        type="button"
+                        onClick={() => setForm({ ...form, cid: opcao.split(' ')[0] })}
+                        className="text-[9px] font-bold bg-white text-blue-700 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded-md border border-blue-200 transition-colors"
+                      >
+                        {opcao}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="pt-4 flex flex-col gap-2 shrink-0 pb-8">
                 {form.telefone && (
